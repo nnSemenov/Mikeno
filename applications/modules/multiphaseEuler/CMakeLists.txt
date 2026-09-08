@@ -71,6 +71,7 @@ target_compile_definitions(${target_name} PRIVATE
     LIB_NAME=lib${target_name}.so
 )
 
+add_subdirectory(fvConstraints)
 add_subdirectory(fvModels)
 add_subdirectory(functionObjects)
 
