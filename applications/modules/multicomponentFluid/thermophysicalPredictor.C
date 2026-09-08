@@ -88,13 +88,15 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
           ? mvConvection->fviDiv(phi_, p() / rho_)
                              : eval(-dpdt)) +
             thermophysicalTransport->divq(he) ==
-        reaction->Qdot()
-      + (
-            buoyancy.valid()
-          ? fvModels().source(rho_, he) + rho_*(U_ & buoyancy->g)
-          : fvModels().source(rho_, he)
-        )
+        ==
+          reaction->Qdot()
+        + fvModels().source(rho(), he)
     );
+
+    if (buoyancy.valid())
+    {
+        EEqn -= rho()*(U() & buoyancy->g);
+    }
 
     EEqn.relax();
 

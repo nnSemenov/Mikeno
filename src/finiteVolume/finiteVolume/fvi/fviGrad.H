@@ -80,6 +80,16 @@ namespace fvi
         const word& name
     );
 
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto grad
+    (
+        const Expression& e,
+        const word& name
+    )
+    {
+        return grad(eval(e), name);
+    }
+
     template<class Type>
     tmp<VolInternalField<typename outerProduct<vector, Type>::type>>
     grad
@@ -93,6 +103,12 @@ namespace fvi
     (
         const tmp<VolField<Type>>&
     );
+
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto grad(const Expression& e)
+    {
+        return grad(eval(e));
+    }
 }
 
 

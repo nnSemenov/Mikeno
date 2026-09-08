@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvcReconstruct.H"
-#include "fvMesh.H"
+#include "reconstructionTensors.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "fviSurfaceIntegrate.H"
@@ -50,8 +50,6 @@ reconstruct(const SurfaceField<Type>& ssf)
 
     const fvMesh& mesh = ssf.mesh()();
 
-    surfaceVectorField SfHat(mesh.Sf()/mesh.magSf());
-
     tmp<VolField<GradType>> treconField
     (
         VolField<GradType>::New
@@ -68,10 +66,12 @@ reconstruct(const SurfaceField<Type>& ssf)
         return treconField;
     }
 
-    treconField.ref().internalFieldRef() =
-        inv(fvi::surfaceSum(SfHat*mesh.Sf()), mesh.solutionD())
-      & fvi::surfaceSum(SfHat*ssf);
+    // Get reference to reconstruct tensors
+    const fvi::reconstructionTensors& rt =
+        fvi::reconstructionTensors::New(mesh);
 
+    treconField.ref().internalFieldRef() =
+        rt.tensors() & fvi::surfaceSum((mesh.Sf()/mesh.magSf())*ssf);
     treconField.ref().correctBoundaryConditions();
 
     return treconField;

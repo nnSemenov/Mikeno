@@ -589,7 +589,7 @@ void Foam::populationBalanceModel::computeDilatationErrors()
         (
             phase.index(),
             fvi::ddt(alpha) + fvi::div(phase.alphaPhi())
-          - (fluid_.fvModels().source(alpha, rho) & rho)()()/rho()
+          - (fluid_.fvModels().source(alpha, rho) & rho())/rho()
         );
 
         for (label i = diameter.iFirst(); i <= diameter.iLast(); ++ i)
@@ -856,7 +856,7 @@ Foam::populationBalanceModel::populationBalanceModel
                 << ": dSph = " << dSphs_[i].value()
                 << ", min/average/max fraction = "
                 << min(fs_[i]()).value() << '/'
-                << average(fs_[i]()) << '/'
+                << average(fs_[i]()).value() << '/'
                 << max(fs_[i]()).value() << endl;
         }
 
@@ -1460,7 +1460,7 @@ void Foam::populationBalanceModel::solve()
 
     int iCorr = 0;
     scalar maxInitialResidual = 1;
-    while (++iCorr <= nCorr && maxInitialResidual > tolerance)
+    while (++iCorr <= nCorr && maxInitialResidual >= tolerance)
     {
         Info<< "populationBalance " << this->name()
             << ": Iteration " << iCorr << endl;
@@ -1498,7 +1498,7 @@ void Foam::populationBalanceModel::solve()
                 (
                     fvm::Sp
                     (
-                        max(phase.residualAlpha() - alpha, scalar(0))
+                        max(phase.residualAlpha() - alpha(), scalar(0))
                        /mesh().time().deltaT(),
                         fi
                     )
@@ -1517,23 +1517,32 @@ void Foam::populationBalanceModel::solve()
 
             fluid_.fvConstraints().constrain(fi);
         }
+
+        shapeModel_->solve();
     }
 
-    const volScalarField alphaF0(phases_.first()*fs_.first());
-    const volScalarField alphaFNm1(phases_.last()*fs_.last());
+    const volScalarField alphaF0(phases_.first().alpha()*fs_.first());
+    const volScalarField alphaFNm1(phases_.last().alpha()*fs_.last());
 
     Info<< "populationBalance " << this->name() << ": Group fraction "
         << "first/last = " << weightedAverage(alphaF0(), mesh().V()).value()
         << '/' << weightedAverage(alphaFNm1(), mesh().V()).value() << endl;
 
-    if (solverDict().lookupOrDefault<Switch>("scale", true))
+    if
+    (
+        solverDict().lookupOrDefaultBackwardsCompatible<Switch>
+        (
+            {"clip", "scale"},
+            true
+        )
+    )
     {
         Info<< "populationBalance " << this->name()
-            << ": Scaling group fractions " << endl;
+            << ": Clipping group fractions " << endl;
 
         forAll(fs_, i)
         {
-            fs_[i].max(0);
+            fs_[i].boundLower(0);
         }
 
         forAll(uniquePhases_, uniquePhasei)
@@ -1567,8 +1576,6 @@ void Foam::populationBalanceModel::solve()
                 << max(fSum).value() << endl;
         }
     }
-
-    shapeModel_->solve();
 }
 
 
@@ -1608,7 +1615,7 @@ void Foam::populationBalanceModel::correct()
         alphas_() +=
             max
             (
-                uniquePhases_[uniquePhasei],
+                uniquePhases_[uniquePhasei].alpha(),
                 uniquePhases_[uniquePhasei].residualAlpha()
             );
     }
@@ -1630,7 +1637,7 @@ void Foam::populationBalanceModel::correct()
         invDsm +=
             max
             (
-                uniquePhases_[uniquePhasei],
+                uniquePhases_[uniquePhasei].alpha(),
                 uniquePhases_[uniquePhasei].residualAlpha()
             )
            /alphas_()
@@ -1690,7 +1697,7 @@ void Foam::populationBalanceModel::correct()
         U_() +=
             max
             (
-                uniquePhases_[uniquePhasei],
+                uniquePhases_[uniquePhasei].alpha(),
                 uniquePhases_[uniquePhasei].residualAlpha()
             )
            /alphas_()

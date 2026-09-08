@@ -27,7 +27,7 @@ License
 #include "localEulerDdtScheme.H"
 #include "hydrostaticInitialisation.H"
 #include "fvcMeshPhi.H"
-#include "fvcVolumeIntegrate.H"
+#include "fvcDomainIntegrate.H"
 #include "fvcReconstruct.H"
 #include "linear.H"
 #include "fviDiv.H"
@@ -76,7 +76,7 @@ Foam::solvers::isothermalFluid::pressureWork
             (
                 fvc::interpolate(rho())*fvc::meshPhi(rho(), U()),
                 p()/rho(),
-                "div(phi,(p|rho))"
+                "div(phi,p|rho)"
             );
     }
     else

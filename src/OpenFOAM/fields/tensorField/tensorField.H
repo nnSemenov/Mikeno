@@ -38,9 +38,6 @@ SourceFiles
 #include "vectorField.H"
 #include "tensorExpressions.H"
 
-#define TEMPLATE
-#include "FieldFunctionsM.H"
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
@@ -60,63 +57,7 @@ typedef Field<tensor> tensorField;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-UNARY_FUNCTION(scalar, tensor, tr)
-UNARY_FUNCTION(sphericalTensor, tensor, sph)
-UNARY_FUNCTION(symmTensor, tensor, symm)
-UNARY_FUNCTION(symmTensor, tensor, twoSymm)
-UNARY_FUNCTION(tensor, tensor, skew)
-UNARY_FUNCTION(tensor, tensor, dev)
-UNARY_FUNCTION(tensor, tensor, dev2)
-UNARY_FUNCTION(scalar, tensor, det)
-UNARY_FUNCTION(tensor, tensor, cof)
-UNARY_FUNCTION(tensor, tensor, inv)
-
-void inv
-(
-    Field<tensor>& tf,
-    const UList<tensor>& tf1,
-    const Vector<label>& solutionD
-);
-
-tmp<tensorField> inv
-(
-    const Field<tensor>& tf,
-    const Vector<label>& solutionD
-);
-
-tmp<tensorField> inv
-(
-    const SubField<tensor>& tf,
-    const Vector<label>& solutionD
-);
-
-tmp<tensorField> inv
-(
-    const tmp<tensorField>& tf,
-    const Vector<label>& solutionD
-);
-
-UNARY_FUNCTION(vector, tensor, eigenValues)
-UNARY_FUNCTION(tensor, tensor, eigenVectors)
-
-UNARY_FUNCTION(vector, symmTensor, eigenValues)
-UNARY_FUNCTION(tensor, symmTensor, eigenVectors)
-
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
-
-UNARY_OPERATOR(vector, tensor, *, hdual)
-UNARY_OPERATOR(tensor, vector, *, hdual)
-
-BINARY_OPERATOR(vector, vector, tensor, /, divide)
-BINARY_TYPE_OPERATOR(vector, vector, tensor, /, divide)
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

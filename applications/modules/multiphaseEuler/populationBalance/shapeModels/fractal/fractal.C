@@ -186,6 +186,13 @@ Foam::populationBalance::shapeModels::fractal::alphaC(const label i) const
 }
 
 
+const Foam::PtrList<Foam::volScalarField>&
+Foam::populationBalance::shapeModels::fractal::kappas() const
+{
+    return kappas_;
+}
+
+
 const Foam::volScalarField&
 Foam::populationBalance::shapeModels::fractal::fld(const label i) const
 {
@@ -243,7 +250,7 @@ void Foam::populationBalance::shapeModels::fractal::solve()
             (
                 fvm::Sp
                 (
-                    max(phase.residualAlpha() - alpha*fi, scalar(0))
+                    max(phase.residualAlpha() - alpha()*fi(), scalar(0))
                    /kappas_[i].mesh().time().deltaT(),
                     kappas_[i]
                 )
@@ -257,11 +264,6 @@ void Foam::populationBalance::shapeModels::fractal::solve()
         kappaiEqn.solve();
 
         popBal_.fluid().fvConstraints().constrain(kappas_[i]);
-
-        // Bound kappa so that the surface-area-volume ratio is greater than
-        // that of spherical particles of this group, but less than that of the
-        // particles represented by the first group
-        kappas_[i] = min(max(kappas_[i], 6/popBal_.dSph(i)), 6/popBal_.dSph(0));
 
         kappas_[i].correctBoundaryConditions();
     }
