@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
-
+#include "macros.H"
 #include "dynamicCode.H"
 #include "OSHA1stream.H"
 #include "dlLibraryTable.H"

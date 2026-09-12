@@ -153,6 +153,6 @@ Foam::tmp<Foam::volScalarField> Foam::heatTransferModels::Niegodajew::K(
     // So, K = 6*h*alpha_disp/d_disp. To keep this convention, h = Nu_this *
     // kappa_liquid / d_e, so K =6 * alpha_disp/d_disp * Nu * k_liq / d_e
 
-    return 6 * max(interface_.dispersed(), residualAlpha) * Nu *
+    return 6 * max(interface_.dispersed().alpha(), residualAlpha) * Nu *
         liquid.thermo().kappa() / (interface_.dispersed().d() * de);
 }

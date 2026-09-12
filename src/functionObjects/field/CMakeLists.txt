@@ -24,7 +24,7 @@ add_library(${target_name} SHARED
     streamlines/streamlinesParticle.C
     streamlines/streamlinesCloud.C
 
-    surfaceInterpolate/surfaceInterpolate.C
+    surfaceInterpolate/surfaceInterpolateFunctionObject.C
 
     volField/volField.C
 
@@ -125,6 +125,7 @@ target_link_libraries(${target_name} PRIVATE
 )
 
 target_include_directories(${target_name} PRIVATE
+    ${LIB_SRC}/finiteVolume/lnInclude
     ${LIB_SRC}/tracking/lnInclude
     ${LIB_SRC}/ThermophysicalTransportModels/thermophysicalTransportModel/lnInclude
 )

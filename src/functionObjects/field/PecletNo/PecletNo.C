@@ -29,7 +29,7 @@ License
 #include "surfaceInterpolate.H"
 #include "addToRunTimeSelectionTable.H"
 
-#include "fvc.H"
+// #include "fvc.H"
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam

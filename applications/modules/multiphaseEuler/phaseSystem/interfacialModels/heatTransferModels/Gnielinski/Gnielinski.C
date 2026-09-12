@@ -72,7 +72,7 @@ Foam::tmp<Foam::volScalarField> Foam::heatTransferModels::Gnielinski::K(
     if (this->writeNu_ and interface_.mesh().time().writeTime()) {
         Nu.write();
     }
-    return 6 * max(interface_.dispersed(), residualAlpha) *
+    return 6 * max(interface_.dispersed().alpha(), residualAlpha) *
         interface_.continuous().thermo().kappa() * Nu /
         sqr(interface_.dispersed().d());
 }

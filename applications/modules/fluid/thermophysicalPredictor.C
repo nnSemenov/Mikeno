@@ -50,7 +50,7 @@ void Foam::solvers::fluid::thermophysicalPredictor()
 
     if (buoyancy.valid())
     {
-        EEqn -= rho()*(U() & buoyancy->g);
+        EEqn -= rho().internalField() * (U().internalField() & buoyancy->g);
     }
 
     EEqn.relax();

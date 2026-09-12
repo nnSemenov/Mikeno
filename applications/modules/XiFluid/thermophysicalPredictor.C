@@ -480,7 +480,8 @@ void Foam::solvers::XiFluid::HuSolve
 
     if (buoyancy.valid())
     {
-        HuEqn -= b()*rho()*(U() & buoyancy->g);
+        HuEqn -= b.internalField() * rho().internalField() *
+            (U().internalField() & buoyancy->g);
     }
 
     HuEqn.relax();
@@ -525,7 +526,8 @@ void Foam::solvers::XiFluid::HbSolve
 
     if (buoyancy.valid())
     {
-        HbEqn -= c()*rho()*(U() & buoyancy->g);
+        HbEqn -= c.internalField() * rho().internalField() *
+            (U().internalField() & buoyancy->g);
     }
 
     HbEqn.relax();

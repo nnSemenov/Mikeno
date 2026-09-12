@@ -78,12 +78,13 @@ void Foam::solvers::multicomponentFluid::setRDeltaT()
         const volInternalScalarField rDeltaTT
         (
             mag(reaction->Qdot())
-           /(alphaTemp*rho()*thermo.Cp()()*thermo.T()())
+           /
+            (rho().internalField() * thermo().Cp().internalField() * thermo().T().internalField() * alphaTemp)
         );
 
-        Info<< "    Temperature = "
-            << 1/(gMax(rDeltaTT.primitiveField()) + vSmall) << ", "
-            << 1/(gMin(rDeltaTT.primitiveField()) + vSmall) << endl;
+        Info << "    Temperature = "
+             << 1 / (gMax(rDeltaTT.primitiveField()) + vSmall) << ", "
+             << 1 / (gMin(rDeltaTT.primitiveField()) + vSmall) << endl;
 
         rDeltaT.internalFieldRef() = max(rDeltaT(), rDeltaTT);
     }

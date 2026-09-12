@@ -54,7 +54,6 @@ SourceFiles
 #define RedlichKwong_H
 
 #include "autoPtr.H"
-#include "GeometricSymmTensorField.H"
 #include "../equationOfState/cubicEOS.H"
 
 namespace Foam
