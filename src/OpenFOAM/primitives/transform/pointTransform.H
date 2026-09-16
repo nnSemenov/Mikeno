@@ -46,6 +46,11 @@ namespace Foam
 
 struct pointTransformOp
 {
+    // Add these to make pointMeshMovers happy
+    inline static const word::Null prefix{};
+    inline static const word::Null infix{};
+    inline static const word::Null postfix{};
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 

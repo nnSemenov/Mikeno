@@ -172,7 +172,7 @@ struct AllContainers
 {
     using allContainersX = AllContainers<std::decay_t<X>>;
 
-    static const unsigned n = allContainersX::n;
+    static constexpr unsigned n = allContainersX::n;
 
     using type = typename allContainersX::type;
 
@@ -206,9 +206,9 @@ struct TypeContainers
 {
     using typeContainersX = TypeContainers<std::decay_t<X>, Type>;
 
-    static const unsigned n = typeContainersX::n;
+    static constexpr unsigned n = typeContainersX::n;
 
-    template<class Property, unsigned I>
+    template <class Property, unsigned I>
     static typename Property::type get
     (
         const UnaryExpression<X, Op>& e
@@ -325,7 +325,7 @@ struct Operation<UnaryExpression<X, Op>>
 {
     using type = Op;
 
-    static const signed char precedence = Op::precedence;
+    static constexpr signed char precedence = Op::precedence;
 };
 
 //- Specialise Name for the unary expression. Wraps the name of the

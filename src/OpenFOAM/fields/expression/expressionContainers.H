@@ -198,7 +198,7 @@ struct AllContainers;
 template<class Expression>
 struct AllContainers<Expression, EnableIfNotExpressionable<Expression>>
 {
-    static const unsigned n = 0;
+    static constexpr unsigned n = 0;
 
     using type = nil;
 
@@ -214,7 +214,7 @@ struct AllContainers<Expression, EnableIfNotExpressionable<Expression>>
 template<class Expression>
 struct AllContainers<Expression, EnableIfExpressionable<Expression>>
 {
-    static const unsigned n = 1;
+    static constexpr unsigned n = 1;
 
     using type = Expression;
 
@@ -270,7 +270,7 @@ struct TypeContainers;
 template<class Expression, class Type>
 struct TypeContainers<Expression, Type, EnableIfNotBaseOf<Type, Expression>>
 {
-    static const unsigned n = 0;
+    static constexpr unsigned n = 0;
 
     template<class Property, unsigned, unsigned N>
     static void get
@@ -284,7 +284,7 @@ struct TypeContainers<Expression, Type, EnableIfNotBaseOf<Type, Expression>>
 template<class Expression, class Type>
 struct TypeContainers<Expression, Type, EnableIfBaseOf<Type, Expression>>
 {
-    static const unsigned n = 1;
+    static constexpr unsigned n = 1;
 
     template<class Property, unsigned>
     static typename Property::type get(const Expression& e)

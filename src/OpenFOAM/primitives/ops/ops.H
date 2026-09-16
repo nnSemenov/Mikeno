@@ -47,8 +47,8 @@ namespace Foam
 
 struct nopOp
 {
-    static const word::Null prefix;
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    inline static const word::Null postfix;
 
     static const signed char precedence =
         expression::Operation<void>::precedence;
@@ -72,8 +72,8 @@ struct nopOp
 
 struct promoteOp
 {
-    static const word::Null prefix;
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    inline static const word::Null postfix;
 
     static const signed char precedence = 2;
 
@@ -96,8 +96,8 @@ struct promoteOp
 
 struct negateOp
 {
-    static const char prefix = '-';
-    static const word::Null postfix;
+    static constexpr char prefix = '-';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 2;
 
@@ -120,8 +120,8 @@ struct negateOp
 
 struct notOp
 {
-    static const char prefix = '!';
-    static const word::Null postfix;
+    static constexpr char prefix = '!';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 2;
 
@@ -145,7 +145,7 @@ struct notOp
     struct Func##Op                                                            \
     {                                                                          \
         static constexpr const char* prefix = #Func"(";                        \
-        static const char postfix = ')';                                       \
+        static constexpr char postfix = ')';                                       \
                                                                                \
         static const signed char precedence =                                  \
             expression::Operation<void>::precedence;                           \
@@ -177,9 +177,9 @@ UnaryFunctionOp(cmptMag)
 
 struct addOp
 {
-    static const word::Null prefix;
-    static const char infix = '+';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '+';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 0;
 
@@ -222,9 +222,9 @@ using sumOp = addOp;
 
 struct subtractOp
 {
-    static const word::Null prefix;
-    static const char infix = '-';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '-';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 0;
 
@@ -253,9 +253,9 @@ struct subtractOp
 
 struct multiplyOp
 {
-    static const word::Null prefix;
-    static const char infix = '*';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '*';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 1;
 
@@ -284,9 +284,9 @@ struct multiplyOp
 
 struct divideOp
 {
-    static const word::Null prefix;
-    static const char infix = '|';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '|';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 1;
 
@@ -315,9 +315,9 @@ struct divideOp
 
 struct innerOp
 {
-    static const word::Null prefix;
-    static const char infix = '&';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '&';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 1;
 
@@ -336,9 +336,9 @@ struct innerOp
 
 struct crossOp
 {
-    static const word::Null prefix;
-    static const char infix = '^';
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    static constexpr char infix = '^';
+    inline static const word::Null postfix;
 
     static const signed char precedence = 1;
 
@@ -358,8 +358,8 @@ struct crossOp
 struct stabiliseOp
 {
     static constexpr const char* prefix = "stabilise(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence =
         expression::Operation<void>::precedence;
@@ -386,8 +386,8 @@ struct stabiliseOp
 struct maxOp
 {
     static constexpr const char* prefix = "max(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence =
         expression::Operation<void>::precedence;
@@ -425,8 +425,8 @@ struct maxOp
 struct minOp
 {
     static constexpr const char* prefix = "min(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence =
         expression::Operation<void>::precedence;
@@ -463,9 +463,9 @@ struct minOp
 
 struct minModOp
 {
-    static constexpr const char* prefix = "minMod(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "minMod(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence =
         expression::Operation<void>::precedence;
@@ -497,9 +497,9 @@ struct minModOp
 
 struct cmptMultiplyOp
 {
-    static constexpr const char* prefix = "cmptMultiply(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "cmptMultiply(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence = 1;
 
@@ -524,9 +524,9 @@ struct cmptMultiplyOp
 
 struct cmptDivideOp
 {
-    static constexpr const char* prefix = "cmptDivide(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "cmptDivide(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence = 1;
 
@@ -551,9 +551,9 @@ struct cmptDivideOp
 
 struct cmptPowOp
 {
-    static constexpr const char* prefix = "cmptPow(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "cmptPow(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
     static const signed char precedence =
         expression::Operation<void>::precedence;

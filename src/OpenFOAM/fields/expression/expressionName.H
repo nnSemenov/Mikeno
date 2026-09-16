@@ -64,7 +64,7 @@ struct Operation
 {
     using type = void;
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         std::numeric_limits<signed char>::min();
 };
 

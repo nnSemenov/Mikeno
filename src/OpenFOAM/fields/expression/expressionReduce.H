@@ -64,7 +64,7 @@ namespace expression
 template<class Type>
 struct Reduce
 {
-    static const bool globalReduce = false;
+    static constexpr bool globalReduce = false;
 
     template<class Op, class Value>
     static const Value& value
@@ -88,7 +88,7 @@ struct ReduceIterable;
 template<template<class ...> class Container, class Type, class ... Args>
 struct ReduceIterable<Container<Type, Args ...>>
 {
-    static const bool globalReduce = false;
+    static constexpr bool globalReduce = false;
 
     template<class Op, class Expression>
     static typename ResultIterable<Container<Type, Args ...>>::

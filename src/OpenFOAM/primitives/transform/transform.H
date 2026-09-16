@@ -190,12 +190,12 @@ inline dimensionSet transform
 struct transformOp
 {
     static constexpr const char* prefix = "transform(";
-    static const char infix = ',';
-    static const char postfix = ')';
-    static const signed char precedence =
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static word name(const word& t, const word& v)
     {
@@ -245,12 +245,12 @@ inline symmTensor transformMask<symmTensor>(const tensor& t)
 struct transformMaskOp
 {
     static constexpr const char* prefix = "transformMask(";
-    static const char infix = ',';
-    static const char postfix = ')';
-    static const signed char precedence =
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static word name(const word& mt, const word& t)
     {

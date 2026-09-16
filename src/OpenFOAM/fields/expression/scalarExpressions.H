@@ -45,14 +45,14 @@ namespace Foam
 
 struct powOp
 {
-    static constexpr const char* prefix = "pow(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "pow(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const scalar a, const float b)
     {
@@ -92,14 +92,14 @@ struct powOp
 
 struct integerPowOp
 {
-    static constexpr const char* prefix = "integerPow(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "integerPow(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const scalar a, const label b)
     {
@@ -113,14 +113,14 @@ struct integerPowOp
 
 struct integerRootOp
 {
-    static constexpr const char* prefix = "integerRoot(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "integerRoot(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const scalar a, const label b)
     {
@@ -185,14 +185,14 @@ BinaryEagerFunction(pow);
 
 struct atan2Op
 {
-    static constexpr const char* prefix = "atan2(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "atan2(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const scalar a, const scalar b)
     {
@@ -209,14 +209,14 @@ BinaryFunction(atan2);
 
 struct jnOp
 {
-    static constexpr const char* prefix = "jn(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "jn(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const int n, const scalar s)
     {
@@ -233,14 +233,14 @@ BinaryFunction(jn);
 
 struct ynOp
 {
-    static constexpr const char* prefix = "yn(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "yn(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     static scalar value(const int n, const scalar s)
     {

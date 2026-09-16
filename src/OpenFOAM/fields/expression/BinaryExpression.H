@@ -340,7 +340,7 @@ struct AllContainers
     using allContainersA = AllContainers<std::decay_t<A>>;
     using allContainersB = AllContainers<std::decay_t<B>>;
 
-    static const unsigned n = allContainersA::n + allContainersB::n;
+    static constexpr unsigned n = allContainersA::n + allContainersB::n;
 
     using type =
         typename std::conditional
@@ -409,7 +409,7 @@ struct TypeContainers
     using typeContainersA = TypeContainers<std::decay_t<A>, Type>;
     using typeContainersB = TypeContainers<std::decay_t<B>, Type>;
 
-    static const unsigned n = typeContainersA::n + typeContainersB::n;
+    static constexpr unsigned n = typeContainersA::n + typeContainersB::n;
 
     template<class Property, unsigned I>
     static std::enable_if_t
@@ -615,7 +615,7 @@ struct Operation<BinaryExpression<A, B, Op>>
 {
     using type = Op;
 
-    static const signed char precedence = Op::precedence;
+    static constexpr signed char precedence = Op::precedence;
 };
 
 //- Specialise Name for the binary expression. Wraps the names of the

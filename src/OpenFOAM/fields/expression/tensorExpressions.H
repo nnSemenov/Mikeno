@@ -67,10 +67,10 @@ UnaryOpFunction(skew)
 
 struct hdualOp
 {
-    static const char prefix = '*';
-    static const word::Null postfix;
+    static constexpr char prefix = '*';
+    inline static const word::Null postfix;
 
-    static const signed char precedence = 2;
+    static constexpr signed char precedence = 2;
 
     static vector value(const symmTensor& x)
     {
@@ -103,13 +103,13 @@ UnaryOperator(*, hdual)
 
 struct ddotOp
 {
-    static const word::Null prefix;
-    static constexpr const char* infix = "&&";
-    static const word::Null postfix;
+    inline static const word::Null prefix;
+    inline static const char* infix = "&&";
+    inline static const word::Null postfix;
 
-    static const signed char precedence = 1;
+    static constexpr signed char precedence = 1;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     template<class A, class B>
     static auto value(const A& a, const B& b)

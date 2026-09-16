@@ -61,13 +61,13 @@ struct powProductOp;
 template<>
 struct powProductOp<0>
 {
-    static constexpr const char* prefix = "pow<0>(";
-    static const char postfix = ')';
+    inline static const char* prefix = "pow<0>(";
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 0>::type value
@@ -88,13 +88,13 @@ struct powProductOp<0>
 template<>
 struct powProductOp<1>
 {
-    static constexpr const char* prefix = "pow<1>(";
-    static const char postfix = ')';
+    inline static const char* prefix = "pow<1>(";
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 1>::type value
@@ -115,13 +115,13 @@ struct powProductOp<1>
 template<>
 struct powProductOp<2>
 {
-    static constexpr const char* prefix = "pow<2>(";
-    static const char postfix = ')';
+    inline static const char* prefix = "pow<2>(";
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 2>::type value
@@ -197,14 +197,14 @@ BinaryFunction(cmptDivide);
 
 struct componentOp
 {
-    static constexpr const char* prefix = "component(";
-    static const char infix = ',';
-    static const char postfix = ')';
+    inline static const char* prefix = "component(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
 
-    static const signed char precedence =
+    static constexpr signed char precedence =
         expression::Operation<void>::precedence;
 
-    static const bool associative = false;
+    static constexpr bool associative = false;
 
     template<class VSType, class Dtype>
     static auto value(const VSType& vs, const Dtype& d)
