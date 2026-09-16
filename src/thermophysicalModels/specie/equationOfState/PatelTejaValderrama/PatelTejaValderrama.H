@@ -420,7 +420,7 @@ class PatelTejaValderrama : public Specie
 
     inline static word typeName()
     {
-        return "PatelTejaValderrama<" + word(Specie::typeName_()) + '>';
+        return word("PatelTejaValderrama<", word(Specie::typeName_()), '>');
     }
 
     inline EOSCore core(scalar p, scalar T) const

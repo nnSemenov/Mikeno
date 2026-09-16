@@ -352,7 +352,7 @@ class RedlichKwong : public Specie
     //- Return the instantiated type name
     static word typeName()
     {
-        return "RedlichKwong<" + word(Specie::typeName_()) + '>';
+        return word("RedlichKwong<", word(Specie::typeName_()), '>');
     }
     //    inline Foam::cubicEOSRawCoefficient coeffRaw(scalar p, scalar T)
     //    const;
