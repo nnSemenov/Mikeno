@@ -127,9 +127,9 @@ public:
         tmp<volScalarField> k(const tmp<volTensorField>& gradU) const
         {
             return
-                pow(2.0*flm_/fmm_, 2.0/3.0)
-              * pow(this->Ce_, -2.0/3.0)
-              * sqr(this->delta())*magSqr(dev(symm(gradU)));
+                pow(2 * flm_ / fmm_, static_cast<scalar>(2.0 / 3.0)) *
+                pow(this->Ce_, static_cast<scalar>(-2.0 / 3.0)) *
+                sqr(this->delta()) * magSqr(dev(symm(gradU)));
         }
 
         //- Return SGS kinetic energy

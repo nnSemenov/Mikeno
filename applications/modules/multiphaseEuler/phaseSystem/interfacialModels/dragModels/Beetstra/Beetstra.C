@@ -84,15 +84,15 @@ Foam::tmp<Foam::volScalarField> Foam::dragModels::Beetstra::CdRe() const
     const volScalarField F0
     (
         "F0",
-        10*alpha1/sqr(alpha2) + sqr(alpha2)*(1 + 1.5*sqrt(alpha1))
+        10*alpha1/sqr(alpha2) + sqr(alpha2)*(1 + scalar{1.5}*sqrt(alpha1))
     );
 
     const volScalarField F1
     (
         "F1",
-        0.413*Res/(24*sqr(alpha2))*(1.0/alpha2
-        + 3*alpha1*alpha2 + 8.4*pow(Res, -0.343))
-        /(1 + pow(10, 3*alpha1)*pow(Res, -(1 + 4*alpha1)/2.0))
+        scalar{0.413}*Res/(24*sqr(alpha2))*(1/alpha2
+        + 3*alpha1*alpha2 + scalar{8.4}*pow(Res, scalar{-0.343}))
+        /(1 + pow(scalar{10}, 3*alpha1)*pow(Res, -(1 + 4*alpha1)/2))
     );
 
     return 24*alpha2*(F0 + F1);

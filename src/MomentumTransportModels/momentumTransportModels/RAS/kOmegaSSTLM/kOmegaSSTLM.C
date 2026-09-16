@@ -41,7 +41,7 @@ tmp<volScalarField> kOmegaSSTLM<BasicMomentumTransportModel>::F1
 ) const
 {
     const volScalarField Ry(this->y()*sqrt(this->k_)/this->nu());
-    const volScalarField F3(exp(-pow(Ry/120.0, 8)));
+    const volScalarField F3(exp(-pow(Ry / scalar{120.0}, 8)));
 
     return max(kOmegaSST<BasicMomentumTransportModel>::F1(CDkOmega), F3);
 }
@@ -88,7 +88,7 @@ tmp<volInternalScalarField> kOmegaSSTLM<BasicMomentumTransportModel>::Fthetat
        /max(375*Omega*nu*ReThetat_(), sqr(deltaU_))
     );
     const volInternalScalarField ReOmega(sqr(y)*omega/nu);
-    const volInternalScalarField Fwake(exp(-sqr(ReOmega/1e5)));
+    const volInternalScalarField Fwake(exp(-sqr(ReOmega / scalar{1e5})));
 
     return volInternalScalarField::New
     (
@@ -98,11 +98,10 @@ tmp<volInternalScalarField> kOmegaSSTLM<BasicMomentumTransportModel>::Fthetat
             max
             (
                 Fwake*exp(-pow4(yBydelta)),
-                (1 - sqr((gammaInt_() - 1.0/ce2_)/(1 - 1.0/ce2_)))
-            ),
-            scalar(1)
-        )
-    );
+                (1 -
+                 sqr((gammaInt_() - scalar{1} / ce2_) /
+                     (1 - scalar{1} / ce2_)))),
+            scalar{1}));
 }
 
 

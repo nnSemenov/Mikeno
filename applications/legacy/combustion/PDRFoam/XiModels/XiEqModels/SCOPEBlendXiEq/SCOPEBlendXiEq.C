@@ -84,9 +84,8 @@ Foam::tmp<Foam::volScalarField> Foam::XiEqModels::SCOPEBlend::XiEq() const
 {
     return pow
     (
-        pow4(1.0/XiEqModelL_->XiEq()) + pow4(1.0/XiEqModelH_->XiEq()),
-        -0.25
-    );
+        pow4(1 / XiEqModelL_->XiEq()) + pow4(1 / XiEqModelH_->XiEq()),
+               scalar{-0.25});
 }
 
 

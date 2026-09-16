@@ -68,31 +68,32 @@ Foam::dragModels::IshiiZuber::CdRe() const
     const volScalarField mud(interface_.dispersed().fluidThermo().mu());
     const volScalarField muc(interface_.continuous().fluidThermo().mu());
 
-    const volScalarField muStar((mud + 0.4*muc)/(mud + muc));
+    const volScalarField muStar((mud + scalar{0.4}*muc)/(mud + muc));
 
     const volScalarField muMix
     (
         muc
-       *pow(max(1 - interface_.dispersed().alpha(), 1e-3), -2.5*muStar)
-    );
+       *
+        pow(max(1 - interface_.dispersed().alpha(), scalar{1e-3}),
+            scalar{-2.5} * muStar));
 
     const volScalarField ReM(Re*muc/muMix);
     const volScalarField CdRe
     (
-        pos0(1000 - ReM)*24*(1 + 0.1*pow(ReM, 0.75))
-      + neg(1000 - ReM)*0.44*ReM
+        pos0(1000 - ReM)*24*(1 + scalar{0.1}*pow(ReM, scalar{0.75}))
+      + neg(1000 - ReM)*scalar{0.44}*ReM
     );
 
     volScalarField F((muc/muMix)*sqrt(1 - interface_.dispersed().alpha()));
     F.boundLower(1e-3);
 
-    const volScalarField Ealpha((1 + 17.67*pow(F, 0.8571428))/(18.67*F));
+    const volScalarField Ealpha((1 + scalar{17.67}*pow(F, scalar{0.8571428}))/(scalar{18.67}*F));
 
-    const volScalarField CdReEllipse(Ealpha*0.6666*sqrt(Eo)*Re);
+    const volScalarField CdReEllipse(Ealpha*scalar{0.6666}*sqrt(Eo)*Re);
 
     return
         pos0(CdReEllipse - CdRe)
-       *min(CdReEllipse, Re*sqr(1 - interface_.dispersed().alpha())*2.66667)
+       *min(CdReEllipse, Re*sqr(1 - interface_.dispersed().alpha())*scalar{2.66667})
       + neg(CdReEllipse - CdRe)*CdRe;
 }
 
