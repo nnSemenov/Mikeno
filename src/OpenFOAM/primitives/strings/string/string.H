@@ -58,14 +58,6 @@ namespace Foam
 {
 
 // Forward declaration of classes
-class Istream;
-class Ostream;
-
-// Forward declaration of friend functions and operators
-class string;
-Istream& operator>>(Istream&, string&);
-Ostream& operator<<(Ostream&, const string&);
-Ostream& operator<<(Ostream&, const std::string&);
 
 template<class T>
 class UList;
@@ -78,6 +70,19 @@ class string
 :
     public std::string
 {
+protected:
+
+    // Protected Static Member Functions
+
+        inline static void Append(string& s);
+
+        template<class Str>
+        inline static void Append(string& s, const Str& a);
+
+        template<class Str, class... Strs>
+        inline static void Append(string& s, const Str& a, Strs const&... strs);
+
+
 public:
 
     // Static Data Members
@@ -87,6 +92,9 @@ public:
 
         //- An empty string
         static const string null;
+
+        //- An empty string type
+        struct Null {};
 
 
     //- Hashing function class, shared by all the derived classes
@@ -105,17 +113,20 @@ public:
         //- Construct null
         inline string();
 
-        //- Construct from std::string
-        inline string(const std::string&);
-
         //- Copy constructor
         inline string(const string&);
 
         //- Move constructor
         inline string(string&&);
 
+        //- Construct from std::string
+        inline string(const std::string&);
+
         //- Construct as copy of character array
         inline string(const char*);
+
+        //- Construct from a single character
+        inline string(const char);
 
         //- Construct as copy of UList of character
         string(const UList<char>&);
@@ -123,14 +134,15 @@ public:
         //- Construct as copy of specified number of characters
         inline string(const char*, const size_type);
 
-        //- Construct from a single character
-        inline string(const char);
-
         //- Construct from copies of a single character
         inline string(const size_type, const char);
 
         //- Construct from Istream
         string(Istream&);
+
+        //- Concatenating constructor
+        template<class Str, class Str1, class... Strs>
+        inline string(const Str& str, const Str1& str1, Strs const&... strs);
 
 
     // Member Functions
@@ -265,6 +277,12 @@ public:
         //
         size_type findClosing(const char, const size_type) const;
 
+        template<class... Strs>
+        inline string& append(Strs const&... strs);
+
+        template<class Str, class... Strs>
+        inline static string cat(const Str& a, Strs const&... strs);
+
 
     // Member Operators
 
@@ -284,16 +302,19 @@ public:
         inline void operator=(const string&);
         inline void operator=(string&&);
 
+        using std::string::operator+=;
 
-    // IOstream Operators
-
-        friend Istream& operator>>(Istream&, string&);
-        friend Ostream& operator<<(Ostream&, const string&);
+        inline void operator+=(const Null&)
+        {}
 };
 
 
 void writeEntry(Ostream& os, const char* value);
 void writeEntry(Ostream& os, const string& value);
+
+Istream& operator>>(Istream&, string&);
+Ostream& operator<<(Ostream&, const string&);
+Ostream& operator<<(Ostream&, const std::string&);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

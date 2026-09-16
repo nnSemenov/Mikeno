@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 {
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 
                 if (!ign.ignited())
                 {
-                    thermo.heu() == thermo.he();
+                    thermo.heu() = thermo.he();
                 }
 
                 #include "pEqn.H"

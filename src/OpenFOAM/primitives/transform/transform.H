@@ -189,6 +189,9 @@ inline dimensionSet transform
 
 struct transformOp
 {
+    static constexpr const char* prefix = "transform(";
+    static const char infix = ',';
+    static const char postfix = ')';
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
@@ -196,18 +199,13 @@ struct transformOp
 
     static word name(const word& t, const word& v)
     {
-        return "transform(" + t + ',' + v + ')';
+        return word("transform(", t, ',', v, ')');
     }
 
-    template<class Type>
-    static Type value(const tensor& t, const Type& v)
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
     {
-        return transform(t, v);
-    }
-
-    static dimensionSet value(const dimensionSet& t, const dimensionSet& v)
-    {
-        return transform(t, v);
+        return transform(a, b);
     }
 };
 
@@ -246,6 +244,9 @@ inline symmTensor transformMask<symmTensor>(const tensor& t)
 
 struct transformMaskOp
 {
+    static constexpr const char* prefix = "transformMask(";
+    static const char infix = ',';
+    static const char postfix = ')';
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
@@ -253,13 +254,7 @@ struct transformMaskOp
 
     static word name(const word& mt, const word& t)
     {
-        return "transform(" + mt + ',' + t + ')';
-    }
-
-    template<class MaskType, class Type>
-    static Type value(const MaskType& mt, const Type& t)
-    {
-        return t;
+        return word("transformMask(", mt, ',', t, ')');
     }
 
     static sphericalTensor value(const sphericalTensor& mt, const tensor& t)
@@ -277,9 +272,10 @@ struct transformMaskOp
         return symm(t);
     }
 
-    static dimensionSet value(const dimensionSet&, const dimensionSet& v)
+    template<class MaskType, class Type>
+    static Type value(const MaskType& mt, const Type& t)
     {
-        return v;
+        return t;
     }
 };
 

@@ -30,8 +30,8 @@ Description
 #ifndef vectorExpressions_H
 #define vectorExpressions_H
 
-#include "expressions.H"
 #include "vector.H"
+#include "expressions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -45,14 +45,8 @@ UnaryFunction(cmptMax)
 UnaryFunction(cmptMin)
 UnaryFunction(cmptAv)
 UnaryFunction(cmptMag)
-
-#define UnaryVectorOpFunction(func)                                            \
-    UnaryOpFunction(vector, vector, func)
-
-UnaryVectorOpFunction(normalised)
-UnaryVectorOpFunction(perpendicular)
-
-#undef UnaryVectorOpFunction
+UnaryOpFunction(normalised)
+UnaryOpFunction(perpendicular)
 
 /*---------------------------------------------------------------------------*\
                          Class powProductOp Declaration
@@ -67,15 +61,13 @@ struct powProductOp;
 template<>
 struct powProductOp<0>
 {
+    static constexpr const char* prefix = "pow<0>(";
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& f)
-    {
-        return "pow<0>(" + f + ')';
-    }
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 0>::type value
@@ -96,15 +88,13 @@ struct powProductOp<0>
 template<>
 struct powProductOp<1>
 {
+    static constexpr const char* prefix = "pow<1>(";
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& f)
-    {
-        return "pow<1>(" + f + ')';
-    }
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 1>::type value
@@ -125,15 +115,13 @@ struct powProductOp<1>
 template<>
 struct powProductOp<2>
 {
+    static constexpr const char* prefix = "pow<2>(";
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& f)
-    {
-        return "pow<2>(" + f + ')';
-    }
 
     template<class Form, class Cmpt, direction Ncmpts>
     static typename powProduct<Form, 2>::type value
@@ -170,24 +158,11 @@ dimensioned<typename powProduct<Type, r>::type> pow
 {
     return dimensioned<typename powProduct<Type, r>::type>
     (
-        "pow(" + dt.name() + ',' + name(r) + ')',
+        word("pow(", dt.name(), ',', name(r), ')'),
         pow(dt.dimensions(), r),
         powProductOp<r>::value(dt.value())
     );
 }
-
-
-// template
-// <
-//     direction r,
-//     class X,
-//     class = EnableIfExpressionable<UnaryExpression<X, powProductOp<r>>>
-// >
-// UnaryExpression<const X&, powProductOp<r>>
-// pow(const X& x)
-// {
-//     return UnaryExpression<const X&, powProductOp<r>>(x);
-// }
 
 #define UnaryPowProduct(XPar, XArg, XVar)                                      \
     template                                                                   \
@@ -210,12 +185,6 @@ UnaryPowProduct(const X&, tmp<X>&& x, x)
 
 #undef UnaryPowProduct
 
-// void hmm()
-// {
-//     const Field<vector> f(1, vector::zero);
-//     Info << pow<2>(f);
-// }
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Binary vector functions
 
@@ -228,15 +197,14 @@ BinaryFunction(cmptDivide);
 
 struct componentOp
 {
+    static constexpr const char* prefix = "component(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& vs, const word& d)
-    {
-        return "component(" + vs + ',' + d + ')';
-    }
 
     template<class VSType, class Dtype>
     static auto value(const VSType& vs, const Dtype& d)

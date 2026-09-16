@@ -45,15 +45,14 @@ namespace Foam
 
 struct powOp
 {
+    static constexpr const char* prefix = "pow(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& a, const word& b)
-    {
-        return "pow(" + a + ',' + b + ')';
-    }
 
     static scalar value(const scalar a, const float b)
     {
@@ -80,8 +79,8 @@ struct powOp
         return integerPow(a, b);
     }
 
-    template<class Exp>
-    static dimensionSet value(const dimensionSet& a, const Exp& b)
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
     {
         return pow(a, b);
     }
@@ -93,15 +92,14 @@ struct powOp
 
 struct integerPowOp
 {
+    static constexpr const char* prefix = "integerPow(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& a, const word& b)
-    {
-        return "integerPow(" + a + ',' + b + ')';
-    }
 
     static scalar value(const scalar a, const label b)
     {
@@ -115,15 +113,14 @@ struct integerPowOp
 
 struct integerRootOp
 {
+    static constexpr const char* prefix = "integerRoot(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& a, const word& b)
-    {
-        return "integerRoot(" + a + ',' + b + ')';
-    }
 
     static scalar value(const scalar a, const label b)
     {
@@ -135,52 +132,52 @@ struct integerRootOp
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Unary scalar functions
 
-#define UnaryScalarOpFunction(func)                                            \
-    UnaryOpFunction(scalar, scalar, func)
+UnaryOpFunction(pow3)
+UnaryOpFunction(pow4)
+UnaryOpFunction(pow5)
+UnaryOpFunction(pow6)
+UnaryOpFunction(pow025)
+UnaryOpFunction(sqrt)
+UnaryOpFunction(sign)
+UnaryOpFunction(pos)
+UnaryOpFunction(pos0)
+UnaryOpFunction(neg)
+UnaryOpFunction(neg0)
+UnaryOpFunction(posPart)
+UnaryOpFunction(negPart)
+UnaryOpFunction(exp)
+UnaryOpFunction(log)
+UnaryOpFunction(log10)
+UnaryOpFunction(sin)
+UnaryOpFunction(cos)
+UnaryOpFunction(tan)
+UnaryOpFunction(asin)
+UnaryOpFunction(acos)
+UnaryOpFunction(atan)
 
-UnaryScalarOpFunction(pow3)
-UnaryScalarOpFunction(pow4)
-UnaryScalarOpFunction(pow5)
-UnaryScalarOpFunction(pow6)
-UnaryScalarOpFunction(pow025)
-UnaryScalarOpFunction(sqrt)
-UnaryScalarOpFunction(cbrt)
-UnaryScalarOpFunction(sign)
-UnaryScalarOpFunction(pos)
-UnaryScalarOpFunction(pos0)
-UnaryScalarOpFunction(neg)
-UnaryScalarOpFunction(neg0)
-UnaryScalarOpFunction(posPart)
-UnaryScalarOpFunction(negPart)
-UnaryScalarOpFunction(exp)
-UnaryScalarOpFunction(log)
-UnaryScalarOpFunction(log10)
-UnaryScalarOpFunction(sin)
-UnaryScalarOpFunction(cos)
-UnaryScalarOpFunction(tan)
-UnaryScalarOpFunction(asin)
-UnaryScalarOpFunction(acos)
-UnaryScalarOpFunction(atan)
-UnaryScalarOpFunction(sinh)
-UnaryScalarOpFunction(cosh)
-UnaryScalarOpFunction(tanh)
-UnaryScalarOpFunction(asinh)
-UnaryScalarOpFunction(acosh)
-UnaryScalarOpFunction(atanh)
-UnaryScalarOpFunction(erf)
-UnaryScalarOpFunction(erfc)
-UnaryScalarOpFunction(lgamma)
-UnaryScalarOpFunction(j0)
-UnaryScalarOpFunction(j1)
-UnaryScalarOpFunction(y0)
-UnaryScalarOpFunction(y1)
-
-#undef UnaryScalarOpFunction
+// Expensive unary scalar functions
+UnaryOpFunction(cbrt)
+UnaryOpFunction(sinh)
+UnaryOpFunction(cosh)
+UnaryOpFunction(tanh)
+UnaryOpFunction(asinh)
+UnaryOpFunction(acosh)
+UnaryOpFunction(atanh)
+UnaryOpFunction(erf)
+UnaryOpFunction(erfc)
+UnaryOpFunction(lgamma)
+UnaryOpFunction(j0)
+UnaryOpFunction(j1)
+UnaryOpFunction(y0)
+UnaryOpFunction(y1)
 
 BinaryFunction(stabilise);
-BinaryFunction(pow);
 BinaryFunction(integerPow);
 BinaryFunction(integerRoot);
+
+// Eager evaluate pow to avoid interference with loop optimisation
+// Benefit demonstrated on x86 processors with sse2 and avx512
+BinaryEagerFunction(pow);
 
 /*---------------------------------------------------------------------------*\
                             Class atan2Op Declaration
@@ -188,15 +185,14 @@ BinaryFunction(integerRoot);
 
 struct atan2Op
 {
+    static constexpr const char* prefix = "atan2(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& a, const word& b)
-    {
-        return "atan2(" + a + ',' + b + ')';
-    }
 
     static scalar value(const scalar a, const scalar b)
     {
@@ -213,15 +209,14 @@ BinaryFunction(atan2);
 
 struct jnOp
 {
+    static constexpr const char* prefix = "jn(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& n, const word& s)
-    {
-        return "jn(" + n + ',' + s + ')';
-    }
 
     static scalar value(const int n, const scalar s)
     {
@@ -238,15 +233,14 @@ BinaryFunction(jn);
 
 struct ynOp
 {
+    static constexpr const char* prefix = "yn(";
+    static const char infix = ',';
+    static const char postfix = ')';
+
     static const signed char precedence =
         expression::Operation<void>::precedence;
 
     static const bool associative = false;
-
-    static word name(const word& n, const word& s)
-    {
-        return "yn(" + n + ',' + s + ')';
-    }
 
     static scalar value(const int n, const scalar s)
     {

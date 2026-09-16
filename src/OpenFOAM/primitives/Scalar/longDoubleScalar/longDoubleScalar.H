@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2018-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -121,6 +121,12 @@ MAXMINPOW(Scalar, double, Scalar)
 #define transFunc(func)            \
 inline Scalar func(const Scalar s) \
 {                                  \
+    return std::func(s);           \
+}
+
+#define cFunc(func)                \
+inline Scalar func(const Scalar s) \
+{                                  \
     return ::func(s);              \
 }
 
@@ -141,7 +147,7 @@ namespace Foam
 
 inline Scalar hypot(const Scalar x, const Scalar y)
 {
-    return ::hypotl(x, y);
+    return std::hypotl(x, y);
 }
 
 inline Scalar atan2(const Scalar y, const Scalar x)
@@ -167,6 +173,7 @@ inline Scalar yn(const int n, const Scalar s)
 #undef ScalarNaN
 #undef readScalar
 #undef transFunc
+#undef cFunc
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

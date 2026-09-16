@@ -53,7 +53,7 @@ struct pointTransformOp
 
     static word name(const word& st, const word& v)
     {
-        return "pointTransform(" + st + ',' + v + ')';
+        return word("pointTransform(", st, ',', v, ')');
     }
 
     template<class Type>
@@ -62,9 +62,10 @@ struct pointTransformOp
         return st.pointTransform(v);
     }
 
-    static dimensionSet value(const dimensionSet& st, const dimensionSet& v)
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
     {
-        return transform(st, v);
+        return transform(a, b);
     }
 };
 
