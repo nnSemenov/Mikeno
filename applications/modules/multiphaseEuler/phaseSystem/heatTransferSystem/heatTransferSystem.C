@@ -23,6 +23,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include <array>
+
 #include "heatTransferSystem.H"
 
 #include "fvmSup.H"
@@ -143,65 +145,6 @@ void Foam::heatTransferSystem::readModels()
 }
 
 
-template<class ... Args>
-Foam::Pair<Foam::tmp<Foam::volScalarField>> Foam::heatTransferSystem::Hs
-(
-    const phaseModel& phase1,
-    const phaseModel& phase2,
-    Args ... args
-) const
-{
-    auto error = [&](const word& why)
-    {
-        FatalErrorInFunction
-            << why << " two-resistance heat transfer models found that "
-            << "provide a heat transfer coefficient between phases "
-            << phase1.name() << " and " << phase2.name() << exit(FatalError);
-    };
-
-    autoPtr<Pair<tmp<volScalarField>>> HsPtr;
-
-    const phaseInterface interface(phase1, phase2);
-
-    auto iter = sidedModels_.find(interface);
-
-    if (iter != sidedModels_.end())
-    {
-        HsPtr.set
-        (
-            new Pair<tmp<volScalarField>>
-            (
-                iter()->KinThe(phase1, args ...),
-                iter()->KinThe(phase2, args ...)
-            )
-        );
-    }
-
-    const Foam::fvModels& fvModels = Foam::fvModels::New(fluid_.mesh());
-
-    forAll(fvModels, i)
-    {
-        if (!isA<fv::twoResistanceHeatTransfer>(fvModels[i])) continue;
-
-        const fv::twoResistanceHeatTransfer& heatTransferFvModel =
-            refCast<const fv::twoResistanceHeatTransfer>(fvModels[i]);
-
-        Pair<tmp<volScalarField>> Hs =
-            heatTransferFvModel.Ks(phase1, phase2, args ...);
-
-        if (!Hs.first().valid() || !Hs.second().valid()) continue;
-
-        if (HsPtr.valid()) error("Multiple");
-
-        HsPtr.set(new Pair<tmp<volScalarField>>(Hs.first(), Hs.second()));
-    }
-
-    if (!HsPtr.valid()) error("No");
-
-    return HsPtr();
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::heatTransferSystem::heatTransferSystem
@@ -256,6 +199,44 @@ Foam::Pair<Foam::tmp<Foam::volScalarField>> Foam::heatTransferSystem::Hs
     return Hs<scalar>(phase1, phase2, residualAlpha);
 }
 
+std::optional<Foam::volScalarField::Internal> Foam::heatTransferSystem::HEff(
+    const phaseModel& from,
+    const phaseModel& to
+) const {
+    // try if one-resistance
+    const std::array<phaseInterfaceKey, 2> single_resist_keys{
+        {
+            phaseInterfaceKey{from, to},
+            phaseInterfaceKey{to, from}
+        }
+    };
+    for (auto& key : single_resist_keys) {
+        auto it = this->models_.find(key);
+        if (it == this->models_.end())
+            continue;
+        const volScalarField::Internal H{it()->K()};
+        const volScalarField& from_alpha = from;
+
+        volScalarField::Internal Hstab(
+            from_alpha.internalField() / max(from_alpha.internalField(), from.residualAlpha()) * H
+        );
+
+        return Hstab;
+    }
+
+    // Try as two-resistance
+    try {
+        auto Hs = this->Hs(from, to);
+        volScalarField::Internal HEff
+        (
+            Hs.first()() * Hs.second()() / (Hs.first()() + Hs.second()())
+        );
+        return HEff;
+    }
+    catch (const std::runtime_error& _) {
+        return std::nullopt;
+    }
+}
 
 Foam::autoPtr<Foam::HashPtrTable<Foam::fvScalarMatrix>>
 Foam::heatTransferSystem::heatTransfer() const

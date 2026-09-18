@@ -38,7 +38,16 @@ SourceFiles
 #ifndef heatTransferSystem_H
 #define heatTransferSystem_H
 
+#include <optional>
+#include <exception>
+
 #include "phaseSystem.H"
+
+#include "fvmSup.H"
+
+#include "heatTransferModel.H"
+
+#include "twoResistanceHeatTransfer.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -57,9 +66,9 @@ class heatTransferSystem
 :
     public IOdictionary
 {
-    // Private Type Definitions
-
-        //- Table of one-resistance heat transfer models
+    // Protected Type Definitions
+protected:
+    //- Table of one-resistance heat transfer models
         typedef
             HashPtrTable
             <
@@ -109,8 +118,52 @@ class heatTransferSystem
             const phaseModel& phase1,
             const phaseModel& phase2,
             Args ... args
-        ) const;
+        ) const {
+        auto error = [&](const word& why) {
+            auto err_str = why +
+                " two-resistance heat transfer models found that provide a heat transfer coefficient between phases " +
+                phase1.name() + " and " + phase2.name();
+            throw std::runtime_error{err_str};
+        };
 
+        autoPtr<Pair<tmp<volScalarField>>> HsPtr;
+
+        const phaseInterface interface(phase1, phase2);
+
+        auto iter = sidedModels_.find(interface);
+
+        if (iter != sidedModels_.end()) {
+            HsPtr.set
+            (
+                new Pair<tmp<volScalarField>>(
+                    iter()->KinThe(phase1, args...),
+                    iter()->KinThe(phase2, args...)
+                )
+            );
+        }
+
+        const Foam::fvModels& fvModels = Foam::fvModels::New(fluid_.mesh());
+
+        forAll(fvModels, i) {
+            if (!isA<fv::twoResistanceHeatTransfer>(fvModels[i])) continue;
+
+            const fv::twoResistanceHeatTransfer& heatTransferFvModel =
+                refCast<const fv::twoResistanceHeatTransfer>(fvModels[i]);
+
+            Pair<tmp<volScalarField>> Hs =
+                heatTransferFvModel.Ks(phase1, phase2, args...);
+
+            if (!Hs.first().valid() || !Hs.second().valid()) continue;
+
+            if (HsPtr.valid()) error("Multiple");
+
+            HsPtr.set(new Pair<tmp<volScalarField>>(Hs.first(), Hs.second()));
+        }
+
+        if (!HsPtr.valid()) error("No");
+
+        return HsPtr();
+    }
 
 public:
 
@@ -151,10 +204,17 @@ public:
             const scalar residualAlpha
         ) const;
 
-        //- Return the heat transfer matrices
-        autoPtr<HashPtrTable<fvScalarMatrix>> heatTransfer() const;
+        //- Return effective heat transfer coefficients between a pair of
+        // phases. Due to stabilization tricks, swappiness is not strictly gaurentted
+        std::optional<volScalarField::Internal> HEff(
+            const phaseModel& from,
+            const phaseModel& to
+        ) const;
 
-        //- Read base phaseProperties dictionary
+    //- Return the heat transfer matrices
+    autoPtr<HashPtrTable<fvScalarMatrix>> heatTransfer() const;
+
+    //- Read base phaseProperties dictionary
         virtual bool read();
 };
 
