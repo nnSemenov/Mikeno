@@ -37,6 +37,7 @@ SourceFiles
 #ifndef SolidThermalPhaseModel_H
 #define SolidThermalPhaseModel_H
 
+#include "autoPtr.H"
 #include "phaseModel.H"
 #include "phaseSolidThermophysicalTransportModel.H"
 
@@ -54,6 +55,7 @@ class SolidThermalPhaseModel
 :
     public BasePhaseModel
 {
+protected:
     // Thermophysical transport
 
         //- Pointer to the solid thermophysical transport model

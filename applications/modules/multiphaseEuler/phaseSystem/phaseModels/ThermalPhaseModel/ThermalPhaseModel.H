@@ -53,8 +53,8 @@ class ThermalPhaseModel
 :
     public ThermophysicalTransportPhaseModel<BasePhaseModel>
 {
-    // Private Data
-
+    // Protected Data
+protected:
         //- Gravitational acceleration
         const uniformDimensionedVectorField& g_;
 

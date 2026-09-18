@@ -36,6 +36,7 @@ SourceFiles
 #ifndef ThermophysicalTransportPhaseModel_H
 #define ThermophysicalTransportPhaseModel_H
 
+#include "autoPtr.H"
 #include "phaseModel.H"
 #include "phaseCompressibleMomentumTransportModel.H"
 #include "PhaseThermophysicalTransportModel.H"
@@ -79,6 +80,7 @@ class ThermophysicalTransportPhaseModel
 :
     public BasePhaseModel
 {
+protected:
     // Private Data
 
         //- Thermophysical transport model type
