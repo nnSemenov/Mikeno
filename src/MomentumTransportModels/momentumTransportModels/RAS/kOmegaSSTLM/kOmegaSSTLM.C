@@ -43,7 +43,6 @@ tmp<volScalarField> kOmegaSSTLM<BasicMomentumTransportModel>::F1
 {
     const volScalarField Ry(this->y()*sqrt(this->k_)/this->nu());
     const volScalarField F3(exp(-pow(Ry/120, 8)));
-    const volScalarField F3(exp(-pow(Ry / scalar{120.0}, 8)));
 
     return max(kOmegaSST<BasicMomentumTransportModel>::F1(CDkOmega), F3);
 }
