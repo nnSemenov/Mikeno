@@ -26,6 +26,7 @@ License
 #include "dynamicLagrangian.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
+#include "fviGrad.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -112,7 +113,7 @@ dynamicLagrangian<BasicMomentumTransportModel>::dynamicLagrangian
     filterPtr_(LESfilter::New(U.mesh(), this->typeDict(type))),
     filter_(filterPtr_()),
 
-    flm0_("flm0", flm_.dimensions(), 0.0),
+    flm0_("flm0", flm_.dimensions(), 0),
     fmm0_("fmm0", fmm_.dimensions(), vSmall)
 {}
 
