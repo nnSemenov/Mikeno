@@ -121,10 +121,10 @@ Foam::pointMeshMovers::multiSolidBody::multiSolidBody
     const dictionary& dict
 )
 :
-    displacementPoints0(mesh, dict, typeName)
+    displacementPoints0(mesh, dict, typeName),
+    SBMFs_(dict.size())
 {
     zoneIndices_.setSize(dict.size());
-    SBMFs_.setSize(dict.size());
     label zonei = 0;
     forAllConstIter(dictionary, dict, iter)
     {
@@ -140,27 +140,26 @@ Foam::pointMeshMovers::multiSolidBody::multiSolidBody
                 << exit(FatalIOError);
         }
 
-        const dictionary& subDict = iter().dict();
-
         SBMFs_.set
         (
             zonei,
-            solidBodyMotionFunction::New(subDict, mesh.time())
+            iter().keyword(),
+            solidBodyMotionFunction::New
+            (
+                SBMFs_,
+                dict,
+                mesh.time(),
+                iter().keyword()
+            )
         );
 
-        zonei ++;
+        zonei++;
     }
     zoneIndices_.setSize(zonei);
     SBMFs_.setSize(zonei);
 
     zonePoints_.setSize(zonei);
     updateZonePointIndices();
-
-    transforms_.setSize(zonei);
-    forAll(zoneIndices_, zonei)
-    {
-        transforms_[zonei] = SBMFs_[zonei].spatialTransformation();
-    }
 
     forAll(zoneIndices_, zonei)
     {
@@ -186,13 +185,11 @@ Foam::tmp<Foam::pointField> Foam::pointMeshMovers::multiSolidBody::newPoints()
 
     forAll(zoneIndices_, zonei)
     {
-        transforms_[zonei] = SBMFs_[zonei].spatialTransformation();
-
         UIndirectList<point>(transformedPts, zonePoints_[zonei]) = eval
         (
             pointTransform
             (
-                transforms_[zonei],
+                SBMFs_[zonei].spatialTransformation(),
                 pointField(points0_, zonePoints_[zonei])
             )
         );
@@ -217,6 +214,8 @@ void Foam::pointMeshMovers::multiSolidBody::topoChange
 
     forAll(zoneIndices_, zonei)
     {
+        const spatialTransform st = SBMFs_[zonei].spatialTransformation();
+
         forAll(zonePoints_[zonei], zonePointi)
         {
             const label pointi = zonePoints_[zonei][zonePointi];
@@ -237,8 +236,7 @@ void Foam::pointMeshMovers::multiSolidBody::topoChange
             }
             else
             {
-                newPoints0[pointi] =
-                    transforms_[zonei].invTransformPoint(points[pointi]);
+                newPoints0[pointi] = st.invTransformPoint(points[pointi]);
             }
         }
     }
@@ -273,12 +271,13 @@ void Foam::pointMeshMovers::multiSolidBody::mapMesh(const polyMeshMap& map)
 
     forAll(zoneIndices_, zonei)
     {
+        const spatialTransform st = SBMFs_[zonei].spatialTransformation();
+
         forAll(zonePoints_[zonei], zonePointi)
         {
             const label pointi = zonePoints_[zonei][zonePointi];
 
-            points0[pointi] =
-                    transforms_[zonei].invTransformPoint(points0[pointi]);
+            points0[pointi] = st.invTransformPoint(points0[pointi]);
         }
     }
 

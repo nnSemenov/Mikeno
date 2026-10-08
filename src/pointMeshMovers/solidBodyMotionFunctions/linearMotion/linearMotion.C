@@ -52,10 +52,9 @@ Foam::solidBodyMotionFunctions::linearMotion::linearMotion
     const Time& runTime
 )
 :
-    solidBodyMotionFunction(name, SBMFCoeffs, runTime)
-{
-    read(SBMFCoeffs);
-}
+    solidBodyMotionFunction(name, SBMFCoeffs, runTime),
+    velocity_(SBMFCoeffs_.lookup("velocity"))
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -69,30 +68,16 @@ Foam::solidBodyMotionFunctions::linearMotion::~linearMotion()
 Foam::septernion
 Foam::solidBodyMotionFunctions::linearMotion::transformation() const
 {
-    scalar t = time_.value();
+    const scalar t = time_.value();
 
     // Translation of centre of gravity with constant velocity
     const vector displacement = velocity_*t;
 
-    quaternion R(1);
-    septernion TR(septernion(-displacement)*R);
+    const septernion TR(septernion(-displacement)*quaternion(1));
 
     DebugInFunction << "Time = " << t << " transformation: " << TR << endl;
 
     return TR;
-}
-
-
-bool Foam::solidBodyMotionFunctions::linearMotion::read
-(
-    const dictionary& SBMFCoeffs
-)
-{
-    solidBodyMotionFunction::read(SBMFCoeffs);
-
-    SBMFCoeffs_.lookup("velocity") >> velocity_;
-
-    return true;
 }
 
 

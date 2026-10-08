@@ -117,7 +117,7 @@ public:
 
         static autoPtr<heatTransferModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface
         );
 
@@ -162,14 +162,14 @@ public:
 
         inline static autoPtr<blendedHeatTransferModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface,
-            const dictionary& blendingDict
+            const entry& blendingEntry
         )
         {
             return autoPtr<blendedHeatTransferModel>
             (
-                new blendedHeatTransferModel(subDicts, interface, blendingDict)
+                new blendedHeatTransferModel(entries, interface, blendingEntry)
             );
         }
 
@@ -206,18 +206,18 @@ public:
 
         inline static autoPtr<sidedBlendedHeatTransferModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface,
-            const dictionary& blendingDict
+            const entry& blendingEntry
         )
         {
             return autoPtr<sidedBlendedHeatTransferModel>
             (
                 new sidedBlendedHeatTransferModel
                 (
-                    subDicts,
+                    entries,
                     interface,
-                    blendingDict
+                    blendingEntry
                 )
             );
         }
@@ -246,13 +246,13 @@ public:
 
         inline static autoPtr<sidedHeatTransferModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface
         )
         {
             return autoPtr<sidedHeatTransferModel>
             (
-                new sidedHeatTransferModel(subDicts, interface)
+                new sidedHeatTransferModel(entries, interface)
             );
         }
 
@@ -293,18 +293,18 @@ public:
 
         inline static autoPtr<blendedSidedHeatTransferModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface,
-            const dictionary& blendingDict
+            const entry& blendingEntry
         )
         {
             return autoPtr<blendedSidedHeatTransferModel>
             (
                 new blendedSidedHeatTransferModel
                 (
-                    subDicts,
+                    entries,
                     interface,
-                    blendingDict
+                    blendingEntry
                 )
             );
         }

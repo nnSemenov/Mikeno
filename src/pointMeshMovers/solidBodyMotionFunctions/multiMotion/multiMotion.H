@@ -36,8 +36,6 @@ SourceFiles
 #define multiMotion_H
 
 #include "solidBodyMotionFunction.H"
-#include "primitiveFields.H"
-#include "point.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -76,6 +74,16 @@ public:
             const Time& runTime
         );
 
+        //- Construct from solidBodyMotionFunction list
+        //  and coefficients dictionary
+        multiMotion
+        (
+            const word& name,
+            const PtrListDictionary<solidBodyMotionFunction>& SBMFs,
+            const dictionary& SBMFCoeffs,
+            const Time& runTime
+        );
+
         //- Disallow default bitwise copy construction
         multiMotion(const multiMotion&) = delete;
 
@@ -102,9 +110,6 @@ public:
 
         //- Return the solid-body motion transformation septernion
         virtual septernion transformation() const;
-
-        //- Update properties from given dictionary
-        virtual bool read(const dictionary& SBMFCoeffs);
 
 
     // Member Operators

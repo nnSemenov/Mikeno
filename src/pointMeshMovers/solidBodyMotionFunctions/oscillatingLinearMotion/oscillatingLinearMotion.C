@@ -52,10 +52,10 @@ Foam::solidBodyMotionFunctions::oscillatingLinearMotion::oscillatingLinearMotion
     const Time& runTime
 )
 :
-    solidBodyMotionFunction(name, SBMFCoeffs, runTime)
-{
-    read(SBMFCoeffs);
-}
+    solidBodyMotionFunction(name, SBMFCoeffs, runTime),
+    amplitude_(SBMFCoeffs_.lookup("amplitude")),
+    omega_(SBMFCoeffs_.lookup<scalar>("omega"))
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -70,30 +70,15 @@ Foam::solidBodyMotionFunctions::oscillatingLinearMotion::
 Foam::septernion
 Foam::solidBodyMotionFunctions::oscillatingLinearMotion::transformation() const
 {
-    scalar t = time_.value();
+    const scalar t = time_.value();
 
     const vector displacement = amplitude_*sin(omega_*t);
 
-    quaternion R(1);
-    septernion TR(septernion(-displacement)*R);
+    septernion TR(septernion(-displacement)*quaternion(1));
 
     DebugInFunction << "Time = " << t << " transformation: " << TR << endl;
 
     return TR;
-}
-
-
-bool Foam::solidBodyMotionFunctions::oscillatingLinearMotion::read
-(
-    const dictionary& SBMFCoeffs
-)
-{
-    solidBodyMotionFunction::read(SBMFCoeffs);
-
-    SBMFCoeffs_.lookup("amplitude") >> amplitude_;
-    SBMFCoeffs_.lookup("omega") >> omega_;
-
-    return true;
 }
 
 

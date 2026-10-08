@@ -555,7 +555,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
 {
     if (verbose)
     {
-        Info<< "Creating new library in " << libRelPath() << endl;
+        Pout<< "Creating new library in " << libRelPath() << endl;
     }
 
     HashTable<string> filterVars(varSubstitutions_);
@@ -579,6 +579,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
         resolvedFiles,
         badFiles
     );
+
     dynamicCode::resolveTemplates
     (
         copyFiles_,
@@ -608,7 +609,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
 
         if (verbose)
         {
-            Info << "    Copying " << srcFile << " to " << dstFile << endl;
+            Pout << "    Copying " << srcFile << " to " << dstFile << endl;
         }
 
         IFstream is(srcFile);
@@ -630,7 +631,6 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
         // Copy lines while expanding variables
         dynamicCode::copyAndFilter(is, os, filterVars);
     }
-
 
     // Create Make/files + Make/options
     createMakeFiles();

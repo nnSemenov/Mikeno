@@ -33,31 +33,6 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::domainDecomposition::mark
-(
-    const labelList& zoneElems,
-    const label zoneI,
-    labelList& elementToZone
-)
-{
-    forAll(zoneElems, i)
-    {
-        label pointi = zoneElems[i];
-
-        if (elementToZone[pointi] == -1)
-        {
-            // First occurrence
-            elementToZone[pointi] = zoneI;
-        }
-        else if (elementToZone[pointi] >= 0)
-        {
-            // Multiple zones
-            elementToZone[pointi] = -2;
-        }
-    }
-}
-
-
 void Foam::domainDecomposition::addInterProcFace
 (
     const label facei,
@@ -133,7 +108,7 @@ void Foam::domainDecomposition::addInterProcFace
 
 Foam::labelList Foam::domainDecomposition::distributeCells()
 {
-    Info<< "Calculating distribution of cells" << nl << endl;
+    Info<< "Calculating distribution of cells" << endl;
 
     cpuTime decompositionTime;
 
@@ -278,14 +253,15 @@ void Foam::domainDecomposition::processInterCyclics
 
 void Foam::domainDecomposition::decompose()
 {
+    Info().OSstream::write(nl); // !!! don't prefix
+
     // Decide which cell goes to which processor
     cellProc_ = distributeCells();
-    Info<< nl;
 
     // Distribute the cells according to the given processor label
 
     // calculate the addressing information for the original mesh
-    Info<< "Calculating original mesh data" << nl << endl;
+    Info<< nl << "Calculating original mesh data" << endl;
 
     // set references to the original mesh
     const polyBoundaryMesh& patches = completeMesh().poly().boundary();
@@ -296,12 +272,12 @@ void Foam::domainDecomposition::decompose()
     // loop through the list of processor labels for the cell and add the
     // cell shape to the list of cells for the appropriate processor
 
-    Info<< "Distributing cells to processors" << nl << endl;
+    Info<< nl << "Distributing cells to processors" << endl;
 
     // Cells per processor
     procCellAddressing_ = invertOneToMany(nProcs(), cellProc_);
 
-    Info<< "Distributing faces to processors" << nl << endl;
+    Info<< nl << "Distributing faces to processors" << endl;
 
     // Loop through all internal faces and decide which processor they belong to
     // First visit all internal faces. If cells at both sides belong to the
@@ -612,7 +588,7 @@ void Foam::domainDecomposition::decompose()
         }
     }
 
-    Info<< "Distributing points to processors" << nl << endl;
+    Info<< nl << "Distributing points to processors" << endl;
 
     // For every processor, loop through the list of faces for the processor.
     // For every face, loop through the list of points and mark the point as
@@ -664,36 +640,7 @@ void Foam::domainDecomposition::decompose()
         procPointLabels.setSize(nUsedPoints);
     }
 
-    Info<< "Constructing processor meshes" << nl << endl;
-
-    // Mark point/faces/cells that are in zones.
-    // -1   : not in zone
-    // -2   : in multiple zones
-    // >= 0 : in single given zone
-    // This will give direct lookup of elements that are in a single zone
-    // and we'll only have to revert back to searching through all zones
-    // for the duplicate elements
-
-    // Point zones
-    labelList pointToZone(completeMesh().points().size(), -1);
-    forAll(completeMesh().pointZones(), zoneI)
-    {
-        mark(completeMesh().pointZones()[zoneI], zoneI, pointToZone);
-    }
-
-    // Face zones
-    labelList faceToZone(completeMesh().faces().size(), -1);
-    forAll(completeMesh().faceZones(), zoneI)
-    {
-        mark(completeMesh().faceZones()[zoneI], zoneI, faceToZone);
-    }
-
-    // Cell zones
-    labelList cellToZone(completeMesh().nCells(), -1);
-    forAll(completeMesh().cellZones(), zoneI)
-    {
-        mark(completeMesh().cellZones()[zoneI], zoneI, cellToZone);
-    }
+    Info<< nl << "Constructing processor meshes" << endl;
 
     // Initialise information for reporting
     label maxProcCells = 0;
@@ -939,8 +886,175 @@ void Foam::domainDecomposition::decompose()
         // Allocate a stitcher, but do not stitch
         procMesh.postConstruct(false, false, fvMesh::stitchType::none);
 
-        // Create point zones
+        // Report processor and update global statistics
         {
+            Info<< nl << "Processor " << proci << nl
+                << "    Number of cells = " << procMesh.nCells() << endl;
+
+            maxProcCells = max(maxProcCells, procMesh.nCells());
+
+            label nBoundaryFaces = 0;
+            label nProcPatches = 0;
+            label nProcFaces = 0;
+
+            forAll(procMesh.poly().boundary(), patchi)
+            {
+                if (isA<processorPolyPatch>(procMesh.poly().boundary()[patchi]))
+                {
+                    const processorPolyPatch& ppp =
+                    refCast<const processorPolyPatch>
+                    (
+                        procMesh.poly().boundary()[patchi]
+                    );
+
+                    Info<< "    Number of faces shared with processor "
+                        << ppp.neighbProcNo() << " = " << ppp.size() << endl;
+
+                    nProcPatches++;
+                    nProcFaces += ppp.size();
+                }
+                else
+                {
+                    nBoundaryFaces += procMesh.poly().boundary()[patchi].size();
+                }
+            }
+
+            Info<< "    Number of processor patches = " << nProcPatches << nl
+                << "    Number of processor faces = " << nProcFaces << nl
+                << "    Number of boundary faces = " << nBoundaryFaces << nl;
+
+            totProcFaces += nProcFaces;
+            totProcPatches += nProcPatches;
+            maxProcPatches = max(maxProcPatches, nProcPatches);
+            maxProcFaces = max(maxProcFaces, nProcFaces);
+        }
+    }
+
+    // Decompose the zones
+    decomposeZones(true);
+
+    // Determine the average number of processor elements
+    scalar avgProcCells = scalar(completeMesh().nCells())/nProcs();
+    scalar avgProcPatches = scalar(totProcPatches)/nProcs();
+    scalar avgProcFaces = scalar(totProcFaces)/nProcs();
+
+    // Prevent division by zero in the case of all faces on one processor
+    if (totProcPatches == 0)
+    {
+        avgProcPatches = 1;
+    }
+    if (totProcFaces == 0)
+    {
+        avgProcFaces = 1;
+    }
+
+    Info<< nl << "Number of processor faces = " << totProcFaces/2 << nl
+        << "Max number of cells = " << maxProcCells
+        << " (" << 100.0*(maxProcCells-avgProcCells)/avgProcCells
+        << "% above average " << avgProcCells << ")" << nl
+        << "Max number of processor patches = " << maxProcPatches
+        << " (" << 100.0*(maxProcPatches-avgProcPatches)/avgProcPatches
+        << "% above average " << avgProcPatches << ")" << nl
+        << "Max number of faces between processors = " << maxProcFaces
+        << " (" << 100.0*(maxProcFaces-avgProcFaces)/avgProcFaces
+        << "% above average " << avgProcFaces << ")" << endl;
+
+    // Clear (and thus trigger re-generation) of finite volume face addressing
+    procFaceAddressingBf_.clear();
+}
+
+
+void Foam::domainDecomposition::decomposePoints()
+{
+    for (label proci = 0; proci < nProcs(); proci++)
+    {
+        fvMesh& procMesh = procMeshes_[proci];
+
+        const label pointsCompare =
+            compareInstances
+            (
+                completeMesh().pointsInstance(),
+                procMeshes_[proci].pointsInstance()
+            );
+
+        if (pointsCompare == -1)
+        {
+            procMesh.setPoints
+            (
+                pointField
+                (
+                    completeMesh().points(),
+                    procPointAddressing_[proci]
+                )
+            );
+        }
+    }
+}
+
+
+void Foam::domainDecomposition::decomposeZones(const bool force)
+{
+    // Mark point/faces/cells that are in zones.
+    // -1   : not in zone
+    // -2   : in multiple zones
+    // >= 0 : in single given zone
+    // This will give direct lookup of elements that are in a single zone
+    // and we'll only have to revert back to searching through all zones
+    // for the duplicate elements
+    auto mark = []
+    (
+        const labelList& zoneElems,
+        const label zoneI,
+        labelList& elementToZone
+    )
+    {
+        forAll(zoneElems, i)
+        {
+            label pointi = zoneElems[i];
+            if (elementToZone[pointi] == -1)
+            {
+                // First occurrence
+                elementToZone[pointi] = zoneI;
+            }
+            else if (elementToZone[pointi] >= 0)
+            {
+                // Multiple zones
+                elementToZone[pointi] = -2;
+            }
+        }
+    };
+
+    const label pointZonesCompare = compareInstances
+    (
+        completeMesh().pointZones().instance(),
+        procMeshes_[0].pointZones().instance()
+    );
+
+    const label faceZonesCompare = compareInstances
+    (
+        completeMesh().faceZones().instance(),
+        procMeshes_[0].faceZones().instance()
+    );
+
+    const label cellZonesCompare = compareInstances
+    (
+        completeMesh().cellZones().instance(),
+        procMeshes_[0].cellZones().instance()
+    );
+
+    if (force || pointZonesCompare == -1)
+    {
+        labelList pointToZone(completeMesh().points().size(), -1);
+        forAll(completeMesh().pointZones(), zoneI)
+        {
+            mark(completeMesh().pointZones()[zoneI], zoneI, pointToZone);
+        }
+
+        for (label proci = 0; proci < nProcs(); proci++)
+        {
+            fvMesh& procMesh = procMeshes_[proci];
+
+            const labelList& curPointLabels = procPointAddressing_[proci];
             const pointZoneList& pz = completeMesh().pointZones();
 
             // Go through all the zoned points and find out if they
@@ -1000,11 +1114,25 @@ void Foam::domainDecomposition::decompose()
             {
                 // Force writing on all processors
                 procMesh.pointZones().writeOpt() = IOobject::AUTO_WRITE;
+                procMesh.pointZones().instance() =
+                    completeMesh().pointZones().instance();
             }
         }
+    }
 
-        // Create face zones
+    if (force || faceZonesCompare == -1)
+    {
+        labelList faceToZone(completeMesh().faces().size(), -1);
+        forAll(completeMesh().faceZones(), zoneI)
         {
+            mark(completeMesh().faceZones()[zoneI], zoneI, faceToZone);
+        }
+
+        for (label proci = 0; proci < nProcs(); proci++)
+        {
+            fvMesh& procMesh = procMeshes_[proci];
+
+            const labelList& curFaceLabels = procFaceAddressing_[proci];
             const faceZoneList& fz = completeMesh().faceZones();
 
             // Go through all the zoned face and find out if they
@@ -1113,11 +1241,25 @@ void Foam::domainDecomposition::decompose()
             {
                 // Force writing on all processors
                 procMesh.faceZones().writeOpt() = IOobject::AUTO_WRITE;
+                procMesh.faceZones().instance() =
+                    completeMesh().faceZones().instance();
             }
         }
+    }
 
-        // Create cell zones
+    if (force || cellZonesCompare == -1)
+    {
+        labelList cellToZone(completeMesh().nCells(), -1);
+        forAll(completeMesh().cellZones(), zoneI)
         {
+            mark(completeMesh().cellZones()[zoneI], zoneI, cellToZone);
+        }
+
+        for (label proci = 0; proci < nProcs(); proci++)
+        {
+            fvMesh& procMesh = procMeshes_[proci];
+
+            const labelList& curCellLabels = procCellAddressing_[proci];
             const cellZoneList& cz = completeMesh().cellZones();
 
             // Go through all the zoned cells and find out if they
@@ -1175,109 +1317,9 @@ void Foam::domainDecomposition::decompose()
             {
                 // Force writing on all processors
                 procMesh.cellZones().writeOpt() = IOobject::AUTO_WRITE;
+                procMesh.cellZones().instance() =
+                    completeMesh().cellZones().instance();
             }
-        }
-
-        // Report processor and update global statistics
-        {
-            Info<< "Processor " << proci << nl
-                << "    Number of cells = " << procMesh.nCells()
-                << endl;
-
-            maxProcCells = max(maxProcCells, procMesh.nCells());
-
-            label nBoundaryFaces = 0;
-            label nProcPatches = 0;
-            label nProcFaces = 0;
-
-            forAll(procMesh.poly().boundary(), patchi)
-            {
-                if (isA<processorPolyPatch>(procMesh.poly().boundary()[patchi]))
-                {
-                    const processorPolyPatch& ppp =
-                    refCast<const processorPolyPatch>
-                    (
-                        procMesh.poly().boundary()[patchi]
-                    );
-
-                    Info<< "    Number of faces shared with processor "
-                        << ppp.neighbProcNo() << " = " << ppp.size() << endl;
-
-                    nProcPatches++;
-                    nProcFaces += ppp.size();
-                }
-                else
-                {
-                    nBoundaryFaces += procMesh.poly().boundary()[patchi].size();
-                }
-            }
-
-            Info<< "    Number of processor patches = " << nProcPatches << nl
-                << "    Number of processor faces = " << nProcFaces << nl
-                << "    Number of boundary faces = " << nBoundaryFaces << nl
-                << endl;
-
-            totProcFaces += nProcFaces;
-            totProcPatches += nProcPatches;
-            maxProcPatches = max(maxProcPatches, nProcPatches);
-            maxProcFaces = max(maxProcFaces, nProcFaces);
-        }
-    }
-
-    // Determine the average number of processor elements
-    scalar avgProcCells = scalar(completeMesh().nCells())/nProcs();
-    scalar avgProcPatches = scalar(totProcPatches)/nProcs();
-    scalar avgProcFaces = scalar(totProcFaces)/nProcs();
-
-    // Prevent division by zero in the case of all faces on one processor
-    if (totProcPatches == 0)
-    {
-        avgProcPatches = 1;
-    }
-    if (totProcFaces == 0)
-    {
-        avgProcFaces = 1;
-    }
-
-    Info<< "Number of processor faces = " << totProcFaces/2 << nl
-        << "Max number of cells = " << maxProcCells
-        << " (" << 100.0*(maxProcCells-avgProcCells)/avgProcCells
-        << "% above average " << avgProcCells << ")" << nl
-        << "Max number of processor patches = " << maxProcPatches
-        << " (" << 100.0*(maxProcPatches-avgProcPatches)/avgProcPatches
-        << "% above average " << avgProcPatches << ")" << nl
-        << "Max number of faces between processors = " << maxProcFaces
-        << " (" << 100.0*(maxProcFaces-avgProcFaces)/avgProcFaces
-        << "% above average " << avgProcFaces << ")" << endl;
-
-    // Clear (and thus trigger re-generation) of finite volume face addressing
-    procFaceAddressingBf_.clear();
-}
-
-
-void Foam::domainDecomposition::decomposePoints()
-{
-    for (label proci = 0; proci < nProcs(); proci++)
-    {
-        fvMesh& procMesh = procMeshes_[proci];
-
-        const label pointsCompare =
-            compareInstances
-            (
-                completeMesh().pointsInstance(),
-                procMeshes_[proci].pointsInstance()
-            );
-
-        if (pointsCompare == -1)
-        {
-            procMesh.setPoints
-            (
-                pointField
-                (
-                    completeMesh().points(),
-                    procPointAddressing_[proci]
-                )
-            );
         }
     }
 }

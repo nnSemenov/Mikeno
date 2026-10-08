@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -71,23 +71,6 @@ class Reaction
     public reaction,
     public ThermoType::thermoType
 {
-
-public:
-
-    // Static data
-
-        //- Default temperature limits of applicability of reaction rates
-        static scalar TlowDefault, ThighDefault;
-
-
-private:
-
-    // Private Data
-
-        //- Temperature limits of applicability of reaction rates
-        scalar Tlow_, Thigh_;
-
-
     // Private Member Functions
 
         //- Construct reaction thermo
@@ -199,12 +182,6 @@ public:
             //- Return the name of the reaction
             using reaction::name;
 
-            //- Return the lower temperature limit for the reaction
-            inline scalar Tlow() const;
-
-            //- Return the upper temperature limit for the reaction
-            inline scalar Thigh() const;
-
 
         // Hooks
 
@@ -246,6 +223,15 @@ public:
                 const label li,
                 scalar& omegaf,
                 scalar& omegar
+            ) const;
+
+            //- Net reaction rate
+            scalar omega
+            (
+                const scalar p,
+                const scalar T,
+                const scalarField& c,
+                const label li
             ) const;
 
             //- The net reaction rate for each species involved
@@ -342,20 +328,20 @@ public:
 
             //- Derivative of the net reaction rate for each species involved
             //  w.r.t. the concentration and temperature
-            void ddNdtByVdcTp
+            void ddNdtByVdcT
             (
                 const scalar p,
                 const scalar T,
                 const scalarField& c,
                 const label li,
                 scalarField& dNdtByV,
-                scalarSquareMatrix& ddNdtByVdcTp,
+                scalarSquareMatrix& ddNdtByVdcT,
                 const bool reduced,
                 const List<label>& c2s,
                 const label csi0,
                 const label Tsi,
-                scalarField& cTpWork0,
-                scalarField& cTpWork1
+                scalarField& cTWork0,
+                scalarField& cTWork1
             ) const;
 
 
