@@ -41,7 +41,7 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
             fields.add(Y()[i]);
         }
     }
-    fields.add(thermo_()).he());
+    fields.add(thermo_().he());
 
     tmp<fv::convectionScheme<scalar>> mvConvection
     (
