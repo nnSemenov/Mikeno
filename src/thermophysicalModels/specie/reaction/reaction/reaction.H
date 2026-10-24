@@ -38,6 +38,7 @@ SourceFiles
 
 #include "speciesTable.H"
 #include "specieCoeffs.H"
+#include "scalarField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -63,6 +64,37 @@ public:
 
         //- Number of un-named reactions
         static label nUnNamedReactions;
+
+        //- Reaction state structure
+        struct state
+        {
+            scalar p;
+            scalar T;
+            scalarField c;
+            label li;
+
+            scalar lnp;
+            scalar rT;
+            scalar lnT;
+            scalar C;
+
+            state(const label nSpecie);
+
+            inline void reset
+            (
+                const scalar p,
+                const scalar T,
+                const label li
+            );
+
+            inline void reset
+            (
+                const scalar p,
+                const scalar T,
+                const scalarField& c,
+                const label li
+            );
+        };
 
 
 private:

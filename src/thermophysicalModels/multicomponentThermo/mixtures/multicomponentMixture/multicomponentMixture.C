@@ -51,7 +51,7 @@ void Foam::multicomponentMixture<ThermoType>::read
     specieThermos_.setSize(species_.size());
     specieCompositions_.setSize(species_.size());
     specieDictLocations_.setSize(species_.size());
-    active_.setSize(species_.size(), true);
+    activeSpecies_.setSize(species_.size(), true);
 
     forAll(species_, speciei)
     {
@@ -105,17 +105,10 @@ Foam::multicomponentMixture<ThermoType>::specieComposition
 
 
 template<class ThermoType>
-const Foam::boolList&
-Foam::multicomponentMixture<ThermoType>::speciesActive() const
+Foam::boolList&
+Foam::multicomponentMixture<ThermoType>::activeSpecies() const
 {
-    return active_;
-}
-
-
-template<class ThermoType>
-Foam::boolList& Foam::multicomponentMixture<ThermoType>::speciesActive()
-{
-    return active_;
+    return activeSpecies_;
 }
 
 

@@ -377,7 +377,7 @@ public:
                 IOstream::streamFormat,
                 IOstream::versionNumber,
                 IOstream::compressionType,
-                const bool write
+                const bool updateInstance
             ) const;
 
             //- Write the objects now (not at end of iteration) and continue

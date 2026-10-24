@@ -136,7 +136,7 @@ public:
         virtual tmp<volScalarField> K(const scalar residualAlpha) const = 0;
 
         //- Dummy write for regIOobject
-        bool writeData(Ostream& os) const;
+        virtual bool writeData(Ostream& os) const;
 };
 
 

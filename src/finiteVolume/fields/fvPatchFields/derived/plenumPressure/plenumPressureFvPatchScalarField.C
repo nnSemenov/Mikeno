@@ -55,7 +55,7 @@ Foam::plenumPressureFvPatchScalarField::plenumPressureFvPatchScalarField
     (
         dict.lookup<scalar>("plenumTemperature", dimensions::temperature)
     ),
-    rho_(1.0),
+    rho_(1),
     hasRho_(false),
     inletAreaRatio_(dict.lookup<scalar>("inletAreaRatio", units::fraction)),
     inletDischargeCoefficient_
@@ -64,7 +64,7 @@ Foam::plenumPressureFvPatchScalarField::plenumPressureFvPatchScalarField
     ),
     timeScale_
     (
-        dict.lookupOrDefault<scalar>("timeScale", dimensions::time, 0.0)
+        dict.lookupOrDefault<scalar>("timeScale", dimensions::time, 0)
     ),
     phiName_(dict.lookupOrDefault<word>("phi", "phi")),
     UName_(dict.lookupOrDefault<word>("U", "U"))
@@ -161,7 +161,7 @@ void Foam::plenumPressureFvPatchScalarField::updateCoeffs()
     }
 
     // Calculate the current mass flow rate
-    scalar massFlowRate(1.0);
+    scalar massFlowRate(1);
     if (phi.internalField().dimensions() == dimensions::volumetricFlux)
     {
         if (hasRho_)
@@ -228,7 +228,7 @@ void Foam::plenumPressureFvPatchScalarField::updateCoeffs()
         1 - (gamma_ - 1)*U_e/(2*gamma_*R_*plenumTemperature_)
     );
 
-    // Quadratic coefficient (others not needed as b = +1.0 and c = -1.0)
+    // Quadratic coefficient (others not needed as b = +1 and c = -1)
     const scalarField a
     (
         (1 - r)/(r*r*inletDischargeCoefficient_*inletDischargeCoefficient_)
@@ -277,7 +277,7 @@ void Foam::plenumPressureFvPatchScalarField::write(Ostream& os) const
         "inletDischargeCoefficient",
         inletDischargeCoefficient_
     );
-    writeEntryIfDifferent<scalar>(os, "timeScale", 0.0, timeScale_);
+    writeEntryIfDifferent<scalar>(os, "timeScale", 0, timeScale_);
     writeEntryIfDifferent<word>(os, "phi", "phi", phiName_);
     writeEntryIfDifferent<word>(os, "U", "U", UName_);
     writeEntry(os, "value", *this);

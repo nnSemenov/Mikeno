@@ -30,18 +30,29 @@ License
 
 void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
 {
+    reaction->correct();
+
+    multivariateSurfaceInterpolationScheme<scalar>::fieldTable fields;
+
+    forAll(Y(), i)
+    {
+        if (thermo_().activeSpecies()[i])
+        {
+            fields.add(Y()[i]);
+        }
+    }
+    fields.add(thermo_()).he());
+
     tmp<fv::convectionScheme<scalar>> mvConvection
     (
         fv::convectionScheme<scalar>::New
         (
             mesh,
             fields,
-            phi_,
+            phi(),
             mesh.schemes().div("div(phi,Yi_h)")
         )
     );
-
-    reaction->correct();
 
     forAll(Y(), i)
     {

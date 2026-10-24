@@ -103,23 +103,11 @@ public:
         //- Post-evaluation hook
         inline void postEvaluate() const;
 
-        //- Evaluate the rate
-        inline scalar operator()
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        //- Evaluate the rate constant
+        inline scalar k(const reaction::state& s) const;
 
         //- Evaluate the derivative
-        inline scalar ddT
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        inline scalar ddT(const reaction::state& s) const;
 
         //- Write to stream
         inline void write(Ostream& os) const;

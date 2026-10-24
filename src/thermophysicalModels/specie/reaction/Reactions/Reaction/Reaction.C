@@ -270,100 +270,36 @@ Foam::dimensionSet Foam::Reaction<ThermoType>::krDims() const
 
 
 template<class ThermoType>
-void Foam::Reaction<ThermoType>::C
-(
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
-    scalar& Cf,
-    scalar& Cr
-) const
-{
-    Cf = pow(c[lhs()[0].index], lhs()[0].exponent);
-    for(label i=1; i<lhs().size(); i++)
-    {
-        Cf *= pow(c[lhs()[i].index], lhs()[i].exponent);
-    }
-
-    Cr = pow(c[rhs()[0].index], rhs()[0].exponent);
-    for(label i=1; i<rhs().size(); i++)
-    {
-        Cr *= pow(c[rhs()[i].index], rhs()[i].exponent);
-    }
-}
-
-
-template<class ThermoType>
-Foam::scalar Foam::Reaction<ThermoType>::omega
-(
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
-    scalar& omegaf,
-    scalar& omegar
-) const
-{
-    C(p, T, c, li, omegaf, omegar);
-
-    const scalar kf = this->kf(p, T, c, li);
-    omegaf = kf*omegaf;
-    omegar = kr(kf, p, T, c, li)*omegar;
-
-    return omegaf - omegar;
-}
-
-
-template<class ThermoType>
-Foam::scalar Foam::Reaction<ThermoType>::omega
-(
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li
-) const
-{
-    scalar omegaf, omegar;
-    return omega(p, T, c, li, omegaf, omegar);
-}
-
-
-template<class ThermoType>
 void Foam::Reaction<ThermoType>::dNdtByV
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const state& s,
     scalarField& dNdtByV,
     const bool reduced,
-    const List<label>& c2s,
-    const label Nsi0
+    const List<label>& c2s
 ) const
 {
-    const scalar omega = this->omega(p, T, c, li);
+    const scalar omega = this->omega(s);
 
     if (reduced)
     {
         forAll(lhs(), i)
         {
-            dNdtByV[Nsi0 + c2s[lhs()[i].index]] -= lhs()[i].stoichCoeff*omega;
+            dNdtByV[c2s[lhs()[i].index]] -= lhs()[i].stoichCoeff*omega;
         }
         forAll(rhs(), i)
         {
-            dNdtByV[Nsi0 + c2s[rhs()[i].index]] += rhs()[i].stoichCoeff*omega;
+            dNdtByV[c2s[rhs()[i].index]] += rhs()[i].stoichCoeff*omega;
         }
     }
     else
     {
         forAll(lhs(), i)
         {
-            dNdtByV[Nsi0 + lhs()[i].index] -= lhs()[i].stoichCoeff*omega;
+            dNdtByV[lhs()[i].index] -= lhs()[i].stoichCoeff*omega;
         }
         forAll(rhs(), i)
         {
-            dNdtByV[Nsi0 + rhs()[i].index] += rhs()[i].stoichCoeff*omega;
+            dNdtByV[rhs()[i].index] += rhs()[i].stoichCoeff*omega;
         }
     }
 }
@@ -372,27 +308,23 @@ void Foam::Reaction<ThermoType>::dNdtByV
 template<class ThermoType>
 void Foam::Reaction<ThermoType>::ddNdtByVdcT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const state& s,
     scalarField& dNdtByV,
     scalarSquareMatrix& ddNdtByVdcT,
     const bool reduced,
     const List<label>& c2s,
-    const label Nsi0,
     const label Tsi,
     scalarField& cTWork0,
     scalarField& cTWork1
 ) const
 {
     // Rate constants
-    const scalar kf = this->kf(p, T, c, li);
-    const scalar kr = this->kr(kf, p, T, c, li);
+    const scalar kf = this->kf(s);
+    const scalar kr = this->kr(kf, s);
 
     // Concentration products
     scalar Cf, Cr;
-    C(p, T, c, li, Cf, Cr);
+    C(s, Cf, Cr);
 
     // Overall reaction rate
     const scalar omega = kf*Cf - kr*Cr;
@@ -402,22 +334,22 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
     {
         forAll(lhs(), i)
         {
-            dNdtByV[Nsi0 + c2s[lhs()[i].index]] -= lhs()[i].stoichCoeff*omega;
+            dNdtByV[c2s[lhs()[i].index]] -= lhs()[i].stoichCoeff*omega;
         }
         forAll(rhs(), i)
         {
-            dNdtByV[Nsi0 + c2s[rhs()[i].index]] += rhs()[i].stoichCoeff*omega;
+            dNdtByV[c2s[rhs()[i].index]] += rhs()[i].stoichCoeff*omega;
         }
     }
     else
     {
         forAll(lhs(), i)
         {
-            dNdtByV[Nsi0 + lhs()[i].index] -= lhs()[i].stoichCoeff*omega;
+            dNdtByV[lhs()[i].index] -= lhs()[i].stoichCoeff*omega;
         }
         forAll(rhs(), i)
         {
-            dNdtByV[Nsi0 + rhs()[i].index] += rhs()[i].stoichCoeff*omega;
+            dNdtByV[rhs()[i].index] += rhs()[i].stoichCoeff*omega;
         }
     }
 
@@ -426,18 +358,17 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
     forAll(lhs(), j)
     {
         const label sj = reduced ? c2s[lhs()[j].index] : lhs()[j].index;
-        const label Nsi0j = Nsi0 + sj;
 
         scalar dCfdcj = 1;
         forAll(lhs(), i)
         {
             if (i == j)
             {
-                dCfdcj *= dpowdc(c[lhs()[i].index], lhs()[i].exponent);
+                dCfdcj *= dpowdc(s.c[lhs()[i].index], lhs()[i].exponent);
             }
             else
             {
-                dCfdcj *= pow(c[lhs()[i].index], lhs()[i].exponent);
+                dCfdcj *= pow(s.c[lhs()[i].index], lhs()[i].exponent);
             }
         }
 
@@ -445,12 +376,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[lhs()[i].index], Nsi0j)
+                ddNdtByVdcT(c2s[lhs()[i].index], sj)
                     -= lhs()[i].stoichCoeff*kf*dCfdcj;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[rhs()[i].index], Nsi0j)
+                ddNdtByVdcT(c2s[rhs()[i].index], sj)
                     += rhs()[i].stoichCoeff*kf*dCfdcj;
             }
         }
@@ -458,12 +389,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + lhs()[i].index, Nsi0j)
+                ddNdtByVdcT(lhs()[i].index, sj)
                     -= lhs()[i].stoichCoeff*kf*dCfdcj;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + rhs()[i].index, Nsi0j)
+                ddNdtByVdcT(rhs()[i].index, sj)
                     += rhs()[i].stoichCoeff*kf*dCfdcj;
             }
         }
@@ -471,18 +402,17 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
     forAll(rhs(), j)
     {
         const label sj = reduced ? c2s[rhs()[j].index] : rhs()[j].index;
-        const label Nsi0j = Nsi0 + sj;
 
         scalar dCrcj = 1;
         forAll(rhs(), i)
         {
             if (i == j)
             {
-                dCrcj *= dpowdc(c[rhs()[i].index], rhs()[i].exponent);
+                dCrcj *= dpowdc(s.c[rhs()[i].index], rhs()[i].exponent);
             }
             else
             {
-                dCrcj *= pow(c[rhs()[i].index], rhs()[i].exponent);
+                dCrcj *= pow(s.c[rhs()[i].index], rhs()[i].exponent);
             }
         }
 
@@ -490,12 +420,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[lhs()[i].index], Nsi0j)
+                ddNdtByVdcT(c2s[lhs()[i].index], sj)
                     += lhs()[i].stoichCoeff*kr*dCrcj;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[rhs()[i].index], Nsi0j)
+                ddNdtByVdcT(c2s[rhs()[i].index], sj)
                     -= rhs()[i].stoichCoeff*kr*dCrcj;
             }
         }
@@ -503,12 +433,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + lhs()[i].index, Nsi0j)
+                ddNdtByVdcT(lhs()[i].index, sj)
                     += lhs()[i].stoichCoeff*kr*dCrcj;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + rhs()[i].index, Nsi0j)
+                ddNdtByVdcT(rhs()[i].index, sj)
                     -= rhs()[i].stoichCoeff*kr*dCrcj;
             }
         }
@@ -517,20 +447,20 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
     // Jacobian contributions from the derivative of the rate constants
     // w.r.t. temperature
     {
-        const scalar dkfdT = this->dkfdT(p, T, c, li);
-        const scalar dkrdT = this->dkrdT(p, T, c, li, dkfdT, kr);
+        const scalar dkfdT = this->dkfdT(s);
+        const scalar dkrdT = this->dkrdT(s, dkfdT, kr);
         const scalar dwdT = dkfdT*Cf - dkrdT*Cr;
 
         if (reduced)
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[lhs()[i].index], Tsi)
+                ddNdtByVdcT(c2s[lhs()[i].index], Tsi)
                     -= lhs()[i].stoichCoeff*dwdT;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + c2s[rhs()[i].index], Tsi)
+                ddNdtByVdcT(c2s[rhs()[i].index], Tsi)
                     += rhs()[i].stoichCoeff*dwdT;
             }
         }
@@ -538,12 +468,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         {
             forAll(lhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + lhs()[i].index, Tsi)
+                ddNdtByVdcT(lhs()[i].index, Tsi)
                     -= lhs()[i].stoichCoeff*dwdT;
             }
             forAll(rhs(), i)
             {
-                ddNdtByVdcT(Nsi0 + rhs()[i].index, Tsi)
+                ddNdtByVdcT(rhs()[i].index, Tsi)
                     += rhs()[i].stoichCoeff*dwdT;
             }
         }
@@ -556,13 +486,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
         scalarField& dkfdc = cTWork0;
         scalarField& dkrdc = cTWork1;
 
-        this->dkfdc(p, T, c, li, dkfdc);
-        this->dkrdc(p, T, c, li, dkfdc, kr, dkrdc);
+        this->dkfdc(s, dkfdc);
+        this->dkrdc(s, dkfdc, kr, dkrdc);
 
-        forAll(c, j)
+        forAll(s.c, j)
         {
             const label sj = reduced ? c2s[j] : j;
-            const label Nsi0j = Nsi0 + sj;
 
             if (sj == -1) continue;
 
@@ -572,12 +501,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
             {
                 forAll(lhs(), i)
                 {
-                    ddNdtByVdcT(Nsi0 + c2s[lhs()[i].index], Nsi0j)
+                    ddNdtByVdcT(c2s[lhs()[i].index], sj)
                         -= lhs()[i].stoichCoeff*dwdc;
                 }
                 forAll(rhs(), i)
                 {
-                    ddNdtByVdcT(Nsi0 + c2s[rhs()[i].index], Nsi0j)
+                    ddNdtByVdcT(c2s[rhs()[i].index], sj)
                         += rhs()[i].stoichCoeff*dwdc;
                 }
             }
@@ -585,12 +514,12 @@ void Foam::Reaction<ThermoType>::ddNdtByVdcT
             {
                 forAll(lhs(), i)
                 {
-                    ddNdtByVdcT(Nsi0 + lhs()[i].index, Nsi0j)
+                    ddNdtByVdcT(lhs()[i].index, sj)
                         -= lhs()[i].stoichCoeff*dwdc;
                 }
                 forAll(rhs(), i)
                 {
-                    ddNdtByVdcT(Nsi0 + rhs()[i].index, Nsi0j)
+                    ddNdtByVdcT(rhs()[i].index, sj)
                         += rhs()[i].stoichCoeff*dwdc;
                 }
             }

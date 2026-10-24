@@ -73,80 +73,41 @@ inline void Foam::JanevReactionRate::postEvaluate() const
 {}
 
 
-inline Foam::scalar Foam::JanevReactionRate::operator()
+inline Foam::scalar Foam::JanevReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar lta = A_;
+    scalar expArg = beta_*s.lnT - Ta_*s.rT + b_[0] + b_[1]*s.lnT;
 
-    if (mag(beta_) > vSmall)
+    scalar lnTn = s.lnT;
+    for (int n=2; n<nb_; n++)
     {
-        lta *= pow(T, beta_);
+        lnTn *= s.lnT;
+        expArg += b_[n]*lnTn;
     }
 
-    scalar expArg = 0;
-
-    if (mag(Ta_) > vSmall)
-    {
-        expArg -= Ta_/T;
-    }
-
-    scalar lnT = log(T);
-
-    for (int n=0; n<nb_; n++)
-    {
-        expArg += b_[n]*pow(lnT, n);
-    }
-
-    lta *= exp(expArg);
-
-    return lta;
+    return A_*exp(expArg);
 }
 
 
 inline Foam::scalar Foam::JanevReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar lta = A_;
+    scalar expArg = beta_*s.lnT - Ta_*s.rT + b_[0] + b_[1]*s.lnT;
+    scalar deriv = beta_ + Ta_*s.rT + b_[1];
 
-    if (mag(beta_) > vSmall)
-    {
-        lta *= pow(T, beta_);
-    }
-
-    scalar expArg = 0;
-
-    if (mag(Ta_) > vSmall)
-    {
-        expArg -= Ta_/T;
-    }
-
-    scalar lnT = log(T);
-
-    for (int n=0; n<nb_; n++)
-    {
-        expArg += b_[n]*pow(lnT, n);
-    }
-
-    scalar deriv = b_[1];
-
+    scalar lnTn = s.lnT;
     for (int n=2; n<nb_; n++)
     {
-        deriv += n*b_[n]*pow(lnT, n-1);
+        deriv += n*b_[n]*lnTn;
+        lnTn *= s.lnT;
+        expArg += b_[n]*lnTn;
     }
 
-    lta *= exp(expArg);
-
-    return lta*(beta_+Ta_/T+deriv)/T;
+    return A_*exp(expArg)*deriv*s.rT;
 }
 
 
@@ -158,10 +119,7 @@ inline bool Foam::JanevReactionRate::hasDdc() const
 
 inline void Foam::JanevReactionRate::ddc
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const reaction::state& s,
     scalarField& ddc
 ) const
 {

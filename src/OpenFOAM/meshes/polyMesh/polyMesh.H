@@ -608,7 +608,7 @@ public:
                 IOstream::streamFormat fmt,
                 IOstream::versionNumber ver,
                 IOstream::compressionType cmp,
-                const bool write = true
+                const bool updateInstance
             ) const;
 
             //- Write the mesh data only

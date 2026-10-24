@@ -103,10 +103,7 @@ Foam::multicomponentThermo::implementation::implementation
     defaultSpecieName_
     (
         requiresDefaultSpecie && species.size()
-      ? dict.lookupBackwardsCompatible<word>
-        (
-            {"defaultSpecie", "inertSpecie"}
-        )
+      ? dict.lookup<word>("defaultSpecie")
       : word("undefined")
     ),
     defaultSpeciei_
@@ -231,22 +228,22 @@ Foam::label Foam::multicomponentThermo::implementation::defaultSpecie() const
 }
 
 
-void Foam::multicomponentThermo::implementation::syncSpeciesActive() const
+void Foam::multicomponentThermo::implementation::syncActiveSpecies() const
 {
     if (Pstream::parRun())
     {
-        boolList& speciesActive =
-            const_cast<boolList&>(this->speciesActive());
+        boolList& activeSpecies =
+            const_cast<boolList&>(this->activeSpecies());
 
-        Pstream::listCombineGather(speciesActive, orEqOp());
-        Pstream::listCombineScatter(speciesActive);
+        Pstream::listCombineGather(activeSpecies, orEqOp());
+        Pstream::listCombineScatter(activeSpecies);
 
         PtrList<volScalarField>& Y =
             const_cast<PtrList<volScalarField>&>(this->Y());
 
         forAll(Y, speciei)
         {
-            if (speciesActive[speciei])
+            if (activeSpecies[speciei])
             {
                 Y[speciei].writeOpt() = IOobject::AUTO_WRITE;
             }

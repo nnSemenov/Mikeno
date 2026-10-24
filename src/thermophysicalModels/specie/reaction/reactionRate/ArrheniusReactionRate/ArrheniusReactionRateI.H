@@ -70,51 +70,21 @@ inline void Foam::ArrheniusReactionRate::postEvaluate() const
 {}
 
 
-inline Foam::scalar Foam::ArrheniusReactionRate::operator()
+inline Foam::scalar Foam::ArrheniusReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar ak = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        ak *= pow(T, beta_);
-    }
-
-    if (mag(Ta_) > vSmall)
-    {
-        ak *= exp(-Ta_/T);
-    }
-
-    return ak;
+    return A_*exp(beta_*s.lnT - Ta_*s.rT);
 }
 
 
 inline Foam::scalar Foam::ArrheniusReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar ak = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        ak *= pow(T, beta_);
-    }
-
-    if (mag(Ta_) > vSmall)
-    {
-        ak *= exp(-Ta_/T);
-    }
-
-    return ak*(beta_+Ta_/T)/T;
+    return A_*exp(beta_*s.lnT - Ta_*s.rT)*(beta_ + Ta_*s.rT)*s.rT;
 }
 
 
@@ -126,10 +96,7 @@ inline bool Foam::ArrheniusReactionRate::hasDdc() const
 
 inline void Foam::ArrheniusReactionRate::ddc
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const reaction::state& s,
     scalarField& ddc
 ) const
 {

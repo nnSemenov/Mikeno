@@ -227,7 +227,10 @@ void Foam::lagrangian::Cloud<ParticleType>::checkFieldFieldIOobject
 template<class ParticleType>
 void Foam::lagrangian::Cloud<ParticleType>::writeFields() const
 {
-    ParticleType::writeFields(*this);
+    if (returnReduce(this->size(), sumOp()))
+    {
+        ParticleType::writeFields(*this);
+    }
 }
 
 
@@ -237,13 +240,14 @@ bool Foam::lagrangian::Cloud<ParticleType>::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool
+    const bool updateInstance
 ) const
 {
     writeCloudUniformProperties();
 
     writeFields();
-    return cloud::writeObject(fmt, ver, cmp, this->size());
+
+    return cloud::writeObject(fmt, ver, cmp, updateInstance);
 }
 
 

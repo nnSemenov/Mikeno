@@ -205,14 +205,15 @@ void Foam::pointMeshMovers::displacementPoints0::distribute
 }
 
 
-bool Foam::pointMeshMovers::displacementPoints0::write() const
+bool Foam::pointMeshMovers::displacementPoints0::write
+(
+    const bool updateInstance
+) const
 {
-    if (points0_.writeOpt() == IOobject::AUTO_WRITE)
-    {
-        points0_.write();
-    }
-
-    return pointMeshMover::write();
+    return
+        points0_.writeOpt() == IOobject::AUTO_WRITE
+      ? pointMeshMover::write(updateInstance) && points0_.write(updateInstance)
+      : pointMeshMover::write(updateInstance);
 }
 
 

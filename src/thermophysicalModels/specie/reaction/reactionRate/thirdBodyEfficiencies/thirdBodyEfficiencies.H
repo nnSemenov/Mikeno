@@ -54,23 +54,34 @@ Ostream& operator<<(Ostream&, const thirdBodyEfficiencies&);
 \*---------------------------------------------------------------------------*/
 
 class thirdBodyEfficiencies
-:
-    public scalarField
 {
     // Private Data
 
         const speciesTable& species_;
+
+        //- Default efficiency
+        scalar defaultEfficiency_;
+
+        //- Third-body efficiencies
+        scalarField efficiencies_;
+
+        //- Specie indices with non-unity third-body efficiencies
+        labelList thirdBodySpecies_;
+
+        //- Third-body efficiencies - reference
+        scalarField efficienciesMdefault_;
 
 
 public:
 
     // Constructors
 
-        //- Construct from components
+        //- Construct from table of efficiencies
         inline thirdBodyEfficiencies
         (
             const speciesTable& species,
-            const scalarList& efficiencies
+            const scalar defaultEfficiency,
+            const List<Tuple2<word, scalar>>& efficiencies
         );
 
         //- Construct from dictionary
@@ -84,10 +95,10 @@ public:
     // Member Functions
 
         //- Calculate and return M, the concentration of the third-bodies
-        inline scalar M(const scalarField& c) const;
+        inline scalar M(const reaction::state& s) const;
 
         //- Return the derivative of M, w.r.t. the species concentrations
-        inline const scalarField& dMdc(const scalarField& c) const;
+        inline const scalarField& dMdc() const;
 
         //- Write to stream
         inline void write(Ostream& os) const;

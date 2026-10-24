@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ bool Foam::regIOobject::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     if (!good())
@@ -51,7 +51,10 @@ bool Foam::regIOobject::writeObject
     }
 
     // If the instance is a time directory update to the current time
-    updateInstance();
+    if (updateInstance)
+    {
+        this->updateInstance();
+    }
 
     // Write global objects on master only
     // Everyone check or just master
@@ -66,7 +69,7 @@ bool Foam::regIOobject::writeObject
 
     if (Pstream::master() || !masterOnly)
     {
-        osGood = fileHandler().writeObject(*this, fmt, ver, cmp, write);
+        osGood = fileHandler().writeObject(*this, fmt, ver, cmp);
     }
     else
     {
@@ -90,14 +93,14 @@ bool Foam::regIOobject::writeObject
 }
 
 
-bool Foam::regIOobject::write(const bool write) const
+bool Foam::regIOobject::write(const bool updateInstance) const
 {
     return writeObject
     (
         time().writeFormat(),
         IOstream::currentVersion,
         time().writeCompression(),
-        write
+        updateInstance
     );
 }
 

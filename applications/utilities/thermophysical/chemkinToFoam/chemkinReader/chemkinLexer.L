@@ -328,7 +328,8 @@ DynamicList<specieCoeffs> rhs;
 
 scalarList ArrheniusCoeffs(3);
 DynamicList<scalar> reactionCoeffs;
-scalarList thirdBodyEfficiencies;
+scalar defaultThirdBodyEfficiency = 1;
+List<Tuple2<word, scalar>> thirdBodyEfficiencies;
 label currentThirdBodyIndex = -1;
 
 word reactionCoeffsName = word::null;
@@ -411,16 +412,12 @@ bool finishReaction = false;
         {
             specieNames_.shrink();
             speciesTable_ = specieNames_;
-            thirdBodyEfficiencies.setSize(specieNames_.size());
-            thirdBodyEfficiencies = 1.0;
             BEGIN(readThermoSpecieName);
         }
         else if (specieName == "END")
         {
             specieNames_.shrink();
             speciesTable_ = specieNames_;
-            thirdBodyEfficiencies.setSize(specieNames_.size());
-            thirdBodyEfficiencies = 1.0;
             BEGIN(INITIAL);
         }
         else
@@ -801,6 +798,7 @@ bool finishReaction = false;
                     (
                         lhs,
                         rhs,
+                        defaultThirdBodyEfficiency,
                         thirdBodyEfficiencies,
                         rType,
                         rrType,
@@ -813,7 +811,8 @@ bool finishReaction = false;
                     rType = unknownReactionType;
                     rrType = Arrhenius;
                     fofType = unknownFallOffFunctionType;
-                    thirdBodyEfficiencies = 1.0;
+                    defaultThirdBodyEfficiency = 1;
+                    thirdBodyEfficiencies.clear();
                     pDependentSpecieName = word::null;
                     lrhsPtr = &lhs;
                     break;
@@ -855,6 +854,7 @@ bool finishReaction = false;
                     (
                         lhs,
                         rhs,
+                        defaultThirdBodyEfficiency,
                         thirdBodyEfficiencies,
                         rType,
                         rrType,
@@ -867,7 +867,8 @@ bool finishReaction = false;
                     rType = unknownReactionType;
                     rrType = Arrhenius;
                     fofType = unknownFallOffFunctionType;
-                    thirdBodyEfficiencies = 1.0;
+                    defaultThirdBodyEfficiency = 1;
+                    thirdBodyEfficiencies.clear();
                     pDependentSpecieName = word::null;
                     lrhsPtr = &lhs;
                 }
@@ -1252,6 +1253,7 @@ bool finishReaction = false;
                 (
                     lhs,
                     rhs,
+                    defaultThirdBodyEfficiency,
                     thirdBodyEfficiencies,
                     rType,
                     rrType,
@@ -1264,7 +1266,8 @@ bool finishReaction = false;
                 rType = unknownReactionType;
                 rrType = Arrhenius;
                 fofType = unknownFallOffFunctionType;
-                thirdBodyEfficiencies = 1.0;
+                defaultThirdBodyEfficiency = 1;
+                thirdBodyEfficiencies.clear();
                 pDependentSpecieName = word::null;
                 lrhsPtr = &lhs;
             }
@@ -1362,7 +1365,10 @@ bool finishReaction = false;
 
 
 <readThirdBodyEfficiency>{thirdBodyEfficiency} {
-        thirdBodyEfficiencies[currentThirdBodyIndex] = stringToScalar(YYText());
+        thirdBodyEfficiencies.append
+        (
+            {specieNames_[currentThirdBodyIndex], stringToScalar(YYText())}
+        );
         BEGIN(readReactionKeyword);
     }
 
@@ -1408,7 +1414,11 @@ bool finishReaction = false;
             rhsThirdBodyCounter++;
         }
 
-        if (pDependentSpecieName != "M")
+        if (pDependentSpecieName == "M")
+        {
+            defaultThirdBodyEfficiency = 1;
+        }
+        else
         {
             HashTable<label>::iterator specieIndexIter
             (
@@ -1417,8 +1427,9 @@ bool finishReaction = false;
 
             if (specieIndexIter != specieIndices_.end())
             {
-                thirdBodyEfficiencies = 0.0;
-                thirdBodyEfficiencies[specieIndexIter()] = 1.0;
+                defaultThirdBodyEfficiency = 0;
+                thirdBodyEfficiencies.clear();
+                thirdBodyEfficiencies.append({pDependentSpecieName, 1.0});
             }
             else
             {
@@ -1581,6 +1592,7 @@ bool finishReaction = false;
             (
                 lhs,
                 rhs,
+                defaultThirdBodyEfficiency,
                 thirdBodyEfficiencies,
                 rType,
                 rrType,
