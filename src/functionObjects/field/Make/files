@@ -19,7 +19,7 @@ streamlines/streamlines.C
 streamlines/streamlinesParticle.C
 streamlines/streamlinesCloud.C
 
-surfaceInterpolate/surfaceInterpolate.C
+surfaceInterpolate/surfaceInterpolateFunctionObject.C
 
 volField/volField.C
 
