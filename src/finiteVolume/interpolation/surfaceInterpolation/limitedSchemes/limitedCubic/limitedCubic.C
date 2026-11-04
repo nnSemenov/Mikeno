@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LimitedScheme.H"
-#include "Limited01.H"
 #include "limitedCubic.H"
 #include "limitedCubicV.H"
 
@@ -34,26 +33,6 @@ namespace Foam
 {
     makeLimitedSurfaceInterpolationScheme(limitedCubic, limitedCubicLimiter)
     makeLimitedVSurfaceInterpolationScheme(limitedCubicV, limitedCubicVLimiter)
-
-    makeLLimitedSurfaceInterpolationTypeScheme
-    (
-        limitedLimitedCubic,
-        LimitedLimiter,
-        limitedCubicLimiter,
-        NVDTVD,
-        magSqr,
-        scalar
-    )
-
-    makeLLimitedSurfaceInterpolationTypeScheme
-    (
-        limitedCubic01,
-        Limited01Limiter,
-        limitedCubicLimiter,
-        NVDTVD,
-        magSqr,
-        scalar
-    )
 }
 
 // ************************************************************************* //

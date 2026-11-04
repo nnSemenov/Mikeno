@@ -474,10 +474,6 @@ $(limitedSchemes)/SuperBee/SuperBee.C
 $(limitedSchemes)/QUICK/QUICK.C
 $(limitedSchemes)/MUSCL/MUSCL.C
 $(limitedSchemes)/UMIST/UMIST.C
-$(limitedSchemes)/Phi/Phi.C
-$(limitedSchemes)/filteredLinear/filteredLinear.C
-$(limitedSchemes)/filteredLinear2/filteredLinear2.C
-$(limitedSchemes)/filteredLinear3/filteredLinear3.C
 $(limitedSchemes)/limitWith/limitWith.C
 
 multivariateSchemes = $(surfaceInterpolation)/multivariateSchemes
@@ -558,6 +554,8 @@ finiteVolume/fvi/fviReconstruct/reconstructionTensors.C
 finiteVolume/fvc/fvcMeshPhi.C
 finiteVolume/fvc/fvcSmooth.C
 finiteVolume/fvc/fvcReconstructMag.C
+
+cfdTools/preLoad/preLoad.C
 
 general = cfdTools/general
 $(general)/findRefCell/findRefCell.C

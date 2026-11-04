@@ -188,6 +188,13 @@ Foam::LimitedScheme<Type, Limiter, LimitFunc>::limiter
 
         calcLimiter(phi, tlimiterField.ref());
 
+        if (debug)
+        {
+            Info<< type() << " " << limiterFieldName
+                << ": average limiter " << average(tlimiterField())
+                << " max " << max(tlimiterField()) << endl;
+        }
+
         return tlimiterField;
     }
 }

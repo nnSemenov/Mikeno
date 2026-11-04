@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LimitedScheme.H"
-#include "Limited01.H"
 #include "MUSCL.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -33,46 +32,6 @@ namespace Foam
 {
     makeLimitedSurfaceInterpolationScheme(MUSCL, MUSCLLimiter)
     makeLimitedVSurfaceInterpolationScheme(MUSCLV, MUSCLLimiter)
-
-    makeLLimitedSurfaceInterpolationTypeScheme
-    (
-        limitedMUSCL,
-        LimitedLimiter,
-        MUSCLLimiter,
-        NVDTVD,
-        magSqr,
-        scalar
-    )
-
-    makeLLimitedSurfaceInterpolationTypeScheme
-    (
-        MUSCL01,
-        Limited01Limiter,
-        MUSCLLimiter,
-        NVDTVD,
-        magSqr,
-        scalar
-    )
-
-/*
-    makeLimitedSurfaceInterpolationTypeScheme
-    (
-        MUSCL,
-        MUSCLLimiter,
-        NVDTVD,
-        rhoMagSqr,
-        scalar
-    )
-
-    makeLimitedSurfaceInterpolationTypeScheme
-    (
-        MUSCL,
-        MUSCLLimiter,
-        NVDTVD,
-        rhoMagSqr,
-        vector
-    )
-*/
 }
 
 // ************************************************************************* //

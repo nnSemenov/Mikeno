@@ -25,7 +25,6 @@ License
 
 #include "multivariateScheme.H"
 #include "LimitedScheme.H"
-#include "Limited01.H"
 #include "vanLeer.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

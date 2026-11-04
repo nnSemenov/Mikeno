@@ -43,13 +43,15 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
     }
     fields.add(thermo_().he());
 
+    tmp<surfaceScalarField> phiY(thermophysicalTransport->phi(phi));
+
     tmp<fv::convectionScheme<scalar>> mvConvection
     (
         fv::convectionScheme<scalar>::New
         (
             mesh,
             fields,
-            phi(),
+            phiY(),
             mesh.schemes().div("div(phi,Yi_h)")
         )
     );
@@ -63,7 +65,7 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
             fvScalarMatrix YiEqn
             (
                 fvm::ddt(rho_, Yi)
-              + mvConvection->fvmDiv(phi_, Yi)
+              + mvConvection->fvmDiv(phiY(), Yi)
               + thermophysicalTransport->divj(Yi)
              ==
                 reaction->R(Yi)
@@ -91,16 +93,19 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
 
     fvScalarMatrix EEqn
     (
-        fvm::ddt(rho_, he) + mvConvection->fvmDiv(phi_, he)
-      + fvi::ddt(rho_, K) + fvi::div(phi_, K)
+        fvm::ddt(rho(), he)
+      + mvConvection->fvmDiv(phiY(), he)
+      + fvi::ddt(rho(), K) + fvi::div(phi(), K)
       + pressureWork
         (
             he.name() == "e"
-          ? mvConvection->fviDiv(phi_, p() / rho_)
-                             : eval(-dpdt)) +
-            thermophysicalTransport->divq(he) ==
-          reaction->Qdot()
-        + fvModels().source(rho(), he)
+          ? mvConvection->fviDiv(phiY(), p()/rho())
+          : eval(-dpdt)
+        )
+      + thermophysicalTransport->divq(he)
+     ==
+        reaction->Qdot()
+      + fvModels().source(rho, he)
     );
 
     if (buoyancy.valid())

@@ -66,6 +66,7 @@ Foam::multivariateScheme<Type, Scheme>::multivariateScheme
 
     surfaceScalarField limiter
     (
+        word("Limiter(", schemeData.name().name(), ')'),
         Scheme(mesh, faceFlux_, *this).limiter(*iter())
     );
 
@@ -76,6 +77,12 @@ Foam::multivariateScheme<Type, Scheme>::multivariateScheme
             limiter,
             Scheme(mesh, faceFlux_, *this).limiter(*iter())
         );
+    }
+
+    if (debug)
+    {
+        Info<< type() << " " << limiter.name()
+            << ": average limiter " << average(limiter) << endl;
     }
 
     weights_ =

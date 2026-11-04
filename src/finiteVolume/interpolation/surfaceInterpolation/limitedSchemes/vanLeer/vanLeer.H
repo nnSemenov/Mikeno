@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,8 +39,6 @@ SourceFiles
 #ifndef vanLeer_H
 #define vanLeer_H
 
-#include "vector.H"
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -58,6 +56,9 @@ class vanLeerLimiter
 
 public:
 
+    //- Maximum asymptotic value of the limiter
+    static constexpr scalar maxLimit = 2;
+
     vanLeerLimiter(Istream&)
     {}
 
@@ -72,7 +73,7 @@ public:
         const vector& d
     ) const
     {
-        scalar r = LimiterFunc::r
+        const scalar r = LimiterFunc::r
         (
             faceFlux, phiP, phiN, gradcP, gradcN, d
         );

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,17 +22,17 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Limited01Limiter
+    Foam::FilteredLimiter
 
 Description
-    A LimitedLimiter with the range 0-1
+    Foam::FilteredLimiter
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Limited01_H
-#define Limited01_H
+#ifndef Filtered_H
+#define Filtered_H
 
-#include "Limited.H"
+#include "vector.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -40,21 +40,72 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                      Class Limited01Limiter Declaration
+                       Class FilteredLimiter Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class LimitedScheme>
-class Limited01Limiter
+class FilteredLimiter
 :
-    public LimitedLimiter<LimitedScheme>
+    public LimitedScheme
 {
+    //- Lower limit of the variable below which the limiter is not applied
+    scalar lowerLimit_;
+
 
 public:
 
-    Limited01Limiter(Istream& is)
+    FilteredLimiter
+    (
+        const scalar lowerLimit,
+        Istream& is
+    )
     :
-        LimitedLimiter<LimitedScheme>(0, 1, is)
+        LimitedScheme(is),
+        lowerLimit_(lowerLimit)
     {}
+
+    FilteredLimiter(Istream& is)
+    :
+        LimitedScheme(is),
+        lowerLimit_(readScalar(is))
+    {}
+
+
+    scalar limiter
+    (
+        const scalar cdWeight,
+        const scalar faceFlux,
+        const scalar phiP,
+        const scalar phiN,
+        const vector& gradcP,
+        const vector& gradcN,
+        const vector& d
+    ) const
+    {
+        if
+        (
+            mag(phiP) > lowerLimit_
+         && mag(phiN) > lowerLimit_
+         && mag(d & gradcP) > lowerLimit_
+         && mag(d & gradcN) > lowerLimit_
+        )
+        {
+            return LimitedScheme::limiter
+            (
+                cdWeight,
+                faceFlux,
+                phiP,
+                phiN,
+                gradcP,
+                gradcN,
+                d
+            );
+        }
+        else
+        {
+            return LimitedScheme::maxLimit;
+        }
+    }
 };
 
 
