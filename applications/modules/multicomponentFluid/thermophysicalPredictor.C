@@ -43,7 +43,7 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
     }
     fields.add(thermo_().he());
 
-    tmp<surfaceScalarField> phiY(thermophysicalTransport->phi(phi));
+    tmp<surfaceScalarField> phiY(thermophysicalTransport->phi(phi()));
 
     tmp<fv::convectionScheme<scalar>> mvConvection
     (
