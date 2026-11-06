@@ -105,7 +105,7 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
       + thermophysicalTransport->divq(he)
      ==
         reaction->Qdot()
-      + fvModels().source(rho, he)
+      + fvModels().source(rho(), he)
     );
 
     if (buoyancy.valid())
