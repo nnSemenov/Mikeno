@@ -132,37 +132,48 @@ UnaryOpFunction(neg)
 UnaryOpFunction(neg0)
 UnaryOpFunction(posPart)
 UnaryOpFunction(negPart)
-UnaryOpFunction(exp)
-UnaryOpFunction(log)
-UnaryOpFunction(log10)
-UnaryOpFunction(sin)
-UnaryOpFunction(cos)
-UnaryOpFunction(tan)
-UnaryOpFunction(asin)
-UnaryOpFunction(acos)
-UnaryOpFunction(atan)
 
-// Expensive unary scalar functions
-UnaryOpFunction(cbrt)
-UnaryOpFunction(sinh)
-UnaryOpFunction(cosh)
-UnaryOpFunction(tanh)
-UnaryOpFunction(asinh)
-UnaryOpFunction(acosh)
-UnaryOpFunction(atanh)
-UnaryOpFunction(erf)
-UnaryOpFunction(erfc)
-UnaryOpFunction(lgamma)
-UnaryOpFunction(j0)
-UnaryOpFunction(j1)
-UnaryOpFunction(y0)
-UnaryOpFunction(y1)
+// Eager unary scalar functions pre-evaluated and cached as tmp fields
+// to avoid interference with loop optimisation
+// Benefit demonstrated on x86 processors with sse2 and avx512
+
+// Note: for some expressions exp, sin and cos are slightly faster
+// without eager evaluation on processors without avx512
+// or without avx512 optimisation i.e. without the native option
+UnaryOpEagerFunction(exp)
+UnaryOpEagerFunction(sin)
+UnaryOpEagerFunction(cos)
+
+UnaryOpEagerFunction(tan)
+UnaryOpEagerFunction(log)
+UnaryOpEagerFunction(log10)
+UnaryOpEagerFunction(asin)
+UnaryOpEagerFunction(acos)
+UnaryOpEagerFunction(atan)
+UnaryOpEagerFunction(cbrt)
+UnaryOpEagerFunction(sinh)
+UnaryOpEagerFunction(cosh)
+UnaryOpEagerFunction(tanh)
+UnaryOpEagerFunction(asinh)
+UnaryOpEagerFunction(acosh)
+UnaryOpEagerFunction(atanh)
+UnaryOpEagerFunction(erf)
+UnaryOpEagerFunction(erfc)
+UnaryOpEagerFunction(lgamma)
+UnaryOpEagerFunction(j0)
+UnaryOpEagerFunction(j1)
+UnaryOpEagerFunction(y0)
+UnaryOpEagerFunction(y1)
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Binary scalar functions
 
 BinaryFunction(stabilise);
 BinaryFunction(integerPow);
 BinaryFunction(integerRoot);
 
-// Eager evaluate pow to avoid interference with loop optimisation
+// Eager pow binary function pre-evaluated and cached as tmp field
+// to avoid interference with loop optimisation
 // Benefit demonstrated on x86 processors with sse2 and avx512
 BinaryEagerFunction(pow);
 
@@ -188,7 +199,7 @@ struct atan2Op
 };
 
 // Atan2 function
-BinaryFunction(atan2);
+BinaryEagerFunction(atan2);
 
 /*---------------------------------------------------------------------------*\
                             Class jnOp Declaration
@@ -236,7 +247,7 @@ struct ynOp
 };
 
 // Bessel function yn
-BinaryFunction(yn);
+BinaryEagerFunction(yn);
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
