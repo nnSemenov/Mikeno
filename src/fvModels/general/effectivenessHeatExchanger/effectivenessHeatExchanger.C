@@ -53,20 +53,31 @@ namespace fv
 
 void Foam::fv::effectivenessHeatExchanger::readCoeffs(const dictionary& dict)
 {
-    secondaryMassFlowRate_ =
-        dict.lookup<scalar>("secondaryMassFlowRate", dimMass/dimTime);
-    secondaryInletT_ =
-        dict.lookup<scalar>("secondaryInletT", dimTemperature);
-    primaryInletT_ =
-        dict.lookup<scalar>("primaryInletT", dimTemperature);
+    secondaryMassFlowRate_ = dict.lookup<scalar>
+    (
+        "secondaryMassFlowRate",
+        dimensions::mass/dimensions::time
+    );
+
+    secondaryInletT_ = dict.lookup<scalar>
+    (
+        "secondaryInletT",
+        dimensions::temperature
+    );
+
+    primaryInletT_ = dict.lookup<scalar>
+    (
+        "primaryInletT",
+        dimensions::temperature
+    );
 
     eTable_.reset
     (
         Function2<scalar>::New
         (
             "effectiveness",
-            dimMass/dimTime,
-            dimMass/dimTime,
+            dimensions::mass/dimensions::time,
+            dimensions::mass/dimensions::time,
             dimless,
             dict
         ).ptr()
@@ -177,7 +188,7 @@ void Foam::fv::effectivenessHeatExchanger::calculateTotalArea
             area += mesh().magSf()[facei];
         }
     }
-    reduce(area, sumOp<scalar>());
+    reduce(area, sumOp());
 }
 
 
@@ -258,8 +269,8 @@ void Foam::fv::effectivenessHeatExchanger::addSup
             CpfMean += Cpf[facei]*mesh().magSf()[facei];
         }
     }
-    reduce(CpfMean, sumOp<scalar>());
-    reduce(totalphi, sumOp<scalar>());
+    reduce(CpfMean, sumOp());
+    reduce(totalphi, sumOp());
 
     const scalar Qt =
         eTable_->value(mag(totalphi), secondaryMassFlowRate_)
@@ -274,12 +285,12 @@ void Foam::fv::effectivenessHeatExchanger::addSup
     if (Qt > 0)
     {
         Tref = max(TCells);
-        reduce(Tref, maxOp<scalar>());
+        reduce(Tref, maxOp());
     }
     else
     {
         Tref = min(TCells);
-        reduce(Tref, minOp<scalar>());
+        reduce(Tref, minOp());
     }
 
     scalarField deltaTCells(cells.size(), 0);
@@ -303,7 +314,7 @@ void Foam::fv::effectivenessHeatExchanger::addSup
     {
         sumWeight += V[cells[i]]*mag(U[cells[i]])*deltaTCells[i];
     }
-    reduce(sumWeight, sumOp<scalar>());
+    reduce(sumWeight, sumOp());
 
     if (mag(Qt) > vSmall)
     {

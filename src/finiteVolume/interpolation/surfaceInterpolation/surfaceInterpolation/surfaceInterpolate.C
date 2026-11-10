@@ -251,7 +251,7 @@ Foam::fvc::interpolate
             << endl;
     }
 
-    return interpolate(vf, "interpolate(" + vf.name() + ')');
+    return interpolate(vf, word("interpolate(", vf.name(), ')'));
 }
 
 
@@ -270,15 +270,14 @@ Foam::fvc::interpolate
 
 
 template<class Type>
-Foam::tmp<Foam::FieldField<Foam::surfaceMesh::PatchField, Type>>
-Foam::fvc::interpolate
+Foam::tmp<Foam::SurfaceBoundaryField<Type>> Foam::fvc::interpolate
 (
-    const FieldField<fvMesh::PatchField, Type>& fvpff
+    const VolBoundaryField<Type>& fvpff
 )
 {
-    FieldField<surfaceMesh::PatchField, Type>* fvspffPtr
+    SurfaceBoundaryField<Type>* fvspffPtr
     (
-        new FieldField<surfaceMesh::PatchField, Type>(fvpff.size())
+        new SurfaceBoundaryField<Type>(fvpff.size())
     );
 
     forAll(*fvspffPtr, patchi)
@@ -286,26 +285,27 @@ Foam::fvc::interpolate
         fvspffPtr->set
         (
             patchi,
-            surfaceMesh::PatchField<Type>::NewCalculatedType
+            surfaceMesh::PatchField<Type>::New
             (
-                fvpff[patchi].patch()
+                surfaceMesh::PatchField<Type>::calculatedType(),
+                fvpff[patchi].patch(),
+                DimensionedField<Type, surfaceMesh>::null()
             ).ptr()
         );
         (*fvspffPtr)[patchi] = fvpff[patchi];
     }
 
-    return tmp<FieldField<surfaceMesh::PatchField, Type>>(fvspffPtr);
+    return tmp<SurfaceBoundaryField<Type>>(fvspffPtr);
 }
 
 
 template<class Type>
-Foam::tmp<Foam::FieldField<Foam::surfaceMesh::PatchField, Type>>
-Foam::fvc::interpolate
+Foam::tmp<Foam::SurfaceBoundaryField<Type>> Foam::fvc::interpolate
 (
-    const tmp<FieldField<fvMesh::PatchField, Type>>& tfvpff
+    const tmp<VolBoundaryField<Type>>& tfvpff
 )
 {
-    tmp<FieldField<surfaceMesh::PatchField, Type>> tfvspff =
+    tmp<SurfaceBoundaryField<Type>> tfvspff =
         interpolate(tfvpff());
     tfvpff.clear();
     return tfvspff;
@@ -334,7 +334,7 @@ Foam::fvc::dotInterpolate
     return scheme<Type>
     (
         vf.mesh(),
-        "dotInterpolate(" + Sf.name() + ',' + vf.name() + ')'
+        word("dotInterpolate(", Sf.name(), ',', vf.name(), ')')
     )().dotInterpolate(Sf, vf);
 }
 

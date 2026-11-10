@@ -60,7 +60,7 @@ public:
 
         typedef UniformDimensionedField<Type> Internal;
         typedef UniformField<Type> Patch;
-        typedef UniformFieldField<Type> Boundary;
+        typedef UniformFieldField<Type> BoundaryField;
         typedef Type cmptType;
 
 
@@ -92,11 +92,9 @@ public:
 
         inline const Internal& internalField() const;
 
-        inline const Internal& v() const;
-
         inline typename Internal::FieldType primitiveField() const;
 
-        inline Boundary boundaryField() const;
+        inline BoundaryField boundaryField() const;
 };
 
 
@@ -105,6 +103,8 @@ public:
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "UniformGeometricFieldExpression.H"
 
 #ifdef NoRepository
     #include "UniformGeometricField.C"

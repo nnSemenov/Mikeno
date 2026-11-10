@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,20 +45,20 @@ Foam::ejectionModel::ejectionModel
     film_(film),
     rate_
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "ejectionRate",
             film.mesh,
-            dimensionedScalar(dimless/dimTime, 0)
+            dimensionedScalar(dimless/dimensions::time, 0)
         )
     ),
     diameter_
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "ejectionDiameter",
             film.mesh,
-            dimensionedScalar(dimLength, 0)
+            dimensionedScalar(dimensions::length, 0)
         )
     )
 {}

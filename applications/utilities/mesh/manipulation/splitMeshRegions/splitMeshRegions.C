@@ -774,7 +774,7 @@ void createAndWriteRegion
 
         if (!isA<processorPolyPatch>(pp))
         {
-            if (returnReduce(pp.size(), sumOp<label>()) > 0)
+            if (returnReduce(pp.size(), sumOp()) > 0)
             {
                 oldToNew[patchi] = newI;
                 if (!addedPatches.found(patchi))
@@ -990,7 +990,7 @@ void matchRegions
             cellZoneNCells[zoneI] = returnReduce
             (
                 mesh.cellZones()[zoneI].size(),
-                sumOp<label>()
+                sumOp()
             );
         }
     }
@@ -1021,7 +1021,7 @@ void matchRegions
                 nCellsInZone[cellRegion[celli]]++;
             }
         }
-        Pstream::listCombineGather(nCellsInZone, plusEqOp<label>());
+        Pstream::listCombineGather(nCellsInZone, addEqOp());
         Pstream::listCombineScatter(nCellsInZone);
 
         // Pick the region with largest overlap of the zone
@@ -1043,7 +1043,7 @@ void matchRegions
                     break;
                 }
             }
-            reduce(regioni, minOp<label>());
+            reduce(regioni, minOp());
         }
 
         // If successful, name the identified region and map it to the zone
@@ -1143,7 +1143,7 @@ void writeCellToRegion(const fvMesh& mesh, const labelList& cellRegion)
 
     // Write for post processing
     {
-        volScalarField::Internal cellToRegion
+        volInternalScalarField cellToRegion
         (
             IOobject
             (
@@ -1164,7 +1164,7 @@ void writeCellToRegion(const fvMesh& mesh, const labelList& cellRegion)
         cellToRegion.write();
 
         Info<< "Writing region index per cell as a "
-            << volScalarField::Internal::typeName << " to "
+            << volInternalScalarField::typeName << " to "
             << cellToRegion.relativeObjectPath() << nl << endl;
     }
 }
@@ -1272,7 +1272,7 @@ int main(int argc, char *argv[])
         "a single inter-region patch per pair of regions"
     );
 
-    #include "setRootCaseNoFunctionObjects.H"
+    #include "setRootCase.H"
 
     if (!args.optionFound("disconnected") && !args.optionFound("cellZones"))
     {
@@ -1370,7 +1370,7 @@ int main(int argc, char *argv[])
             faceSet blockedFaceSet(mesh, disconnectedFaceSetName);
 
             Info<< "Read "
-                << returnReduce(blockedFaceSet.size(), sumOp<label>())
+                << returnReduce(blockedFaceSet.size(), sumOp())
                 << " blocked faces from set \'" << disconnectedFaceSetName
                 << "\'" << nl << endl;
 
@@ -1465,7 +1465,7 @@ int main(int argc, char *argv[])
                 haveDefaultRegion = true;
             }
         }
-        reduce(haveDefaultRegion, orOp<bool>());
+        reduce(haveDefaultRegion, orOp());
 
         if (haveDefaultRegion)
         {
@@ -1492,7 +1492,7 @@ int main(int argc, char *argv[])
 
         forAll(regionNCells, regioni)
         {
-            reduce(regionNCells[regioni], sumOp<label>());
+            reduce(regionNCells[regioni], sumOp());
         }
     }
 

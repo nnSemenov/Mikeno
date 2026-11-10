@@ -428,8 +428,8 @@ void Foam::searchableSurfaces::distributedTriSurface::findLine
 
         if
         (
-            returnReduce(nLocal, sumOp<label>())
-          < returnReduce(start.size(), sumOp<label>())
+            returnReduce(nLocal, sumOp())
+          < returnReduce(start.size(), sumOp())
         )
         {
             // Not all can be resolved locally. Build segments and map,
@@ -887,8 +887,8 @@ Foam::searchableSurfaces::distributedTriSurface::independentlyDistributedBbs
     {
         forAll(bbs[proci], i)
         {
-            reduce(bbs[proci][i].min(), minOp<point>());
-            reduce(bbs[proci][i].max(), maxOp<point>());
+            reduce(bbs[proci][i].min(), minOp());
+            reduce(bbs[proci][i].max(), maxOp());
         }
     }
     return bbs;
@@ -1301,8 +1301,8 @@ Foam::searchableSurfaces::distributedTriSurface::distributedTriSurface
 {
     read();
 
-    reduce(bounds().min(), minOp<point>());
-    reduce(bounds().max(), maxOp<point>());
+    reduce(bounds().min(), minOp());
+    reduce(bounds().max(), maxOp());
 
     if (debug)
     {
@@ -1374,15 +1374,15 @@ Foam::searchableSurfaces::distributedTriSurface::distributedTriSurface
         FatalErrorInFunction
             << "    using 'timeStampMaster' or 'inotifyMaster.'\n"
             << "    Modify the entry fileModificationChecking\n"
-            << "    in the etc/controlDict.\n"
+            << "    in the etc/configDict/OptimisationSwitches.\n"
             << "    Use 'timeStamp' instead."
             << exit(FatalError);
     }
 
     read();
 
-    reduce(bounds().min(), minOp<point>());
-    reduce(bounds().max(), maxOp<point>());
+    reduce(bounds().min(), minOp());
+    reduce(bounds().max(), maxOp());
 
     if (debug)
     {
@@ -1458,15 +1458,15 @@ Foam::searchableSurfaces::distributedTriSurface::distributedTriSurface
         FatalErrorInFunction
             << "    using 'timeStampMaster' or 'inotifyMaster.'\n"
             << "    Modify the entry fileModificationChecking\n"
-            << "    in the etc/controlDict.\n"
+            << "    in the etc/configDict/OptimisationSwitches.\n"
             << "    Use 'timeStamp' instead."
             << exit(FatalError);
     }
 
     read();
 
-    reduce(bounds().min(), minOp<point>());
-    reduce(bounds().max(), maxOp<point>());
+    reduce(bounds().min(), minOp());
+    reduce(bounds().max(), maxOp());
 
     if (debug)
     {
@@ -1584,8 +1584,8 @@ void Foam::searchableSurfaces::distributedTriSurface::findNearest
     (
         Pstream::parRun()
      && (
-            returnReduce(nLocal, sumOp<label>())
-          < returnReduce(samples.size(), sumOp<label>())
+            returnReduce(nLocal, sumOp())
+          < returnReduce(samples.size(), sumOp())
         )
     )
     {
@@ -1781,7 +1781,7 @@ void Foam::searchableSurfaces::distributedTriSurface::findLineAll
     e1.setSize(compactI);
     pointMap.setSize(compactI);
 
-    while (returnReduce(e0.size(), sumOp<label>()) > 0)
+    while (returnReduce(e0.size(), sumOp()) > 0)
     {
         findLine
         (
@@ -2339,8 +2339,8 @@ void Foam::searchableSurfaces::distributedTriSurface::distribute
     // Set the bounds() value to the boundBox of the undecomposed surface
     triSurface::bounds() = boundBox(points());
 
-    reduce(bounds().min(), minOp<point>());
-    reduce(bounds().max(), maxOp<point>());
+    reduce(bounds().min(), minOp());
+    reduce(bounds().max(), maxOp());
 
     // Regions stays same
     // Volume type stays same.
@@ -2376,7 +2376,7 @@ bool Foam::searchableSurfaces::distributedTriSurface::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     // Make sure dictionary goes to same directory as surface
@@ -2403,7 +2403,7 @@ bool Foam::searchableSurfaces::distributedTriSurface::writeObject
     }
 
     // Dictionary needs to be written in ascii - binary output not supported.
-    return dict_.writeObject(IOstream::ASCII, ver, cmp, true);
+    return dict_.writeObject(IOstream::ASCII, ver, cmp, updateInstance);
 }
 
 
@@ -2420,13 +2420,13 @@ void Foam::searchableSurfaces::distributedTriSurface::writeStats
         bb,
         nPoints
     );
-    reduce(bb.min(), minOp<point>());
-    reduce(bb.max(), maxOp<point>());
+    reduce(bb.min(), minOp());
+    reduce(bb.max(), maxOp());
 
     os  << indent << "Triangles    : "
-        << returnReduce(triSurface::size(), sumOp<label>()) << endl
+        << returnReduce(triSurface::size(), sumOp()) << endl
         << indent << "Vertices     : "
-        << returnReduce(nPoints, sumOp<label>()) << endl
+        << returnReduce(nPoints, sumOp()) << endl
         << indent << "Bounding Box : " << bb << endl;
 }
 

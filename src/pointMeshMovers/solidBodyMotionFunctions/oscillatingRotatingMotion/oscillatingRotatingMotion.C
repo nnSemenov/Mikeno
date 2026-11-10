@@ -56,10 +56,11 @@ oscillatingRotatingMotion
     const Time& runTime
 )
 :
-    solidBodyMotionFunction(name, SBMFCoeffs, runTime)
-{
-    read(SBMFCoeffs);
-}
+    solidBodyMotionFunction(name, SBMFCoeffs, runTime),
+    origin_(SBMFCoeffs_.lookup("origin")),
+    amplitude_(SBMFCoeffs_.lookup("amplitude")),
+    omega_(SBMFCoeffs_.lookup<scalar>("omega"))
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -75,34 +76,16 @@ Foam::septernion
 Foam::solidBodyMotionFunctions::oscillatingRotatingMotion::
 transformation() const
 {
-    scalar t = time_.value();
+    const scalar t = time_.value();
 
-    vector eulerAngles = amplitude_*sin(omega_*t);
+    const vector eulerAngles = amplitude_*degToRad(sin(omega_*t));
 
-    // Convert the rotational motion from deg to rad
-    eulerAngles *= pi/180.0;
-
-    quaternion R(quaternion::XYZ, eulerAngles);
-    septernion TR(septernion(-origin_)*R*septernion(origin_));
+    const quaternion R(quaternion::XYZ, eulerAngles);
+    const septernion TR(septernion(-origin_)*R*septernion(origin_));
 
     DebugInFunction << "Time = " << t << " transformation: " << TR << endl;
 
     return TR;
-}
-
-
-bool Foam::solidBodyMotionFunctions::oscillatingRotatingMotion::read
-(
-    const dictionary& SBMFCoeffs
-)
-{
-    solidBodyMotionFunction::read(SBMFCoeffs);
-
-    SBMFCoeffs_.lookup("origin") >> origin_;
-    SBMFCoeffs_.lookup("amplitude") >> amplitude_;
-    SBMFCoeffs_.lookup("omega") >> omega_;
-
-    return true;
 }
 
 

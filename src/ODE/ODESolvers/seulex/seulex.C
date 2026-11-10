@@ -50,6 +50,8 @@ namespace Foam
 Foam::seulex::seulex(const ODESystem& ode, const dictionary& dict)
 :
     ODESolver(ode, dict),
+    pivot_(dict.lookupOrDefault<Switch>("pivot", false)),
+    rowTol_(dict.lookupOrDefault<scalar>("rowTol", min(absTol_))),
     jacRedo_(min(1e-4, min(relTol_))),
     nSeq_(iMaxx_),
     cpu_(iMaxx_),
@@ -60,6 +62,7 @@ Foam::seulex::seulex(const ODESystem& ode, const dictionary& dict)
     dfdy_(n_),
     a_(n_),
     pivotIndices_(n_),
+    pivotScale_(n_),
     dxOpt_(iMaxx_),
     temp_(iMaxx_),
     y0_(n_),
@@ -124,11 +127,25 @@ bool Foam::seulex::seul
         a_(i, i) += 1/dx;
     }
 
-    LUDecompose(a_, pivotIndices_);
+    if (pivot_)
+    {
+        LUDecompose(a_, pivotIndices_, pivotScale_);
+    }
+    else
+    {
+        LUDecompose(a_, rowTol_);
+    }
 
     scalar xnew = x0 + dx;
     odes_.derivatives(xnew, y0, li, dy_);
-    LUBacksubstitute(a_, pivotIndices_, dy_);
+    if (pivot_)
+    {
+        LUBacksubstitute(a_, pivotIndices_, dy_);
+    }
+    else
+    {
+        LUBacksubstitute(a_, dy_);
+    }
 
     yTemp_ = y0;
 
@@ -152,7 +169,14 @@ bool Foam::seulex::seul
                 dy_[i] = dydx_[i] - dy_[i]/dx;
             }
 
-            LUBacksubstitute(a_, pivotIndices_, dy_);
+            if (pivot_)
+            {
+                LUBacksubstitute(a_, pivotIndices_, dy_);
+            }
+            else
+            {
+                LUBacksubstitute(a_, dy_);
+            }
 
             const scalar denom = max(1, dy1);
 
@@ -178,7 +202,15 @@ bool Foam::seulex::seul
         }
 
         odes_.derivatives(xnew, yTemp_, li, dy_);
-        LUBacksubstitute(a_, pivotIndices_, dy_);
+
+        if (pivot_)
+        {
+            LUBacksubstitute(a_, pivotIndices_, dy_);
+        }
+        else
+        {
+            LUBacksubstitute(a_, dy_);
+        }
     }
 
     for (label i=0; i<n_; i++)
@@ -222,6 +254,7 @@ bool Foam::seulex::resize()
         resizeMatrix(dfdy_);
         resizeMatrix(a_);
         resizeField(pivotIndices_);
+        resizeField(pivotScale_);
         resizeField(y0_);
         resizeField(ySequence_);
         resizeField(scale_);

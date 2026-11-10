@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -43,6 +43,7 @@ Description
 #include "wallFvPatch.H"
 #include "setWriter.H"
 #include "writeFile.H"
+#include "fviGrad.H"
 
 using namespace Foam;
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
 {
     argList::noParallel();
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
 
     #include "createTime.H"
     #include "createMesh.H"
@@ -93,11 +94,11 @@ int main(int argc, char *argv[])
         // Correct driving force for a constant volume flow rate
         const dimensionedVector UbarStar
         (
-            flowMask & U.weightedAverage(mesh.V())
+            flowMask & weightedAverage(U(), mesh.V())
         );
 
         U += (Ubar - UbarStar);
-        gradP += (Ubar - UbarStar)/(1.0/UEqn.A())().weightedAverage(mesh.V());
+        gradP += (Ubar - UbarStar)/weightedAverage(1/UEqn.A()()(), mesh.V());
 
         viscosity->correct();
         turbulence->correct();

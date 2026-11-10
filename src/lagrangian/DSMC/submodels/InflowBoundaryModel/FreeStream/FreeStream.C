@@ -156,12 +156,12 @@ void Foam::FreeStream<CloudType>::inflow()
 
     label particlesInserted = 0;
 
-    const volScalarField::Boundary& boundaryT
+    const volScalarField::BoundaryField& boundaryT
     (
         cloud.boundaryT().boundaryField()
     );
 
-    const volVectorField::Boundary& boundaryU
+    const volVectorField::BoundaryField& boundaryU
     (
         cloud.boundaryU().boundaryField()
     );
@@ -186,7 +186,7 @@ void Foam::FreeStream<CloudType>::inflow()
 
             scalar mass = cloud.constProps(typeId).mass();
 
-            if (min(boundaryT[patchi]) < small)
+            if (min(boundaryT[patchi].field()) < small)
             {
                 FatalErrorInFunction
                     << "Zero boundary temperature detected, check boundaryT "
@@ -424,7 +424,7 @@ void Foam::FreeStream<CloudType>::inflow()
         }
     }
 
-    reduce(nLocateBoundaryHits, sumOp<label>());
+    reduce(nLocateBoundaryHits, sumOp());
     if (nLocateBoundaryHits != 0)
     {
         WarningInFunction
@@ -433,7 +433,7 @@ void Foam::FreeStream<CloudType>::inflow()
             << " particles" << endl;
     }
 
-    reduce(particlesInserted, sumOp<label>());
+    reduce(particlesInserted, sumOp());
 
     Info<< "    Particles inserted              = "
         << particlesInserted << endl;

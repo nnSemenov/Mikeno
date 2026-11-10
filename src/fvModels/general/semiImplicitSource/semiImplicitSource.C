@@ -127,7 +127,7 @@ void Foam::fv::semiImplicitSource::addSupType
         dimensioned<Type>
         (
             "zero",
-            eqn.dimensions()/dimVolume,
+            eqn.dimensions()/dimensions::volume,
             Zero
         ),
         false
@@ -149,7 +149,7 @@ void Foam::fv::semiImplicitSource::addSupType
     UIndirectList<Type>(Su, zone_.zone()) =
         fieldSu_[field.name()].template value<Type>(t)/VDash;
 
-    volScalarField::Internal Sp
+    volInternalScalarField Sp
     (
         IOobject
         (

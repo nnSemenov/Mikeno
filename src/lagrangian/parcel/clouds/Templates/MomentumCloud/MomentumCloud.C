@@ -302,7 +302,7 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
     rndGen_(0),
     stdNormal_(rndGen_.generator()),
     cellOccupancyPtr_(),
-    cellLengthScale_(mag(cbrt(this->mesh().V()))),
+    cellLengthScale_(mag(cbrt(this->mesh().V().primitiveField()))),
     rho_(rho),
     U_(U),
     mu_(mu),
@@ -336,7 +336,7 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
     UIntegrator_(nullptr),
     UTrans_
     (
-        new volVectorField::Internal
+        new volInternalVectorField
         (
             IOobject
             (
@@ -347,12 +347,12 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedVector(dimMass*dimVelocity, Zero)
+            dimensionedVector(dimensions::momentum, Zero)
         )
     ),
     UCoeff_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -363,7 +363,7 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar( dimMass, 0)
+            dimensionedScalar(dimensions::mass, 0)
         )
     )
 {
@@ -431,7 +431,7 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
     UIntegrator_(c.UIntegrator_->clone()),
     UTrans_
     (
-        new volVectorField::Internal
+        new volInternalVectorField
         (
             IOobject
             (
@@ -447,7 +447,7 @@ Foam::MomentumCloud<CloudType>::MomentumCloud
     ),
     UCoeff_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -730,7 +730,7 @@ void Foam::MomentumCloud<CloudType>::topoChange(const polyTopoChangeMap& map)
 
     injectors_.topoChange();
 
-    cellLengthScale_ = mag(cbrt(this->mesh().V()));
+    cellLengthScale_ = mag(cbrt(this->mesh().V().primitiveField()));
 }
 
 
@@ -743,7 +743,7 @@ void Foam::MomentumCloud<CloudType>::mapMesh(const polyMeshMap& map)
 
     injectors_.topoChange();
 
-    cellLengthScale_ = mag(cbrt(this->mesh().V()));
+    cellLengthScale_ = mag(cbrt(this->mesh().V().primitiveField()));
 }
 
 
@@ -756,7 +756,7 @@ void Foam::MomentumCloud<CloudType>::distribute(const polyDistributionMap& map)
 
     injectors_.topoChange();
 
-    cellLengthScale_ = mag(cbrt(this->mesh().V()));
+    cellLengthScale_ = mag(cbrt(this->mesh().V().primitiveField()));
 }
 
 
@@ -764,16 +764,16 @@ template<class CloudType>
 void Foam::MomentumCloud<CloudType>::info()
 {
     vector linearMomentum = linearMomentumOfSystem();
-    reduce(linearMomentum, sumOp<vector>());
+    reduce(linearMomentum, sumOp());
 
     scalar linearKineticEnergy = linearKineticEnergyOfSystem();
-    reduce(linearKineticEnergy, sumOp<scalar>());
+    reduce(linearKineticEnergy, sumOp());
 
     Info<< "Cloud: " << this->name() << nl
         << "    Current number of parcels       = "
-        << returnReduce(this->size(), sumOp<label>()) << nl
+        << returnReduce(this->size(), sumOp()) << nl
         << "    Current mass in system          = "
-        << returnReduce(massInSystem(), sumOp<scalar>()) << nl
+        << returnReduce(massInSystem(), sumOp()) << nl
         << "    Linear momentum                 = "
         << linearMomentum << nl
         << "   |Linear momentum|                = "

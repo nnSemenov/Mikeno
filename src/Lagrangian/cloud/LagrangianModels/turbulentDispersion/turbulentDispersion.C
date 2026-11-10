@@ -156,8 +156,11 @@ Foam::Lagrangian::turbulentDispersion::turbulentDispersion
         )
     ),
     fractionTurb_(initialiseTurbField("fractionTurb", dimless, vGreat)),
-    tTurb_(initialiseTurbField("tTurb", dimTime, NaN)),
-    Uturb_(initialiseTurbField("Uturb", dimVelocity, vector::uniform(NaN))),
+    tTurb_(initialiseTurbField("tTurb", dimensions::time, NaN)),
+    Uturb_
+    (
+        initialiseTurbField("Uturb", dimensions::velocity, vector::uniform(NaN))
+    ),
     rndGen_("rndGen", stateDict, name, false),
     avgUturbPtr_(nullptr)
 {}
@@ -243,12 +246,12 @@ void Foam::Lagrangian::turbulentDispersion::preAddSup
     );
     static const dimensionedScalar rootVSmallEpsilon
     (
-        dimEnergy/dimMass/dimTime,
+        dimensions::turbulentEpsilon,
         rootVSmall
     );
     static const dimensionedScalar rootVSmallEpsilonU
     (
-        dimEnergy/dimMass/dimTime*dimVelocity,
+        dimensions::turbulentEpsilon*dimensions::velocity,
         rootVSmall
     );
     tTurb =
@@ -294,7 +297,7 @@ void Foam::Lagrangian::turbulentDispersion::preAddSup
         (
             "avgUturb",
             subMesh,
-            dimensionedVector(dimVelocity, Zero)
+            dimensionedVector(dimensions::velocity, Zero)
         ).ptr()
     );
 
@@ -389,7 +392,7 @@ void Foam::Lagrangian::turbulentDispersion::addSup
 {
     assertCloud<clouds::coupledToConstantDensityFluid>();
 
-    eqn.Su += dragPtr_->D(deltaT.mesh())*avgUturbPtr_();
+    eqn.Su += eval(dragPtr_->D(deltaT.mesh())*avgUturbPtr_());
 }
 
 
@@ -407,7 +410,7 @@ void Foam::Lagrangian::turbulentDispersion::addSup
         clouds::coupledToFluid
     >();
 
-    eqn.Su += dragPtr_->D(deltaT.mesh())*avgUturbPtr_();
+    eqn.Su += eval(dragPtr_->D(deltaT.mesh())*avgUturbPtr_());
 }
 
 

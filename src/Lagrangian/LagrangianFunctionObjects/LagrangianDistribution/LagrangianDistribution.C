@@ -120,7 +120,7 @@ bool Foam::functionObjects::LagrangianDistribution::multiplyWeight
     const GeoField<scalar>& w =
         mesh().lookupObject<GeoField<scalar>>(weightFieldName);
 
-    weight *= w;
+    weight *= w.primitiveField();
 
     return true;
 }
@@ -214,7 +214,7 @@ void Foam::functionObjects::LagrangianDistribution::writeDistribution
     }
 
     // Synchronise
-    Pstream::listCombineGather(PDF, plusEqOp<scalar>());
+    Pstream::listCombineGather(PDF, addEqOp());
     Pstream::listCombineScatter(PDF);
 
     // Normalise and correct the ends, as they have half as many samples as the
@@ -254,7 +254,7 @@ bool Foam::functionObjects::LagrangianDistribution::writeDistribution
             weight,
             fieldName,
             pTraits<Type>::componentNames[d],
-            field.component(d)()
+            eval(field.component(d))()
         );
     }
 
@@ -320,7 +320,7 @@ bool Foam::functionObjects::LagrangianDistribution::execute()
 bool Foam::functionObjects::LagrangianDistribution::write()
 {
     // We can't construct a distribution without any samples
-    if (returnReduce(mesh().size(), sumOp<label>()) == 0) return true;
+    if (returnReduce(mesh().size(), sumOp()) == 0) return true;
 
     // Construct the weights
     scalarField weight(mesh().size(), 1);

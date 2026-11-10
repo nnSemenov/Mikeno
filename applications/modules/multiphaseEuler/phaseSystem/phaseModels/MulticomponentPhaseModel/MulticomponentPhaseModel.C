@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -87,7 +87,7 @@ Foam::MulticomponentPhaseModel<BasePhaseModel>::YiEqn(volScalarField& Yi)
     return
     (
         fvm::ddt(alpha, rho, Yi)
-      + fvm::div(alphaRhoPhi, Yi, "div(" + alphaRhoPhi.name() + ",Yi)")
+      + fvm::div(alphaRhoPhi, Yi, word("div(", alphaRhoPhi.name(), ",Yi)"))
       + this->divj(Yi)
      ==
         alpha*this->R(Yi)
@@ -96,7 +96,7 @@ Foam::MulticomponentPhaseModel<BasePhaseModel>::YiEqn(volScalarField& Yi)
         (
             fvm::Sp
             (
-                max(this->residualAlpha() - alpha, scalar(0))*rho
+                max(this->residualAlpha() - alpha(), scalar(0))*rho()
                /this->mesh().time().deltaT(),
                 Yi
             )

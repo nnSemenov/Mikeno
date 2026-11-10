@@ -55,11 +55,11 @@ class reactionModel
     // Private Member Functions
 
         //- Construct the base IO object
-        IOobject createIOobject
+        static IOobject createIOobject
         (
             const fluidMulticomponentThermo& thermo,
             const word& reactionProperties
-        ) const;
+        );
 
 
 protected:
@@ -161,13 +161,13 @@ public:
         virtual void correct() = 0;
 
         //- Consumption rate, i.e. source term for specie equation
-        virtual tmp<volScalarField::Internal> R(const label speciei) const = 0;
+        virtual tmp<volInternalScalarField> R(const label speciei) const = 0;
 
         //- Consumption rate matrix, i.e. source term for specie equation
         virtual tmp<fvScalarMatrix> R(volScalarField& Y) const = 0;
 
         //- Heat release rate [kg/m/s^3]
-        virtual tmp<volScalarField> Qdot() const = 0;
+        virtual tmp<volInternalScalarField> Qdot() const = 0;
 
         //- Update properties from given dictionary
         virtual bool read();

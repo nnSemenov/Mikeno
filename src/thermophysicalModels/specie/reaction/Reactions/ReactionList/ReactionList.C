@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,17 @@ License
 
 #include "ReactionList.H"
 #include "HashPtrTable.H"
+#include "delimitDictionary.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+template<class ThermoType>
+Foam::ReactionList<ThermoType>::ReactionList()
+:
+    Tlow_(0),
+    Thigh_(great)
+{}
+
 
 template<class ThermoType>
 Foam::ReactionList<ThermoType>::ReactionList
@@ -35,14 +44,10 @@ Foam::ReactionList<ThermoType>::ReactionList
     const PtrList<ThermoType>& speciesThermo,
     const dictionary& dict
 )
+:
+    Tlow_(dict.lookupOrDefault<scalar>("Tlow", 0)),
+    Thigh_(dict.lookupOrDefault<scalar>("Thigh", great))
 {
-    // Set general temperature limits from the dictionary
-    Reaction<ThermoType>::TlowDefault =
-        dict.lookupOrDefault<scalar>("Tlow", 0);
-
-    Reaction<ThermoType>::ThighDefault =
-        dict.lookupOrDefault<scalar>("Thigh", great);
-
     const dictionary& reactions(dict.subDict("reactions"));
 
     this->setSize(reactions.size());
@@ -73,14 +78,10 @@ Foam::ReactionList<ThermoType>::ReactionList
     const objectRegistry& ob,
     const dictionary& dict
 )
+:
+    Tlow_(dict.lookupOrDefault<scalar>("Tlow", 0)),
+    Thigh_(dict.lookupOrDefault<scalar>("Thigh", great))
 {
-    // Set general temperature limits from the dictionary
-    Reaction<ThermoType>::TlowDefault =
-        dict.lookupOrDefault<scalar>("Tlow", 0);
-
-    Reaction<ThermoType>::ThighDefault =
-        dict.lookupOrDefault<scalar>("Thigh", great);
-
     const dictionary& reactions(dict.subDict("reactions"));
 
     this->setSize(reactions.size());
@@ -109,29 +110,20 @@ Foam::ReactionList<ThermoType>::ReactionList
 template<class ThermoType>
 void Foam::ReactionList<ThermoType>::write(Ostream& os) const
 {
-    os  << "reactions" << nl;
-    os  << token::BEGIN_BLOCK << incrIndent << nl;
-
-    forAll(*this, i)
     {
-        const Reaction<ThermoType>& r = this->operator[](i);
+        const delimitDictionary delimitReactions(os, "reactions");
 
-        os  << indent << r.name() << nl
-            << indent << token::BEGIN_BLOCK << incrIndent << nl;
-
-        writeEntry(os, "type", r.type());
-
-        r.write(os);
-
-        os  << decrIndent << indent << token::END_BLOCK << nl;
+        forAll(*this, i)
+        {
+            const Reaction<ThermoType>& r = this->operator[](i);
+            const delimitDictionary delimitReaction(os, r.name());
+            writeEntry(os, "type", r.type());
+            r.write(os);
+        }
     }
 
-    os << decrIndent << token::END_BLOCK << nl;
-
-    writeEntry(os, "Tlow", Reaction<ThermoType>::TlowDefault);
-    writeEntry(os, "Thigh", Reaction<ThermoType>::ThighDefault);
-
-    os << nl;
+    writeEntry(os, "Tlow", Tlow_);
+    writeEntry(os, "Thigh", Thigh_);
 }
 
 

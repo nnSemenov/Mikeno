@@ -12,28 +12,22 @@ IOdictionary financialProperties
     )
 );
 
-dimensionedScalar strike
+const dimensionedScalar strike
 (
     "strike",
-    dimLength,
-    financialProperties.lookup("strike")
+    dimensions::length,
+    financialProperties
 );
+const dimensionedScalar r("r", dimless/dimensions::time, financialProperties);
 
-dimensionedScalar r
-(
-    "r",
-    dimless/dimTime,
-    financialProperties.lookup("r")
-);
-
-dimensionedScalar sigma
+const dimensionedScalar sigma
 (
     "sigma",
     dimensionSet(0, 0, -0.5, 0, 0),
-    financialProperties.lookup("sigma")
+    financialProperties
 );
 
-dimensionedScalar sigmaSqr = sqr(sigma);
+const dimensionedScalar sigmaSqr = sqr(sigma);
 
 
 Info<< nl << "Reading field V" << endl;
@@ -85,7 +79,7 @@ V == max
     dimensionedScalar(V.dimensions(), 0)
 );
 
-volScalarField delta
+volInternalScalarField delta
 (
     IOobject
     (
@@ -95,5 +89,5 @@ volScalarField delta
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    fvc::grad(V)().component(Foam::vector::X)
+    fvi::grad(V)().component(Foam::vector::X)
 );

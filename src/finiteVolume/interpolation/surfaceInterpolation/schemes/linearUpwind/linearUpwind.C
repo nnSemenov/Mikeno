@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,7 +40,7 @@ Foam::linearUpwind<Foam::vector>::correction
     (
         surfaceVectorField::New
         (
-            "linearUpwind::correction(" + vf.name() + ')',
+            word("linearUpwind::correction(", vf.name(), ')'),
             mesh,
             dimensioned<vector>(vf.name(), vf.dimensions(), Zero)
         )
@@ -65,18 +65,20 @@ Foam::linearUpwind<Foam::vector>::correction
         )
     );
 
-    tmp<volTensorField> tgradVf = gradScheme_().grad(vf, gradSchemeName_);
+    tmp<volTensorField> tgradVf = gradScheme_().fvcGrad(vf, gradSchemeName_);
     const volTensorField& gradVf = tgradVf();
 
     forAll(faceFlux, facei)
     {
         const label celli =
             (faceFlux[facei] > 0) ? owner[facei] : neighbour[facei];
+
         sfCorr[facei] = (Cf[facei] - C[celli]) & gradVf[celli];
     }
 
 
-    typename surfaceVectorField::Boundary& bSfCorr = sfCorr.boundaryFieldRef();
+    typename surfaceVectorField::BoundaryField& bSfCorr =
+        sfCorr.boundaryFieldRef();
 
     forAll(bSfCorr, patchi)
     {
@@ -98,7 +100,7 @@ Foam::linearUpwind<Foam::vector>::correction
 
             forAll(pOwner, facei)
             {
-                label own = pOwner[facei];
+                const label own = pOwner[facei];
 
                 if (pFaceFlux[facei] > 0)
                 {

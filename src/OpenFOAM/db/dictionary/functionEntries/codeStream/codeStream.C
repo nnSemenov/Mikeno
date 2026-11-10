@@ -168,7 +168,7 @@ void* Foam::functionEntries::codeStream::compile
         codeDictVars,
         codeOptions,
         compileFiles,
-        wordList::null()
+        wordList{}
     );
 
     // Load library if not already loaded
@@ -214,7 +214,7 @@ void* Foam::functionEntries::codeStream::compile
     bool allHaveLib = lib;
     if (!masterOnlyRead(typeName, contextDict))
     {
-        reduce(allHaveLib, andOp<bool>());
+        reduce(allHaveLib, andOp());
     }
 
     if (!allHaveLib)

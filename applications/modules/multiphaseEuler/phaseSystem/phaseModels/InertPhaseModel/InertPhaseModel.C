@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,15 +59,15 @@ bool Foam::InertPhaseModel<BasePhaseModel>::inert() const
 
 
 template<class BasePhaseModel>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::InertPhaseModel<BasePhaseModel>::R(const label speciei) const
 {
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             IOobject::groupName("R_" + this->Y()[speciei].name(), this->name()),
             this->mesh(),
-            dimensionedScalar(dimDensity/dimTime, 0)
+            dimensionedScalar(dimensions::density/dimensions::time, 0)
         );
 }
 
@@ -78,20 +78,20 @@ Foam::InertPhaseModel<BasePhaseModel>::R(volScalarField& Yi) const
 {
     return tmp<fvScalarMatrix>
     (
-        new fvScalarMatrix(Yi, dimMass/dimTime)
+        new fvScalarMatrix(Yi, dimensions::mass/dimensions::time)
     );
 }
 
 
 template<class BasePhaseModel>
-Foam::tmp<Foam::volScalarField>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::InertPhaseModel<BasePhaseModel>::Qdot() const
 {
-    return volScalarField::New
+    return volInternalScalarField::New
     (
         IOobject::groupName("Qdot", this->name()),
         this->mesh(),
-        dimensionedScalar(dimEnergy/dimTime/dimVolume, 0)
+        dimensionedScalar(dimensions::powerDensity, 0)
     );
 }
 

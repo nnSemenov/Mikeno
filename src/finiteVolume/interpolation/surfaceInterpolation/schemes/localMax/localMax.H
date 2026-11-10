@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -124,7 +124,7 @@ public:
             (
                 SurfaceField<Type>::New
                 (
-                    "localMax::interpolate(" + vf.name() + ')',
+                    word("localMax::interpolate(", vf.name(), ')'),
                     mesh,
                     vf.dimensions()
                 )
@@ -139,8 +139,8 @@ public:
                 vff[facei] = max(vf[own[facei]], vf[nei[facei]]);
             }
 
-            typename SurfaceField<Type>::
-                Boundary& bff = vff.boundaryFieldRef();
+            typename SurfaceField<Type>::BoundaryField& bff =
+                vff.boundaryFieldRef();
 
             forAll(bff, patchi)
             {

@@ -78,7 +78,7 @@ Foam::PatchFlowRateInjection<CloudType>::PatchFlowRateInjection
     (
         distribution::New
         (
-            dimLength,
+            dimensions::length,
             this->typeDict().subDict("sizeDistribution"),
             this->sizeSampleQ(),
             owner.rndGen().generator()
@@ -154,7 +154,7 @@ Foam::scalar Foam::PatchFlowRateInjection<CloudType>::volumetricFlowRate() const
     const scalarField& phip = phi.boundaryField()[patchId_];
 
     scalar flowRateIn;
-    if (phi.dimensions() == dimVolumetricFlux)
+    if (phi.dimensions() == dimensions::volumetricFlux)
     {
         flowRateIn = max(scalar(0), -sum(phip));
     }
@@ -167,7 +167,7 @@ Foam::scalar Foam::PatchFlowRateInjection<CloudType>::volumetricFlowRate() const
         flowRateIn = max(scalar(0), -sum(phip/rhop));
     }
 
-    reduce(flowRateIn, sumOp<scalar>());
+    reduce(flowRateIn, sumOp());
 
     return flowRateIn;
 }
@@ -183,7 +183,7 @@ Foam::scalar Foam::PatchFlowRateInjection<CloudType>::massFlowRate() const
     const scalarField& phip = phi.boundaryField()[patchId_];
 
     scalar flowRateIn;
-    if (phi.dimensions() == dimVolumetricFlux)
+    if (phi.dimensions() == dimensions::volumetricFlux)
     {
         const volScalarField& rho =
             mesh.lookupObject<volScalarField>(rhoName_);
@@ -196,7 +196,7 @@ Foam::scalar Foam::PatchFlowRateInjection<CloudType>::massFlowRate() const
         flowRateIn = max(scalar(0), -sum(phip));
     }
 
-    reduce(flowRateIn, sumOp<scalar>());
+    reduce(flowRateIn, sumOp());
 
     return flowRateIn;
 }

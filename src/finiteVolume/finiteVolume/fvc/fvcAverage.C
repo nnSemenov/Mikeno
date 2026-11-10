@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvcAverage.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "fvMesh.H"
 #include "linear.H"
 
@@ -53,7 +53,7 @@ average
     (
         VolField<Type>::New
         (
-            "average("+ssf.name()+')',
+            word("average(", ssf.name(), ')'),
             mesh,
             dimensioned<Type>("0", ssf.dimensions(), Zero)
         )
@@ -68,12 +68,11 @@ average
 
     av.primitiveFieldRef() =
     (
-        surfaceSum(mesh.magSf()*ssf)().primitiveField()
-       /surfaceSum(mesh.magSf())().primitiveField()
+        fvi::surfaceSum(mesh.magSf()*ssf)().primitiveField()
+       /fvi::surfaceSum(mesh.magSf())().primitiveField()
     );
 
-    typename VolField<Type>::
-    Boundary& bav = av.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bav = av.boundaryFieldRef();
 
     forAll(bav, patchi)
     {

@@ -215,7 +215,8 @@ Foam::label Foam::patchToPatches::nearest::finalise
     const vectorField& srcPointNormals,
     const vectorField& srcPointNormals0,
     const primitiveOldTimePatch& tgtPatch,
-    const transformer& tgtToSrc
+    const transformer& tgtToSrc,
+    const unsigned char report
 )
 {
     // Keep only the closest opposing face
@@ -241,10 +242,11 @@ Foam::label Foam::patchToPatches::nearest::finalise
             srcPointNormals,
             srcPointNormals0,
             tgtPatch,
-            tgtToSrc
+            tgtToSrc,
+            report
         );
 
-    if (debug)
+    if (nCouples != 0 && (report & patchToPatch::report::extent))
     {
         auto countNonEmpty = [](const List<DynamicList<label>>& ll)
         {
@@ -255,14 +257,14 @@ Foam::label Foam::patchToPatches::nearest::finalise
                 result += !ll[i].empty();
             }
 
-            return returnReduce(result, sumOp<label>());
+            return returnReduce(result, sumOp());
         };
 
         Info<< indent
             << "Coupled " << countNonEmpty(srcLocalTgtFaces_)
-            << "/" << returnReduce(srcLocalTgtFaces_.size(), sumOp<label>())
+            << "/" << returnReduce(srcLocalTgtFaces_.size(), sumOp())
             << " source faces and " << countNonEmpty(tgtLocalSrcFaces_)
-            << "/" << returnReduce(tgtLocalSrcFaces_.size(), sumOp<label>())
+            << "/" << returnReduce(tgtLocalSrcFaces_.size(), sumOp())
             << " target faces" << endl;
     }
 

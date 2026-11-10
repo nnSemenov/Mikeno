@@ -26,7 +26,6 @@ License
 #include "layerAverage.H"
 #include "FaceCellWave.H"
 #include "layerInfo.H"
-#include "regionSplit.H"
 #include "syncTools.H"
 #include "volFields.H"
 #include "writeFile.H"
@@ -99,7 +98,7 @@ void Foam::functionObjects::layerAverage::calcLayers()
             cellLayer_[celli] = layeri;
         }
     }
-    reduce(nLayers_, maxOp<label>());
+    reduce(nLayers_, maxOp());
 
     // Report
     if (nLayers_ != 0)
@@ -129,7 +128,7 @@ void Foam::functionObjects::layerAverage::calcLayers()
     layerVolume_ = sum<scalar>(mesh_.V());
 
     // Average the cell centres
-    layerCentre_ = sum<vector>(mesh_.V()*mesh_.C())/layerVolume_;
+    layerCentre_ = sum<vector>(mesh_.V()*mesh_.C()())/layerVolume_;
 
     // If symmetric, keep only half of the coordinates
     if (symmetric_)

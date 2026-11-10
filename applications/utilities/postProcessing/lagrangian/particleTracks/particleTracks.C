@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         Info<< "    Reading particle positions" << endl;
         passiveParticleCloud myCloud(mesh, cloudName);
 
-        Info<< "    Read " << returnReduce(myCloud.size(), sumOp<label>())
+        Info<< "    Read " << returnReduce(myCloud.size(), sumOp())
             << " particles" << endl;
 
         forAllConstIter(passiveParticleCloud, myCloud, iter)
@@ -93,17 +93,17 @@ int main(int argc, char *argv[])
         }
     }
 
-    label maxNProcs = returnReduce(maxIds.size(), maxOp<label>());
+    label maxNProcs = returnReduce(maxIds.size(), maxOp());
 
     Info<< "Detected particles originating from " << maxNProcs
         << " processors." << nl << endl;
 
     maxIds.setSize(maxNProcs, -1);
 
-    Pstream::listCombineGather(maxIds, maxEqOp<label>());
+    Pstream::listCombineGather(maxIds, maxEqOp());
     Pstream::listCombineScatter(maxIds);
 
-    labelList numIds = maxIds + 1;
+    const labelField numIds = maxIds + 1;
 
     Info<< nl << "Particle statistics:" << endl;
     forAll(maxIds, proci)
@@ -209,12 +209,12 @@ int main(int argc, char *argv[])
 
         Info<< "\nWriting particle tracks in " << setFormat
             << " format to " << vtkPath << nl << endl;
-
+        const pointField points(allTrack);
         setWriter::New(setFormat, propsDict)->write
         (
             vtkPath,
             "tracks",
-            coordSet(allTrackIDs, word::null, pointField(allTrack))
+            coordSet(allTrackIDs, word::null, &points)
         );
     }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,7 +59,7 @@ Foam::fv::VoFTurbulenceDamping::VoFTurbulenceDamping
 :
     fvModel(sourceName, modelType, mesh, dict),
     phaseName_(dict.lookupOrDefault("phase", word::null)),
-    delta_("delta", dimLength, dict),
+    delta_("delta", dimensions::length, dict),
     mixture_
     (
         mesh.lookupObject<incompressibleTwoPhaseVoFMixture>
@@ -114,7 +114,7 @@ void Foam::fv::VoFTurbulenceDamping::addSup
         Info<< type() << ": applying source to " << eqn.psi().name() << endl;
     }
 
-    const volScalarField::Internal aSqrnu
+    const volInternalScalarField aSqrnu
     (
         mixture_.alpha1()()*sqr(mixture_.nuModel1().nu()()())
       + mixture_.alpha2()()*sqr(mixture_.nuModel2().nu()()())
@@ -122,7 +122,7 @@ void Foam::fv::VoFTurbulenceDamping::addSup
 
     if (field.name() == "epsilon")
     {
-        eqn += mixture_.interfaceFraction()*C2_*aSqrnu*turbulence_.k()()
+        eqn += mixture_.interfaceFraction()()*C2_*aSqrnu*turbulence_.k()()()
            /pow4(delta_);
     }
     else if (field.name() == "omega")
@@ -152,7 +152,7 @@ void Foam::fv::VoFTurbulenceDamping::addSup
         Info<< type() << ": applying source to " << eqn.psi().name() << endl;
     }
 
-    tmp<volScalarField::Internal> taSqrnu;
+    tmp<volInternalScalarField> taSqrnu;
 
     if (mixture_.alpha1().name() == alpha.name())
     {
@@ -171,7 +171,7 @@ void Foam::fv::VoFTurbulenceDamping::addSup
 
     if (field.name() == IOobject::groupName("epsilon", phaseName_))
     {
-        eqn += mixture_.interfaceFraction()*C2_*taSqrnu*turbulence_.k()()
+        eqn += mixture_.interfaceFraction()*C2_*taSqrnu*turbulence_.k()()()
            /pow4(delta_);
     }
     else if (field.name() == IOobject::groupName("omega", phaseName_))

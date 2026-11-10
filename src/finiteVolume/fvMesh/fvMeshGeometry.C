@@ -60,7 +60,7 @@ void Foam::fvMesh::makeSf() const
             true
         ),
         *this,
-        dimArea,
+        dimensions::area,
         faceAreas()
     );
 }
@@ -92,7 +92,7 @@ void Foam::fvMesh::makeMagSf() const
             true
         ),
         *this,
-        dimArea,
+        dimensions::area,
         magFaceAreas()
     );
 }
@@ -126,7 +126,7 @@ void Foam::fvMesh::makeC() const
             true
         ),
         *this,
-        dimLength,
+        dimensions::length,
         cellCentres(),
         faceCentres(),
         true,               // preserveCouples
@@ -161,7 +161,7 @@ void Foam::fvMesh::makeCf() const
             true
         ),
         *this,
-        dimLength,
+        dimensions::length,
         faceCentres()
     );
 }
@@ -221,7 +221,7 @@ Foam::surfaceVectorField& Foam::fvMesh::CfRef()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-const Foam::volScalarField::Internal& Foam::fvMesh::V() const
+const Foam::volInternalScalarField& Foam::fvMesh::V() const
 {
     if (!VPtr_)
     {
@@ -240,7 +240,7 @@ const Foam::volScalarField::Internal& Foam::fvMesh::V() const
                 true
             ),
             *this,
-            dimVolume,
+            dimensions::volume,
             cellVolumes()
         );
     }
@@ -249,7 +249,7 @@ const Foam::volScalarField::Internal& Foam::fvMesh::V() const
 }
 
 
-const Foam::volScalarField::Internal& Foam::fvMesh::V0() const
+const Foam::volInternalScalarField& Foam::fvMesh::V0() const
 {
     if (!V0Ptr_ || Foam::isNull(V0Ptr_))
     {
@@ -262,7 +262,7 @@ const Foam::volScalarField::Internal& Foam::fvMesh::V0() const
 }
 
 
-const Foam::volScalarField::Internal& Foam::fvMesh::V00() const
+const Foam::volInternalScalarField& Foam::fvMesh::V00() const
 {
     if (!V00Ptr_)
     {
@@ -278,7 +278,7 @@ const Foam::volScalarField::Internal& Foam::fvMesh::V00() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::fvMesh::Vsc() const
+Foam::tmp<Foam::volInternalScalarField> Foam::fvMesh::Vsc() const
 {
     if (moving() && time().subCycling())
     {
@@ -306,7 +306,7 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fvMesh::Vsc() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::fvMesh::Vsc0() const
+Foam::tmp<Foam::volInternalScalarField> Foam::fvMesh::Vsc0() const
 {
     if (moving() && time().subCycling())
     {
@@ -415,7 +415,7 @@ Foam::tmp<Foam::surfaceVectorField> Foam::fvMesh::delta() const
         (
             "delta",
             *this,
-            dimLength
+            dimensions::length
         )
     );
     surfaceVectorField& delta = tdelta.ref();
@@ -429,8 +429,7 @@ Foam::tmp<Foam::surfaceVectorField> Foam::fvMesh::delta() const
         delta[facei] = C[neighbour[facei]] - C[owner[facei]];
     }
 
-    surfaceVectorField::Boundary& deltabf =
-        delta.boundaryFieldRef();
+    surfaceVectorField::BoundaryField& deltabf = delta.boundaryFieldRef();
 
     forAll(deltabf, patchi)
     {
@@ -454,7 +453,7 @@ const Foam::surfaceScalarField& Foam::fvMesh::phi() const
     // mesh motion fluxes if the time has been incremented
     if (!time().subCycling() && phiPtr_->timeIndex() != time().timeIndex())
     {
-        (*phiPtr_) = dimensionedScalar(dimVolume/dimTime, 0);
+        (*phiPtr_) = dimensionedScalar(dimensions::volumetricFlux, 0);
     }
 
     return *phiPtr_;

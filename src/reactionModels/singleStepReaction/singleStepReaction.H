@@ -85,7 +85,7 @@ protected:
         List<int> specieProd_;
 
         //- Fuel consumption rate
-        volScalarField wFuel_;
+        volInternalScalarField wFuel_;
 
         //- Semi-implicit (true) or explicit (false) treatment
         bool semiImplicit_;
@@ -157,13 +157,13 @@ public:
 
 
         //- Specie consumption rate field
-        virtual tmp<volScalarField::Internal> R(const label speciei) const;
+        virtual tmp<volInternalScalarField> R(const label speciei) const;
 
         //- Specie consumption rate matrix
         virtual tmp<fvScalarMatrix> R(volScalarField& Y) const;
 
         //- Heat release rate [kg/m/s^3]
-        virtual tmp<volScalarField> Qdot() const;
+        virtual tmp<volInternalScalarField> Qdot() const;
 
         //- Update properties from given dictionary
         virtual bool read();

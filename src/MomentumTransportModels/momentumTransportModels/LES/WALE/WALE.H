@@ -89,6 +89,13 @@ protected:
         //  velocity gradient field
         tmp<volSymmTensorField> Sd(const volTensorField& gradU) const;
 
+        //- Return the deviatoric symmetric part of the square of the given
+        //  velocity gradient field
+        tmp<volInternalSymmTensorField> Sd
+        (
+            const volInternalTensorField& gradU
+        ) const;
+
         //- Return SGS kinetic energy
         //  calculated from the given velocity gradient
         tmp<volScalarField> k(const volTensorField& gradU) const;

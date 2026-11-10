@@ -269,7 +269,7 @@ Foam::volScalarField& Foam::LocalInteraction<CloudType>::massEscape()
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimMass, 0)
+                dimensionedScalar(dimensions::mass, 0)
             )
         );
     }
@@ -298,7 +298,7 @@ Foam::volScalarField& Foam::LocalInteraction<CloudType>::massStick()
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimMass, 0)
+                dimensionedScalar(dimensions::mass, 0)
             )
         );
     }
@@ -428,19 +428,19 @@ void Foam::LocalInteraction<CloudType>::info(Ostream& os)
 
     // Accumulate current data
     labelList npe(SubList<label>(nEscape_, nPatches));
-    Pstream::listCombineGather(npe, plusEqOp<label>());
+    Pstream::listCombineGather(npe, addEqOp());
     SubField<label>(npe) += npe0;
 
     scalarList mpe(SubList<scalar>(massEscape_, nPatches));
-    Pstream::listCombineGather(mpe, plusEqOp<scalar>());
+    Pstream::listCombineGather(mpe, addEqOp());
     SubField<scalar>(mpe) += mpe0;
 
     labelList nps(SubList<label>(nStick_, nPatches));
-    Pstream::listCombineGather(nps, plusEqOp<label>());
+    Pstream::listCombineGather(nps, addEqOp());
     SubField<label>(nps) += nps0;
 
     scalarList mps(SubList<scalar>(massStick_, nPatches));
-    Pstream::listCombineGather(mps, plusEqOp<scalar>());
+    Pstream::listCombineGather(mps, addEqOp());
     SubField<scalar>(mps) += mps0;
 
     for (label patchi = 0; patchi < nPatches; ++ patchi)

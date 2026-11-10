@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,7 +52,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve()
             phasei,
             new surfaceScalarField
             (
-                "phi" + alpha.name() + "Corr",
+                word("phi", alpha.name(), "Corr"),
                 fvc::flux
                 (
                     phi,
@@ -84,7 +84,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve()
         MULES::limit
         (
             MULEScontrols,
-            1.0/mesh.time().deltaT().value(),
+            1/mesh.time().deltaT().value(),
             geometricOneField(),
             alpha,
             phi,
@@ -128,16 +128,16 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve()
         rhoPhi += alphaPhi*alpha.rho();
 
         Info<< alpha.name() << " volume fraction, min, max = "
-            << alpha.weightedAverage(mesh.V()).value()
-            << ' ' << min(alpha).value()
-            << ' ' << max(alpha).value()
+            << weightedAverage(alpha(), mesh.V()).value()
+            << ' ' << min(alpha.alpha()).value()
+            << ' ' << max(alpha.alpha()).value()
             << endl;
 
         sumAlpha += alpha;
     }
 
     Info<< "Phase-sum volume fraction, min, max = "
-        << sumAlpha.weightedAverage(mesh.V()).value()
+        << weightedAverage(sumAlpha(), mesh.V()).value()
         << ' ' << min(sumAlpha).value()
         << ' ' << max(sumAlpha).value()
         << endl;
@@ -146,7 +146,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve()
     volScalarField sumCorr(1.0 - sumAlpha);
     forAll(phases, phasei)
     {
-        incompressibleVoFphase& alpha = phases[phasei];
+        volScalarField& alpha = phases[phasei];
         alpha += alpha*sumCorr;
     }
 }

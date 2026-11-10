@@ -75,12 +75,15 @@ Foam::codedFixedValueFvPatchField<Type>::codedFixedValueFvPatchField
         dict.lookupOrDefault<word>
         (
             "name",
+            word
             (
-                iF.mesh().name() == polyMesh::defaultRegion
-              ? word::null
-              : word(iF.mesh().name() + '_')
+                (
+                    iF.mesh().name() == polyMesh::defaultRegion
+                  ? word::null
+                  : word(iF.mesh().name() + '_')
+                ),
+                iF.name(), '_', p.name()
             )
-          + iF.name() + '_' + p.name()
         ),
         dict,
         codeKeys,
@@ -145,7 +148,7 @@ Foam::codedFixedValueFvPatchField<Type>::redirectPatchField() const
 
         if (this->overridesConstraint())
         {
-            writeEntry(os, "patchType", this->patch().type());
+            writeEntry(os, "patchType", patch().type());
         }
 
         writeEntry(os, "value", *this);
@@ -157,8 +160,8 @@ Foam::codedFixedValueFvPatchField<Type>::redirectPatchField() const
         (
             fvPatchField<Type>::New
             (
-                this->patch(),
-                this->internalField(),
+                patch(),
+                internalField(),
                 dict
             ).ptr()
         );

@@ -48,16 +48,13 @@ Foam::AveragingMethod<Type>::AveragingMethod
 )
 :
     regIOobject(io),
-    FieldField<Field, Type>(),
+    Field<Field<Type>>(size.size()),
     dict_(dict),
     mesh_(mesh)
 {
     forAll(size, i)
     {
-        FieldField<Field, Type>::append
-        (
-            new Field<Type>(size[i], Zero)
-        );
+        Field<Field<Type>>::operator[](i).setSize(size[i], Zero);
     }
 }
 
@@ -69,7 +66,7 @@ Foam::AveragingMethod<Type>::AveragingMethod
 )
 :
     regIOobject(am),
-    FieldField<Field, Type>(am),
+    Field<Field<Type>>(am),
     dict_(am.dict_),
     mesh_(am.mesh_)
 {}
@@ -132,7 +129,7 @@ void Foam::AveragingMethod<Type>::average
 {
     updateGrad();
 
-    *this /= max(weight, small);
+    *this /= max(weight.field(), small);
 }
 
 
@@ -144,7 +141,7 @@ bool Foam::AveragingMethod<Type>::writeData(Ostream& os) const
 
 
 template<class Type>
-bool Foam::AveragingMethod<Type>::write(const bool write) const
+bool Foam::AveragingMethod<Type>::write(const bool updateInstance) const
 {
     const pointMesh& pointMesh_(pointMesh::New(mesh_));
 
@@ -234,16 +231,16 @@ bool Foam::AveragingMethod<Type>::write(const bool write) const
     }
 
     // average
-    cellValue.primitiveFieldRef() /= mesh_.V();
-    cellGrad.primitiveFieldRef() /= mesh_.V();
+    cellValue.primitiveFieldRef() /= mesh_.V().primitiveField();
+    cellGrad.primitiveFieldRef() /= mesh_.V().primitiveField();
     pointValue.primitiveFieldRef() /= pointVolume;
     pointGrad.primitiveFieldRef() /= pointVolume;
 
     // write
-    if (!cellValue.write(write)) return false;
-    if (!cellGrad.write(write)) return false;
-    if (!pointValue.write(write)) return false;
-    if (!pointGrad.write(write)) return false;
+    if (!cellValue.write(updateInstance)) return false;
+    if (!cellGrad.write(updateInstance)) return false;
+    if (!pointValue.write(updateInstance)) return false;
+    if (!pointGrad.write(updateInstance)) return false;
 
     return true;
 }

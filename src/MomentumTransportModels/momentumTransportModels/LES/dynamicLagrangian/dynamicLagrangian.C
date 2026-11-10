@@ -26,6 +26,7 @@ License
 #include "dynamicLagrangian.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
+#include "fviGrad.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -39,7 +40,7 @@ namespace LESModels
 template<class BasicMomentumTransportModel>
 void dynamicLagrangian<BasicMomentumTransportModel>::correctNut
 (
-    const tmp<volTensorField>& gradU
+    const volTensorField& gradU
 )
 {
     this->nut_ = (flm_/fmm_)*sqr(this->delta())*mag(dev(symm(gradU)));
@@ -90,7 +91,8 @@ dynamicLagrangian<BasicMomentumTransportModel>::dynamicLagrangian
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimless
     ),
     fmm_
     (
@@ -102,7 +104,8 @@ dynamicLagrangian<BasicMomentumTransportModel>::dynamicLagrangian
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimless
     ),
     theta_("theta", this->typeDict(type), 1.5),
 
@@ -110,7 +113,7 @@ dynamicLagrangian<BasicMomentumTransportModel>::dynamicLagrangian
     filterPtr_(LESfilter::New(U.mesh(), this->typeDict(type))),
     filter_(filterPtr_()),
 
-    flm0_("flm0", flm_.dimensions(), 0.0),
+    flm0_("flm0", flm_.dimensions(), 0),
     fmm0_("fmm0", fmm_.dimensions(), vSmall)
 {}
 
@@ -158,25 +161,26 @@ void dynamicLagrangian<BasicMomentumTransportModel>::correct()
     tmp<volTensorField> tgradU(fvc::grad(U));
     const volTensorField& gradU = tgradU();
 
-    volSymmTensorField S(dev(symm(gradU)));
-    volScalarField magS(mag(S));
+    const volSymmTensorField S(dev(symm(gradU)));
+    const volScalarField magS(mag(S));
 
-    volVectorField Uf(filter_(U));
-    volSymmTensorField Sf(dev(symm(fvc::grad(Uf))));
-    volScalarField magSf(mag(Sf));
+    const volVectorField Uf(filter_(U));
+    const volInternalSymmTensorField Sf(dev(symm(fvi::grad(Uf))));
+    const volInternalScalarField magSf(mag(Sf));
 
-    volSymmTensorField L(dev(filter_(sqr(U)) - (sqr(filter_(U)))));
-    volSymmTensorField M
+    const volInternalSymmTensorField L(dev(filter_[sqr(U)] - sqr(filter_[U])));
+    const volInternalSymmTensorField M
     (
-        2.0*sqr(this->delta())*(filter_(magS*S) - 4.0*magSf*Sf)
+        2*sqr(this->delta()())*(filter_[magS*S] - 4*magSf*Sf)
     );
 
-    volScalarField invT
+    const volInternalScalarField invT
     (
-        alpha*rho*(1.0/(theta_.value()*this->delta()))*pow(flm_*fmm_, 1.0/8.0)
+        alpha()*rho()
+       *(1/(theta_.value()*this->delta()()))*pow(flm_()*fmm_(), static_cast<scalar>(1.0/8.0))
     );
 
-    volScalarField LM(L && M);
+    const volInternalScalarField LM(L && M);
 
     fvScalarMatrix flmEqn
     (
@@ -194,7 +198,7 @@ void dynamicLagrangian<BasicMomentumTransportModel>::correct()
     fvConstraints.constrain(flm_);
     bound(flm_, flm0_);
 
-    volScalarField MM(M && M);
+    const volInternalScalarField MM(magSqr(M));
 
     fvScalarMatrix fmmEqn
     (

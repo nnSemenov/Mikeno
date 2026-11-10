@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,9 +30,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
-#include "Time.H"
 #include "polyMesh.H"
-#include "emptyPolyPatch.H"
 #include "twoDPointCorrector.H"
 
 using namespace Foam;
@@ -41,62 +39,45 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    #include "addRegionOption.H"
+    #include "addMeshOption.H"
+
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createPolyMesh.H"
+    #include "createSpecifiedPolyMesh.H"
 
-    pointIOField points
-    (
-        IOobject
-        (
-            "points",
-            runTime.findInstance(polyMesh::meshSubDir, "points"),
-            polyMesh::meshSubDir,
-            runTime,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            false
-        )
-    );
+    pointIOField& points = mesh.lookupObjectRef<pointIOField>("points");
+    pointField& pts = points;
 
-    boundBox bb(points);
+    const point midPoint = gAverage(pts);
 
-    Info<< "bounding box: min = " << bb.min()
-        << " max = " << bb.max() << " meters."
-        << endl;
+    const twoDPointCorrector& twoDCorr = twoDPointCorrector::New(mesh);
 
+    const direction planeNormalCmpt = twoDCorr.normalDir();
 
-    point midPoint = gAverage(points);
+    const scalar midCmptVal = midPoint[planeNormalCmpt];
+    const scalar minCmptVal = mesh.bounds().min()[planeNormalCmpt];
+    const scalar maxCmptVal = mesh.bounds().max()[planeNormalCmpt];
 
-    const twoDPointCorrector& twoDCorr
-    (
-        twoDPointCorrector::New(mesh)
-    );
-
-    direction planeNormalCmpt = twoDCorr.normalDir();
-
-    scalar midCmptVal = midPoint[planeNormalCmpt];
-    scalar minCmptVal = bb.min()[planeNormalCmpt];
-    scalar maxCmptVal = bb.max()[planeNormalCmpt];
-
-    forAll(points, pointi)
+    forAll(pts, pointi)
     {
-        if (points[pointi][planeNormalCmpt] < midCmptVal)
+        if (pts[pointi][planeNormalCmpt] < midCmptVal)
         {
-            points[pointi][planeNormalCmpt] = minCmptVal;
+            pts[pointi][planeNormalCmpt] = minCmptVal;
         }
         else
         {
-            points[pointi][planeNormalCmpt] = maxCmptVal;
+            pts[pointi][planeNormalCmpt] = maxCmptVal;
         }
     }
 
-    twoDCorr.correctPoints(points);
+    twoDCorr.correctPoints(pts);
 
     // Ensure the points are written to a sufficient precision
     IOstream::defaultPrecision(IOstream::highPrecision());
 
     Info<< "Writing points into directory " << points.path() << nl << endl;
+
     points.write();
 
     Info<< "End\n" << endl;

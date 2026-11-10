@@ -30,8 +30,7 @@ Description
 SourceFiles
     GeometricFieldI.H
     GeometricField.C
-    GeometricFieldFunctions.H
-    GeometricFieldFunctions.C
+    GeometricFieldExpression.H
 
 \*---------------------------------------------------------------------------*/
 
@@ -41,6 +40,7 @@ SourceFiles
 #include "GeometricFieldFwd.H"
 #include "GeometricBoundaryField.H"
 #include "GeometricFieldSources.H"
+#include "expressionExpressionable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -48,23 +48,6 @@ namespace Foam
 {
 
 class dictionary;
-
-// Forward declaration of friend functions and operators
-
-template<class Type, class GeoMesh, template<class> class PrimitiveField>
-Ostream& operator<<
-(
-    Ostream&,
-    const GeometricField<Type, GeoMesh, PrimitiveField>&
-);
-
-template<class Type, class GeoMesh, template<class> class PrimitiveField>
-Ostream& operator<<
-(
-    Ostream&,
-    const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
-);
-
 
 /*---------------------------------------------------------------------------*\
                        Class GeometricField Declaration
@@ -76,45 +59,43 @@ class GeometricField
     public DimensionedField<Type, GeoMesh, PrimitiveField>,
     public OldTimeField<GeometricField<Type, GeoMesh, PrimitiveField>>
 {
-    // Private Member Functions
-
-        //- Read from file if it is present
-        bool readIfPresent();
-
 
 public:
 
-    // Public Typedefs
+    // Public Types
 
         //- Value type
-        typedef Type Type_;
+        using Type_ = Type;
 
         //- Geometric mesh type
-        typedef GeoMesh GeoMesh_;
+        using GeoMesh_ = GeoMesh;
 
         //- Base mesh type from which GeoMesh is constructed
-        typedef typename GeoMesh::Mesh Mesh;
+        using Mesh = typename GeoMesh::Mesh;
 
         //- Type of the internal field from which this GeometricField is derived
-        typedef DimensionedField<Type, GeoMesh, PrimitiveField> Internal;
+        using Internal = DimensionedField<Type, GeoMesh, PrimitiveField>;
 
         //- Type of the field from which this GeometricField is derived
-        typedef DimensionedField<Type, GeoMesh, PrimitiveField> Base;
+        using Base = DimensionedField<Type, GeoMesh, PrimitiveField>;
 
         //- Type of the patch field of which the Boundary is composed
-        typedef typename GeoMesh::template PatchField<Type> Patch;
+        using PatchField = typename GeoMesh::template PatchField<Type>;
 
         //- Type of the boundary field
-        typedef GeometricBoundaryField<Type, GeoMesh, PrimitiveField> Boundary;
+        using BoundaryField = PtrField<PatchField>;
+
+        //- Type of the boundary field
+        using Boundary = GeometricBoundaryField<Type, GeoMesh, PrimitiveField>;
 
         //- Type of the field source of which the Sources is composed
-        typedef typename GeoMesh::template FieldSource<Type> Source;
+        using Source = typename GeoMesh::template FieldSource<Type>;
 
         //- Type of the field sources
-        typedef GeometricFieldSources<Type, GeoMesh, PrimitiveField> Sources;
+        using Sources = GeometricFieldSources<Type, GeoMesh, PrimitiveField>;
 
         //- Component type of the elements of the field
-        typedef typename PrimitiveField<Type>::cmptType cmptType;
+        using cmptType = typename PrimitiveField<Type>::cmptType;
 
 
 private:
@@ -139,6 +120,22 @@ private:
         //- Read the field - create the field dictionary on-the-fly
         void readFields();
 
+        //- Read from file if it is present
+        bool readIfPresent();
+
+        //- Constructor given IOobject, mesh, dimensions and patch field types.
+        //  This allocates storage for the field but not values
+        GeometricField
+        (
+            const IOobject&,
+            const GeoMesh&,
+            const dimensionSet&,
+            const wordList& wantedPatchTypes,
+            const wordList& actualPatchTypes = wordList(),
+            const HashTable<word>& fieldSourceTypes = HashTable<word>(),
+            const IOerrorLocation& fieldSourceErrorLocation = IOerrorLocation()
+        );
+
 
 public:
 
@@ -161,38 +158,23 @@ public:
     // Constructors
 
         //- Constructor given IOobject, mesh, dimensions and patch field type.
-        //  This allocates storage for the field but not values.
-        //  Used only within this class to create TEMPORARY variables
+        //  Warning: this allocates storage but does not set field values!
         GeometricField
         (
             const IOobject&,
             const GeoMesh&,
             const dimensionSet&,
-            const word& patchFieldType = Patch::calculatedType()
-        );
-
-        //- Constructor given IOobject, mesh, dimensions and patch field types.
-        //  This allocates storage for the field but not values.
-        //  Used only within this class to create TEMPORARY variables
-        GeometricField
-        (
-            const IOobject&,
-            const GeoMesh&,
-            const dimensionSet&,
-            const wordList& wantedPatchTypes,
-            const wordList& actualPatchTypes = wordList(),
-            const HashTable<word>& fieldSourceTypes = HashTable<word>(),
-            const IOerrorLocation& fieldSourceErrorLocation = IOerrorLocation()
+            const word& patchFieldType
         );
 
         //- Constructor given IOobject, mesh, dimensioned<Type>
-        //  and patch field type.
+        //  and optional patch field type.
         GeometricField
         (
             const IOobject&,
             const GeoMesh&,
             const dimensioned<Type>&,
-            const word& patchFieldType = Patch::calculatedType()
+            const word& patchFieldType = PatchField::calculatedType()
         );
 
         //- Constructor given IOobject, mesh, dimensioned<Type>
@@ -213,7 +195,22 @@ public:
         (
             const IOobject&,
             const Internal&,
-            const PtrList<Patch>&,
+            const PtrField<PatchField>&,
+            const HashPtrTable<Source>& = HashPtrTable<Source>()
+        );
+
+        //- Constructor from component expressions
+        template
+        <
+            class InternalExpression,
+            class BoundaryExpression,
+            class = EnableIfExpressionable<InternalExpression>
+        >
+        GeometricField
+        (
+            const IOobject&,
+            const InternalExpression&,
+            const BoundaryExpression&,
             const HashPtrTable<Source>& = HashPtrTable<Source>()
         );
 
@@ -224,15 +221,43 @@ public:
             const GeoMesh&,
             const dimensionSet&,
             const PrimitiveField<Type>&,
-            const PtrList<Patch>&,
+            const PtrField<PatchField>&,
+            const HashPtrTable<Source>& = HashPtrTable<Source>()
+        );
+
+        //- Constructor from component expressions
+        template
+        <
+            class InternalExpression,
+            class BoundaryExpression,
+            class = EnableIfExpressionable<InternalExpression>
+        >
+        GeometricField
+        (
+            const IOobject&,
+            const GeoMesh&,
+            const dimensionSet&,
+            const InternalExpression&,
+            const BoundaryExpression&,
             const HashPtrTable<Source>& = HashPtrTable<Source>()
         );
 
         //- Construct and read given IOobject
-        GeometricField(const IOobject&, const GeoMesh&);
+        GeometricField
+        (
+            const IOobject&,
+            const GeoMesh&,
+            const dimensionSet& dims = dimensions::invalid
+        );
 
         //- Construct from dictionary
-        GeometricField(const IOobject&, const GeoMesh&, const dictionary&);
+        GeometricField
+        (
+            const IOobject&,
+            const GeoMesh&,
+            const dictionary&,
+            const dimensionSet& dims = dimensions::invalid
+        );
 
         //- Copy constructor
         GeometricField(const GeometricField<Type, GeoMesh, PrimitiveField>&);
@@ -252,6 +277,10 @@ public:
         (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
         );
+
+        //- Construct from an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        GeometricField(const Expression& e);
 
         //- Construct as copy resetting IO parameters
         template<template<class> class PrimitiveField2>
@@ -301,6 +330,16 @@ public:
             const word& patchFieldType
         );
 
+        //- Construct as copy of expression setting IO parameters
+        //  and patch field type
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        GeometricField
+        (
+            const IOobject&,
+            const Expression& e,
+            const word& patchFieldType
+        );
+
         //- Constructor from internal field and patch field type
         template<template<class> class PrimitiveField2>
         GeometricField
@@ -336,6 +375,19 @@ public:
         (
             const IOobject&,
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&,
+            const wordList& patchFieldTypes,
+            const wordList& actualPatchTypes = wordList(),
+            const HashTable<word>& fieldSourceTypes = HashTable<word>(),
+            const IOerrorLocation& fieldSourceErrorLocation = IOerrorLocation()
+        );
+
+        //- Construct as copy of tmp resetting IO parameters
+        //  and patch field types
+        template <class Expression, class = EnableIfExpressionable<Expression>>
+        GeometricField
+        (
+            const IOobject&,
+            const Expression&,
             const wordList& patchFieldTypes,
             const wordList& actualPatchTypes = wordList(),
             const HashTable<word>& fieldSourceTypes = HashTable<word>(),
@@ -378,7 +430,23 @@ public:
         (
             const word& name,
             const Internal&,
-            const PtrList<Patch>&,
+            const PtrField<PatchField>&,
+            const HashPtrTable<Source>& = HashPtrTable<Source>()
+        );
+
+        //- Return a temporary field constructed from name,
+        //  internal field and list of patch fields
+        template
+        <
+            class InternalExpression,
+            class BoundaryExpression,
+            class = EnableIfExpressionable<InternalExpression>
+        >
+        static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
+        (
+            const word& name,
+            const InternalExpression&,
+            const BoundaryExpression&,
             const HashPtrTable<Source>& = HashPtrTable<Source>()
         );
 
@@ -389,7 +457,7 @@ public:
             const word& name,
             const GeoMesh&,
             const dimensionSet&,
-            const word& patchFieldType = Patch::calculatedType()
+            const word& patchFieldType = PatchField::calculatedType()
         );
 
         //- Return a temporary field constructed from mesh, dimensioned<Type>
@@ -399,7 +467,7 @@ public:
             const word& name,
             const GeoMesh&,
             const dimensioned<Type>&,
-            const word& patchFieldType = Patch::calculatedType()
+            const word& patchFieldType = PatchField::calculatedType()
         );
 
         //- Return a temporary field constructed from mesh, dimensioned<Type>
@@ -455,6 +523,16 @@ public:
         (
             const word& name,
             const tmp<Internal>&,
+            const word& patchFieldType
+        );
+
+        //- Return a temporary field constructed from name,
+        //  internal field expression and patch field type
+        template<class Expression, class = EnableIfExpression<Expression>>
+        static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
+        (
+            const word& name,
+            const Expression& e,
             const word& patchFieldType
         );
 
@@ -521,11 +599,6 @@ public:
         //- Return a const-reference to the dimensioned internal field
         inline const Internal& internalField() const;
 
-        //- Return a const-reference to the dimensioned internal field
-        //  of a "vol" field.  Useful in the formulation of source-terms
-        //  for FV equations
-        inline const Internal& v() const;
-
         //- Return a reference to the primitive field
         //  Note: this increments the event counter and checks the
         //  old-time fields; avoid in loops.
@@ -537,14 +610,26 @@ public:
         //- Return a reference to the boundary field
         //  Note: this increments the event counter and checks the
         //  old-time fields; avoid in loops.
-        Boundary& boundaryFieldRef();
+        Boundary& boundaryRef();
 
         //- Return a reference to the boundary field without storing old times
         //  Note: this increments the event counter; avoid in loops.
-        Boundary& boundaryFieldRefNoStoreOldTimes();
+        Boundary& boundaryRefNoStoreOldTimes();
 
         //- Return const-reference to the boundary field
-        inline const Boundary& boundaryField() const;
+        inline const Boundary& boundary() const;
+
+        //- Return a reference to the boundary field
+        //  Note: this increments the event counter and checks the
+        //  old-time fields; avoid in loops.
+        BoundaryField& boundaryFieldRef();
+
+        //- Return a reference to the boundary field without storing old times
+        //  Note: this increments the event counter; avoid in loops.
+        BoundaryField& boundaryFieldRefNoStoreOldTimes();
+
+        //- Return const-reference to the boundary field
+        inline const BoundaryField& boundaryField() const;
 
         //- Return a reference to the sources
         //  Note: this increments the event counter and checks the
@@ -586,17 +671,15 @@ public:
         //- Does the field need a reference level for solution
         bool needReference() const;
 
-        //- Return a component of the field
-        tmp<GeometricField<cmptType, GeoMesh, Field>> component
-        (
-            const direction
-        ) const;
+        //- Return a component field expression of the field
+        inline auto component(const direction&) const;
 
         //- WriteData member function required by regIOobject
-        bool writeData(Ostream&) const;
+        virtual bool writeData(Ostream&) const;
 
-        //- Return transpose (only if it is a tensor field)
-        tmp<GeometricField<Type, GeoMesh, Field>> T() const;
+        //- Return transpose field expression
+        //  (only if it is a tensor field)
+        inline auto T() const;
 
         //- Relax field (for steady-state solution).
         //  alpha >= 1 : no relaxation
@@ -655,17 +738,24 @@ public:
             const tmp<GeometricField<cmptType, GeoMesh, PrimitiveField2>>&
         );
 
+        //- Replace a component field of the field from the given expression
+        template<class Expression, class = EnableIfExpression<Expression>>
+        void replace(const direction, const Expression&);
+
         //- Replace a component field of the field
         void replace(const direction, const dimensioned<cmptType>&);
 
-        void max(const dimensioned<Type>&);
+        //- Bound the field to the given lower bound
+        void boundLower(const dimensioned<Type>& lower);
 
-        void min(const dimensioned<Type>&);
+        //- Bound the field to the given upper bound
+        void boundUpper(const dimensioned<Type>& upper);
 
-        void maxMin
+        //- Bound the field within the given lower and upper bounds
+        void bound
         (
-            const dimensioned<Type>& minDt,
-            const dimensioned<Type>& maxDt
+            const dimensioned<Type>& lower,
+            const dimensioned<Type>& upper
         );
 
 
@@ -675,46 +765,52 @@ public:
         //  Useful in the formulation of source-terms for FV equations
         inline const Internal& operator()() const;
 
-        void operator=
-        (
-            const GeometricField<Type, GeoMesh, PrimitiveField>&
-        );
-        void operator=
-        (
-            GeometricField<Type, GeoMesh, PrimitiveField>&&
-        );
+        void operator=(const GeometricField<Type, GeoMesh, PrimitiveField>&);
+
+        void operator=(GeometricField<Type, GeoMesh, PrimitiveField>&&);
+
         template<template<class> class PrimitiveField2>
-        void operator=
-        (
-            const GeometricField<Type, GeoMesh, PrimitiveField2>&
-        );
+        void operator=(const GeometricField<Type, GeoMesh, PrimitiveField2>&);
+
         void operator=
         (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
         );
+
+        //- Assign to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator=(const Expression& e);
+
         template<template<class> class PrimitiveField2>
         void operator=
         (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField2>>&
         );
+
         void operator=(const dimensioned<Type>&);
+
         void operator=(const zero&);
+
+        template<template<class> class PrimitiveField2>
+        void operator==(const GeometricField<Type, GeoMesh, PrimitiveField2>&);
+
+        void operator==
+        (
+            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
+        );
 
         template<template<class> class PrimitiveField2>
         void operator==
         (
-            const GeometricField<Type, GeoMesh, PrimitiveField2>&
-        );
-        void operator==
-        (
-            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
-        );
-        template<template<class> class PrimitiveField2>
-        void operator==
-        (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField2>>&
         );
+
+        //- Assign to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator==(const Expression& e);
+
         void operator==(const dimensioned<Type>&);
+
         void operator==(const zero&);
 
         template<template<class> class PrimitiveField2>
@@ -722,11 +818,17 @@ public:
         (
             const GeometricField<Type, GeoMesh, PrimitiveField2>&
         );
+
         template<template<class> class PrimitiveField2>
         void operator+=
         (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField2>>&
         );
+
+        //- Assign-add to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator+=(const Expression& e);
+
         void operator+=(const dimensioned<Type>&);
 
         template<template<class> class PrimitiveField2>
@@ -734,11 +836,17 @@ public:
         (
             const GeometricField<Type, GeoMesh, PrimitiveField2>&
         );
+
         template<template<class> class PrimitiveField2>
         void operator-=
         (
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField2>>&
         );
+
+        //- Assign-subtract to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator-=(const Expression& e);
+
         void operator-=(const dimensioned<Type>&);
 
         template<template<class> class PrimitiveField2>
@@ -746,11 +854,17 @@ public:
         (
             const GeometricField<scalar, GeoMesh, PrimitiveField2>&
         );
+
         template<template<class> class PrimitiveField2>
         void operator*=
         (
             const tmp<GeometricField<scalar, GeoMesh, PrimitiveField2>>&
         );
+
+        //- Assign-multiply to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator*=(const Expression& e);
+
         void operator*=(const dimensioned<scalar>&);
 
         template<template<class> class PrimitiveField2>
@@ -758,27 +872,18 @@ public:
         (
             const GeometricField<scalar, GeoMesh, PrimitiveField2>&
         );
+
         template<template<class> class PrimitiveField2>
         void operator/=
         (
             const tmp<GeometricField<scalar, GeoMesh, PrimitiveField2>>&
         );
+
+        //- Assign-divide to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator/=(const Expression& e);
+
         void operator/=(const dimensioned<scalar>&);
-
-
-    // Ostream operators
-
-        friend Ostream& operator<< <Type, GeoMesh, PrimitiveField>
-        (
-            Ostream&,
-            const GeometricField<Type, GeoMesh, PrimitiveField>&
-        );
-
-        friend Ostream& operator<< <Type, GeoMesh, PrimitiveField>
-        (
-            Ostream&,
-            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
-        );
 };
 
 
@@ -786,18 +891,32 @@ template<class Type, class GeoMesh, template<class> class PrimitiveField>
 Ostream& operator<<
 (
     Ostream&,
-    const GeometricBoundaryField<Type, GeoMesh, PrimitiveField>&
+    const GeometricField<Type, GeoMesh, PrimitiveField>&
+);
+
+
+template<class Type, class GeoMesh, template<class> class PrimitiveField>
+bool reusable(const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>& tgf);
+
+
+template<class TypeR, class GeoMesh>
+tmp<GeometricField<TypeR, GeoMesh, Field>> New
+(
+    const tmp<GeometricField<TypeR, GeoMesh, Field>>& tgf1,
+    const word& name,
+    const dimensionSet& dimensions,
+    const bool initRet = false
 );
 
 
 template<class Type, class GeoMesh, template<class> class PrimitiveField>
 struct OldTimeFieldCopy<GeometricField<Type, GeoMesh, PrimitiveField>>
 {
-    typedef GeometricField<Type, GeoMesh, PrimitiveField> FieldType;
+    using FieldType = GeometricField<Type, GeoMesh, PrimitiveField>;
 
-    typedef typename OldTimeField0Type<FieldType>::type Field0Type;
+    using Field0Type = typename OldTimeField0Type<FieldType>::type;
 
-    typedef typename FieldType::Patch::Calculated Calculated;
+    using Calculated = typename FieldType::PatchField::Calculated;
 
     tmp<Field0Type> operator()(const IOobject& io, const FieldType& field)
     {
@@ -813,12 +932,11 @@ struct OldTimeFieldCopy<GeometricField<Type, GeoMesh, PrimitiveField>>
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "GeometricFieldI.H"
+#include "GeometricFieldExpression.H"
 
 #ifdef NoRepository
     #include "GeometricField.C"
 #endif
-
-#include "GeometricFieldFunctions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

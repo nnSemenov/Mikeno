@@ -56,7 +56,7 @@ forAll(allSpeciesRhoN, rN)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimless/dimVolume,
+            inv(dimensions::volume),
             "zeroGradient"
         )
     );
@@ -77,7 +77,7 @@ volScalarField totalRhoN
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimless/dimVolume,
+    inv(dimensions::volume),
     "zeroGradient"
 );
 totalRhoN.primitiveFieldRef() = 0;
@@ -111,7 +111,7 @@ forAll(allSpeciesRhoM, rM)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimMass/dimVolume,
+            dimensions::density,
             "zeroGradient"
         )
     );
@@ -132,7 +132,7 @@ volScalarField totalRhoM
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimMass/dimVolume,
+    dimensions::density,
     "zeroGradient"
 );
 totalRhoM.primitiveFieldRef() = 0;
@@ -166,7 +166,7 @@ forAll(allSpeciesVelocity, v)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimVelocity,
+            dimensions::velocity,
             "zeroGradient"
         )
     );
@@ -175,24 +175,6 @@ forAll(allSpeciesVelocity, v)
 }
 
 Info << "    Creating total velocity field" << endl;
-
-// volVectorField totalVelocity
-// (
-//     IOobject
-//     (
-//         "velocity_total",
-//         runTime.name(),
-//         mesh,
-//         IOobject::NO_READ,
-//         IOobject::AUTO_WRITE
-//     ),
-//     mesh,
-//     dimVelocity,
-//     "zeroGradient"
-// );
-// totalVelocity.primitiveFieldRef() = Zero;
-// totalVelocity.correctBoundaryConditions();
-
 
 volVectorField totalVelocity
 (
@@ -205,7 +187,7 @@ volVectorField totalVelocity
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedVector(dimVelocity, Zero)
+    dimensionedVector(dimensions::velocity, Zero)
 );
 
 /*---------------------------------------------------------------------------*\
@@ -236,7 +218,7 @@ forAll(allSpeciesTemperature, t)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimTemperature,
+            dimensions::temperature,
             "zeroGradient"
         )
     );
@@ -257,7 +239,7 @@ volScalarField totalTemperature
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimTemperature,
+    dimensions::temperature,
     "zeroGradient"
 );
 totalTemperature.primitiveFieldRef() = 0;

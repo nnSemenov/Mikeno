@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -66,31 +66,25 @@ inline void Foam::thirdBodyArrheniusReactionRate::postEvaluate() const
 }
 
 
-inline Foam::scalar Foam::thirdBodyArrheniusReactionRate::operator()
+inline Foam::scalar Foam::thirdBodyArrheniusReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li
+    const reaction::state& s
 ) const
 {
     return
-        thirdBodyEfficiencies_.M(c)
-       *ArrheniusReactionRate::operator()(p, T, c, li);
+        thirdBodyEfficiencies_.M(s)
+       *ArrheniusReactionRate::k(s);
 }
 
 
 inline Foam::scalar Foam::thirdBodyArrheniusReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li
+    const reaction::state& s
 ) const
 {
     return
-        thirdBodyEfficiencies_.M(c)
-       *ArrheniusReactionRate::ddT(p, T, c, li);
+        thirdBodyEfficiencies_.M(s)
+       *ArrheniusReactionRate::ddT(s);
 }
 
 
@@ -102,17 +96,12 @@ inline bool Foam::thirdBodyArrheniusReactionRate::hasDdc() const
 
 inline void Foam::thirdBodyArrheniusReactionRate::ddc
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const reaction::state& s,
     scalarField& ddc
 ) const
 {
-    const scalar k = ArrheniusReactionRate::operator()(p, T, c, li);
-
-    ddc = thirdBodyEfficiencies_.dMdc(c);
-    ddc *= k;
+    ddc = thirdBodyEfficiencies_.dMdc();
+    ddc *= ArrheniusReactionRate::k(s);
 }
 
 

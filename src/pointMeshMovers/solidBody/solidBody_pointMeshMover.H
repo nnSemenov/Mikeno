@@ -48,7 +48,7 @@ namespace pointMeshMovers
 {
 
 /*---------------------------------------------------------------------------*\
-                    Class solidBody Declaration
+                          Class solidBody Declaration
 \*---------------------------------------------------------------------------*/
 
 class solidBody
@@ -65,9 +65,6 @@ class solidBody
 
         //- Points to move when cell zone is supplied
         labelList zonePoints_;
-
-        //- Cache the current transform for topoChange
-        mutable septernion transform_;
 
 
     // Private Member Functions

@@ -62,7 +62,7 @@ Foam::XiEqModels::Gulder::Gulder
 :
     XiEqModel(thermo, turbulence, Su),
     XiEqCoeff_("XiEqCoeff", dimless, 0.62),
-    SuMin_("SuMin", 0.01*Su.average())
+    SuMin_("SuMin", 0.01*average(Su()))
 {
     readCoeffs(dict);
 }
@@ -85,7 +85,7 @@ Foam::tmp<Foam::volScalarField> Foam::XiEqModels::Gulder::XiEq() const
         max
         (
             momentumTransport_.epsilon(),
-            dimensionedScalar(sqr(dimVelocity)/dimTime, small)
+            dimensionedScalar(dimensions::turbulentEpsilon, small)
         )
     );
 

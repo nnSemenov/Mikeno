@@ -2,7 +2,7 @@ name: Build on Ubuntu
 
 on:
   push:
-    branches: [ "feature/*","dev" ]
+    branches: [ "feature/*","dev","4NapH" ]
   pull_request:
     branches: [ "master" ]
 
@@ -20,14 +20,17 @@ jobs:
     strategy:
       matrix:
         compiler: [Gcc, Clang]
+        precision: [DP,SP]
 
     steps:
-    - uses: actions/checkout@v4
+
+    - name: Checkout Repo
+      uses: actions/checkout@v7
 
     - name: Set compiler
       shell: bash
       run: |
-        echo "foam_platform=linux64${{ matrix.compiler }}DPInt32Opt" >> $GITHUB_ENV
+        echo "foam_platform=linux64${{ matrix.compiler }}${{ matrix.precision }}Int32Opt" >> $GITHUB_ENV
         if [ "${{ matrix.compiler }}" == "Gcc" ]; then
           echo "c_compiler=gcc-14" >> $GITHUB_ENV
           echo "cxx_compiler=g++-14" >> $GITHUB_ENV
@@ -45,7 +48,7 @@ jobs:
 
     - name: Install deps
       run: | 
-        sudo apt install --fix-missing flex libfl-dev libopenmpi-dev paraview-dev libscotch-dev libptscotch-dev libmetis-dev libparmetis-dev libtrilinos-zoltan-dev libboost-all-dev gnuplot
+        sudo apt install --fix-missing flex libfl-dev libopenmpi-dev paraview-dev libscotch-dev libptscotch-dev libmetis-dev libscotchparmetis-dev libtrilinos-zoltan-dev libboost-all-dev gnuplot
         
 #    - name: Install paraview and related deps
 #      run: sudo apt install --fix-missing paraview paraview-dev libvtk9-dev
@@ -62,7 +65,7 @@ jobs:
         sudo cmake --install build
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja -DParaView_TYPE=none -DCMAKE_C_COMPILER=$c_compiler -DCMAKE_CXX_COMPILER=$cxx_compiler
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja -DParaView_TYPE=none -DCMAKE_C_COMPILER=$c_compiler -DCMAKE_CXX_COMPILER=$cxx_compiler -DWM_PRECISION_OPTION=${{ matrix.precision }}
 
     - name: Build
       # Build your program with the given configuration
@@ -77,7 +80,7 @@ jobs:
 #        7z a -mx=9 -mmt=0 -xr'!build' -xr'!.git' -xr'!.github' -xr'!idea' -xr'!.vscode' -snl -sse $foam_platform.7z
 
     - name: Upload archive
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: platform-binary-${{ matrix.compiler }}
         path: platform.7z
@@ -138,7 +141,7 @@ jobs:
       run: 7z a -mx=9 -mmt=0 test.7z test
 
     - name: Upload test files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: ${{ failure() }}
       with:
         name: test-failure-files-${{ matrix.compiler }}

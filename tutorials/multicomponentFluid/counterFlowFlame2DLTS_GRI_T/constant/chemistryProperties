@@ -1,0 +1,35 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      chemistryProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#includeEtc "caseDicts/solvers/chemistry/TDAC/tabulationProperties.cfg"
+
+initialChemicalTimeStep 1e-7;
+
+ode
+{
+    solver          seulex;
+    absTol          1e-8;
+    relTol          1e-1;
+}
+
+tabulation
+{
+    tolerance   3e-3;
+}
+
+#include "reactionsGRI"
+
+// ************************************************************************* //

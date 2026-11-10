@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -58,6 +58,7 @@ See also
 #include "phaseCompressibleMomentumTransportModel.H"
 #include "buoyancy.H"
 #include "pressureReference.H"
+#include "capillarySystem.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -125,8 +126,9 @@ protected:
 
         populationBalanceSystem populationBalanceSystem_;
 
+        autoPtr<capillarySystem> capillarySystem_;
 
-    // Thermophysical properties
+        // Thermophysical properties
 
         volScalarField& p_;
 
@@ -143,7 +145,7 @@ protected:
 
     // Optional models
 
-        const IOMRFZoneList& MRF;
+        const MRFZones& MRF;
 
 
     // Cached temporary fields
@@ -159,7 +161,7 @@ protected:
         //- Stored divU from the previous mesh so that it can be
         //  mapped and used in correctPhi to ensure the corrected phi
         //  has the same divergence
-        autoPtr<volScalarField> divU;
+        autoPtr<volInternalScalarField> divU;
 
         //- Read controls
         virtual bool read();
@@ -197,7 +199,7 @@ private:
         //- Return the list of pressure equation compressibility contributions
         PtrList<fvScalarMatrix> compressibilityEqns
         (
-            const PtrList<volScalarField::Internal>& dmdts
+            const PtrList<volInternalScalarField>& dmdts
         ) const;
 
 
@@ -230,12 +232,12 @@ public:
         //- Reference to the mass-flux field
         const surfaceScalarField& phi;
 
+        inline auto &capillary() const & { return capillarySystem_(); }
 
-    //- Runtime type information
-    TypeName("multiphaseEuler");
+        //- Runtime type information
+        TypeName("multiphaseEuler");
 
-
-    // Constructors
+        // Constructors
 
         //- Construct from region mesh
         multiphaseEuler(fvMesh& mesh);

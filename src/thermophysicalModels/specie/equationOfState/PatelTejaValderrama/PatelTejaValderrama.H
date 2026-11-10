@@ -143,8 +143,8 @@ class PatelTejaValderrama : public Specie
             return p / (Z * this->R(W) * T);
         }
 
-        [[nodiscard]] inline residualEnergy residualHE(scalar p, scalar T,
-                                                       scalar W) const
+        [[nodiscard]] inline Foam::residualEnergy residualHE(scalar p, scalar T,
+                                                             scalar W) const
         {
             const scalar z = this->Z(p, T);
             const scalar V = z * RR * T / p;
@@ -162,7 +162,7 @@ class PatelTejaValderrama : public Specie
             };
         }
 
-        [[nodiscard]] inline residualSpecificHeat residualSpecificHeat(
+        [[nodiscard]] inline Foam::residualSpecificHeat residualSpecificHeat(
             scalar p, scalar T, scalar W) const
         {
             const scalar z = this->Z(p, T);
@@ -188,7 +188,7 @@ class PatelTejaValderrama : public Specie
             };
         }
 
-        [[nodiscard]] inline residualSpecificHeatDerivative
+        [[nodiscard]] inline Foam::residualSpecificHeatDerivative
         residualSpecificHeatDerivative(scalar p, scalar T, scalar W) const
         {
             const scalar z = this->Z(p, T);
@@ -420,7 +420,7 @@ class PatelTejaValderrama : public Specie
 
     inline static word typeName()
     {
-        return "PatelTejaValderrama<" + word(Specie::typeName_()) + '>';
+        return word("PatelTejaValderrama<", word(Specie::typeName_()), '>');
     }
 
     inline EOSCore core(scalar p, scalar T) const

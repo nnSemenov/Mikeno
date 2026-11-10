@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,8 +50,8 @@ div
 {
     return VolField<Type>::New
     (
-        "div("+ssf.name()+')',
-        fvc::surfaceIntegrateExtrapolate(ssf)
+        word("div(", ssf.name(), ')'),
+        fvc::surfaceIntegrate(ssf)
     );
 }
 
@@ -108,7 +108,7 @@ div
     const VolField<Type>& vf
 )
 {
-    return fvc::div(vf, "div("+vf.name()+')');
+    return fvc::div(vf, word("div(", vf.name(), ')'));
 }
 
 
@@ -209,7 +209,7 @@ div
 {
     return fvc::div
     (
-        flux, vf, "div("+flux.name()+','+vf.name()+')'
+        flux, vf, word("div(", flux.name(), ',', vf.name(), ')')
     );
 }
 

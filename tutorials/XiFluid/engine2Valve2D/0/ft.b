@@ -14,7 +14,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 0 0 0 0];
+dimensions      [];
 
 internalField   uniform 0;
 
@@ -25,21 +25,21 @@ boundaryField
     inletFuel
     {
         type            inletOutlet;
-        phi             phic;
+        phi             alphaPhi.b;
         inletValue      uniform 0;
     }
 
     inlet
     {
         type            inletOutlet;
-        phi             phic;
+        phi             alphaPhi.b;
         inletValue      uniform 0;
     }
 
     outlet
     {
         type            inletOutlet;
-        phi             phic;
+        phi             alphaPhi.b;
         inletValue      uniform 0;
     }
 

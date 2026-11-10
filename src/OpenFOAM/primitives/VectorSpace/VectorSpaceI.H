@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,7 @@ License
 
 #include "error.H"
 #include "products.H"
-#include "VectorSpaceOps.H"
-#include "ops.H"
+#include "VectorSpaceOp.H"
 #include <type_traits>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -44,7 +43,7 @@ inline VectorSpace<Form, Cmpt, Ncmpts>::VectorSpace()
 template<class Form, class Cmpt, direction Ncmpts>
 inline VectorSpace<Form, Cmpt, Ncmpts>::VectorSpace(const Foam::zero)
 {
-    VectorSpaceOps<Ncmpts,0>::eqOpS(*this, Zero, eqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op([](Cmpt& x) { x = Zero; }, *this);
 }
 
 
@@ -55,7 +54,11 @@ inline VectorSpace<Form, Cmpt, Ncmpts>::VectorSpace
     const VectorSpace<Form2, Cmpt2, Ncmpts>& vs
 )
 {
-    VectorSpaceOps<Ncmpts,0>::eqOp(*this, vs, eqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt2& b) { a = b; },
+        *this, vs
+    );
 }
 
 
@@ -168,7 +171,7 @@ template<class Form, class Cmpt, direction Ncmpts>
 inline Form VectorSpace<Form, Cmpt, Ncmpts>::uniform(const Cmpt& s)
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::eqOpS(v, s, eqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op([&s](Cmpt& x) { x = s; }, v);
     return v;
 }
 
@@ -281,7 +284,11 @@ inline void VectorSpace<Form, Cmpt, Ncmpts>::operator+=
     const VectorSpace<Form, Cmpt, Ncmpts>& vs
 )
 {
-    VectorSpaceOps<Ncmpts,0>::eqOp(*this, vs, plusEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& x, const Cmpt& y) { x += y; },
+        *this, vs
+    );
 }
 
 
@@ -291,14 +298,18 @@ inline void VectorSpace<Form, Cmpt, Ncmpts>::operator-=
     const VectorSpace<Form, Cmpt, Ncmpts>& vs
 )
 {
-    VectorSpaceOps<Ncmpts,0>::eqOp(*this, vs, minusEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& x, const Cmpt& y) { x -= y; },
+        *this, vs
+    );
 }
 
 
 template<class Form, class Cmpt, direction Ncmpts>
 inline void VectorSpace<Form, Cmpt, Ncmpts>::operator=(const Foam::zero)
 {
-    VectorSpaceOps<Ncmpts,0>::eqOpS(*this, 0, eqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op([](Cmpt& x) { x = Zero; }, *this);
 }
 
 
@@ -309,7 +320,7 @@ inline void VectorSpace<Form, Cmpt, Ncmpts>::operator*=
     const Type s
 )
 {
-    VectorSpaceOps<Ncmpts,0>::eqOpS(*this, s, multiplyEqOp2<Cmpt, Type>());
+    VectorSpaceOp<Ncmpts, 0>::op([s](Cmpt& x) { x *= s; }, *this);
 }
 
 
@@ -320,7 +331,7 @@ inline void VectorSpace<Form, Cmpt, Ncmpts>::operator/=
     const Type s
 )
 {
-    VectorSpaceOps<Ncmpts,0>::eqOpS(*this, s, divideEqOp2<Cmpt, Type>());
+    VectorSpaceOp<Ncmpts, 0>::op([&s](Cmpt& x) { x /= s; }, *this);
 }
 
 
@@ -351,41 +362,41 @@ inline const Cmpt& component
 // Powers of a Form
 // Equivalent to outer-products between the Form and itself
 // Form^0 = 1.0
-template<class Form, class Cmpt, direction Ncmpts>
-inline typename powProduct<Form, 0>::type pow
-(
-    const VectorSpace<Form, Cmpt, Ncmpts>&,
-    typename powProduct<Form, 0>::type =
-        pTraits<typename powProduct<Form, 0>::type>::zero
-)
-{
-    return 1.0;
-}
+// template<class Form, class Cmpt, direction Ncmpts>
+// inline typename powProduct<Form, 0>::type pow
+// (
+//     const VectorSpace<Form, Cmpt, Ncmpts>&,
+//     typename powProduct<Form, 0>::type =
+//         pTraits<typename powProduct<Form, 0>::type>::zero
+// )
+// {
+//     return 1.0;
+// }
 
-// Form^1 = Form
-template<class Form, class Cmpt, direction Ncmpts>
-inline typename powProduct<Form, 1>::type pow
-(
-    const VectorSpace<Form, Cmpt, Ncmpts>& v,
-    typename powProduct<Form, 1>::type =
-        pTraits<typename powProduct<Form, 1>::type>::zero
-)
-{
-    return static_cast<const Form&>(v);
-}
+// // Form^1 = Form
+// template<class Form, class Cmpt, direction Ncmpts>
+// inline typename powProduct<Form, 1>::type pow
+// (
+//     const VectorSpace<Form, Cmpt, Ncmpts>& v,
+//     typename powProduct<Form, 1>::type =
+//         pTraits<typename powProduct<Form, 1>::type>::zero
+// )
+// {
+//     return static_cast<const Form&>(v);
+// }
 
 
-// Form^2 = sqr(Form)
-template<class Form, class Cmpt, direction Ncmpts>
-inline typename powProduct<Form, 2>::type pow
-(
-    const VectorSpace<Form, Cmpt, Ncmpts>& v,
-    typename powProduct<Form, 2>::type =
-        pTraits<typename powProduct<Form, 2>::type>::zero
-)
-{
-    return sqr(static_cast<const Form&>(v));
-}
+// // Form^2 = sqr(Form)
+// template<class Form, class Cmpt, direction Ncmpts>
+// inline typename powProduct<Form, 2>::type pow
+// (
+//     const VectorSpace<Form, Cmpt, Ncmpts>& v,
+//     typename powProduct<Form, 2>::type =
+//         pTraits<typename powProduct<Form, 2>::type>::zero
+// )
+// {
+//     return sqr(static_cast<const Form&>(v));
+// }
 
 
 template<class Form, class Cmpt, direction Ncmpts>
@@ -395,11 +406,10 @@ inline auto magSqr
 )
 {
     auto ms = magSqr(vs.v_[0]);
-    VectorSpaceOps<Ncmpts,1>::SeqOp
+    VectorSpaceOp<Ncmpts, 1>::op
     (
-        ms,
-        vs,
-        plusEqMagSqrOp2<decltype(ms), Cmpt>()
+        [&ms](const Cmpt& x) { ms += magSqr(x); },
+        vs
     );
     return ms;
 }
@@ -427,53 +437,76 @@ inline Form normalised
 
 
 template<class Form, class Cmpt, direction Ncmpts>
-inline VectorSpace<Form, Cmpt, Ncmpts> cmptMultiply
+inline Form cmptMultiply
 (
     const VectorSpace<Form, Cmpt, Ncmpts>& vs1,
     const VectorSpace<Form, Cmpt, Ncmpts>& vs2
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, cmptMultiplyOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = cmptMultiply(b, c); },
+        v,
+        vs1,
+        vs2
+    );
     return v;
 }
 
 
 template<class Form, class Cmpt, direction Ncmpts>
-inline VectorSpace<Form, Cmpt, Ncmpts> cmptPow
+inline Form cmptPow
 (
     const VectorSpace<Form, Cmpt, Ncmpts>& vs1,
     const VectorSpace<Form, Cmpt, Ncmpts>& vs2
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, cmptPowOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = cmptPow(b, c); },
+        v,
+        vs1,
+        vs2
+    );
     return v;
 }
 
 
 template<class Form, class Cmpt, direction Ncmpts>
-inline VectorSpace<Form, Cmpt, Ncmpts> cmptDivide
+inline Form cmptDivide
 (
     const VectorSpace<Form, Cmpt, Ncmpts>& vs1,
     const VectorSpace<Form, Cmpt, Ncmpts>& vs2
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, cmptDivideOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = cmptDivide(b, c); },
+        v,
+        vs1,
+        vs2
+    );
     return v;
 }
 
 
 template<class Form, class Cmpt, direction Ncmpts>
-inline VectorSpace<Form, Cmpt, Ncmpts> stabilise
+inline Form stabilise
 (
     const VectorSpace<Form, Cmpt, Ncmpts>& vs,
     const Cmpt& small
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::opVS(v, vs, small, stabiliseOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [&small](Cmpt& a, const Cmpt& b) { a = stabilise(b, small); },
+        v,
+        vs
+    );
     return v;
 }
 
@@ -485,7 +518,11 @@ inline Cmpt cmptMax
 )
 {
     Cmpt cMax = vs.v_[0];
-    VectorSpaceOps<Ncmpts,1>::SeqOp(cMax, vs, maxEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 1>::op
+    (
+        [&cMax](const Cmpt& c) { cMax = max(c, cMax); },
+        vs
+    );
     return cMax;
 }
 
@@ -497,7 +534,11 @@ inline Cmpt cmptMin
 )
 {
     Cmpt cMin = vs.v_[0];
-    VectorSpaceOps<Ncmpts,1>::SeqOp(cMin, vs, minEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 1>::op
+    (
+        [&cMin](const Cmpt& c) { cMin = min(c, cMin); },
+        vs
+    );
     return cMin;
 }
 
@@ -509,7 +550,11 @@ inline Cmpt cmptSum
 )
 {
     Cmpt sum = vs.v_[0];
-    VectorSpaceOps<Ncmpts,1>::SeqOp(sum, vs, plusEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 1>::op
+    (
+        [&sum](const Cmpt& c) { sum += c; },
+        vs
+    );
     return sum;
 }
 
@@ -530,7 +575,11 @@ inline Cmpt cmptProduct
 )
 {
     Cmpt product = vs.v_[0];
-    VectorSpaceOps<Ncmpts,1>::SeqOp(product, vs, multiplyEqOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 1>::op
+    (
+        [&product](const Cmpt& c) { product *= c; },
+        vs
+    );
     return product;
 }
 
@@ -542,7 +591,12 @@ inline Form cmptSqr
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::eqOp(v, vs, eqSqrOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b) { a = sqr(b); },
+        v,
+        vs
+    );
     return v;
 }
 
@@ -554,7 +608,12 @@ inline Form cmptMag
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::eqOp(v, vs, eqMagOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b) { a = mag(b); },
+        v,
+        vs
+    );
     return v;
 }
 
@@ -567,7 +626,11 @@ inline Form max
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, maxOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = max(b, c); },
+        v, vs1, vs2
+    );
     return v;
 }
 
@@ -580,7 +643,11 @@ inline Form min
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, minOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = min(b, c); },
+        v, vs1, vs2
+    );
     return v;
 }
 
@@ -593,7 +660,11 @@ inline Form minMod
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, minModOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = minMod(b, c); },
+        v, vs1, vs2
+    );
     return v;
 }
 
@@ -646,7 +717,11 @@ inline Form operator-
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::eqOp(v, vs, eqNegOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b) { a = -b; },
+        v, vs
+    );
     return v;
 }
 
@@ -659,7 +734,11 @@ inline Form operator+
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, plusOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = b + c; },
+        v, vs1, vs2
+    );
     return v;
 }
 
@@ -671,7 +750,11 @@ inline Form operator-
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::op(v, vs1, vs2, minusOp<Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [](Cmpt& a, const Cmpt& b, const Cmpt& c) { a = b - c; },
+        v, vs1, vs2
+    );
     return v;
 }
 
@@ -691,7 +774,11 @@ inline Form operator*
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::opSV(v, s, vs, multiplyOp3<Cmpt, Type, Cmpt>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [&s](Cmpt& a, const Cmpt& b) { a = s*b; },
+        v, vs
+    );
     return v;
 }
 
@@ -711,7 +798,11 @@ inline Form operator*
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::opVS(v, vs, s, multiplyOp3<Cmpt, Cmpt, Type>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [&s](Cmpt& a, const Cmpt& b) { a = b*s; },
+        v, vs
+    );
     return v;
 }
 
@@ -731,7 +822,11 @@ inline Form operator/
 )
 {
     Form v;
-    VectorSpaceOps<Ncmpts,0>::opVS(v, vs, s, divideOp3<Cmpt, Cmpt, Type>());
+    VectorSpaceOp<Ncmpts, 0>::op
+    (
+        [&s](Cmpt& a, const Cmpt& b) { a = b/s; },
+        v, vs
+    );
     return v;
 }
 
@@ -744,10 +839,11 @@ inline Cmpt operator&&
 )
 {
     Cmpt ddProd = vs1.v_[0]*vs2.v_[0];
-    for (direction i=1; i<Ncmpts; ++i)
-    {
-        ddProd += vs1.v_[i]*vs2.v_[i];
-    }
+    VectorSpaceOp<Ncmpts, 1>::op
+    (
+        [&ddProd](const Cmpt& a, const Cmpt& b) { ddProd += a*b; },
+        vs1, vs2
+    );
     return ddProd;
 }
 

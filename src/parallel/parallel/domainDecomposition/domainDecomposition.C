@@ -270,7 +270,7 @@ void Foam::domainDecomposition::writeCompleteAddressing() const
         cellProc_
     );
 
-    cellProc.write();
+    cellProc.write(false);
 }
 
 
@@ -293,7 +293,7 @@ void Foam::domainDecomposition::writeProcsAddressing() const
             ),
             procPointAddressing_[proci]
         );
-        pointProcAddressing.write();
+        pointProcAddressing.write(false);
 
         labelIOList faceProcAddressing
         (
@@ -308,7 +308,7 @@ void Foam::domainDecomposition::writeProcsAddressing() const
             ),
             procFaceAddressing_[proci]
         );
-        faceProcAddressing.write();
+        faceProcAddressing.write(false);
 
         labelIOList cellProcAddressing
         (
@@ -323,7 +323,7 @@ void Foam::domainDecomposition::writeProcsAddressing() const
             ),
             procCellAddressing_[proci]
         );
-        cellProcAddressing.write();
+        cellProcAddressing.write(false);
     }
 }
 
@@ -335,7 +335,7 @@ void Foam::domainDecomposition::writeAddressing() const
 }
 
 
-void Foam::domainDecomposition::writeProcPoints(const fileName& inst)
+void Foam::domainDecomposition::writeProcPoints(const fileName& inst) const
 {
     IOobject completePointsIo
     (
@@ -373,12 +373,12 @@ void Foam::domainDecomposition::writeProcPoints(const fileName& inst)
             )
         );
 
-        procPoints.write();
+        procPoints.write(false);
     }
 }
 
 
-void Foam::domainDecomposition::writeCompletePoints(const fileName& inst)
+void Foam::domainDecomposition::writeCompletePoints(const fileName& inst) const
 {
     pointIOField completePoints
     (
@@ -417,7 +417,7 @@ void Foam::domainDecomposition::writeCompletePoints(const fileName& inst)
         );
     }
 
-    completePoints.write();
+    completePoints.write(false);
 }
 
 
@@ -544,26 +544,11 @@ bool Foam::domainDecomposition::readDecompose(const bool doPost)
         }
 
         decomposePoints();
+
+        decomposeZones();
     }
     else
     {
-        if
-        (
-            completeMesh().facesInstance()
-         != runTimes_.completeTime().name()
-         && completeMesh().facesInstance()
-         != runTimes_.completeTime().constant()
-        )
-        {
-            FatalErrorInFunction
-                << "Cannot begin mesh decomposition at time "
-                << fileName(runTimes_.completeTime().name()) << nl
-                << "The mesh at this instant is that of an earlier"
-                << " time " << completeMesh().facesInstance() << nl
-                << "Decomposition must start from this earlier time"
-                << exit(FatalError);
-        }
-
         decompose();
     }
 
@@ -595,21 +580,6 @@ void Foam::domainDecomposition::unconformReadDecompose()
         }
 
         unconform();
-    }
-}
-
-
-void Foam::domainDecomposition::writeReadDecompose
-(
-    const bool decomposed,
-    const bool doSets
-)
-{
-    writeProcs(doSets);
-
-    if (decomposed)
-    {
-        writeProcPoints(completeMesh().facesInstance());
     }
 }
 
@@ -692,26 +662,11 @@ bool Foam::domainDecomposition::readReconstruct(const bool doPost)
         }
 
         reconstructPoints();
+
+        reconstructZones();
     }
     else
     {
-        if
-        (
-            procMeshes()[0].facesInstance()
-         != runTimes_.procTimes()[0].name()
-         && procMeshes()[0].facesInstance()
-         != runTimes_.procTimes()[0].constant()
-        )
-        {
-            FatalErrorInFunction
-                << "Cannot begin mesh reconstruction at time "
-                << fileName(runTimes_.procTimes()[0].name()) << nl
-                << "The mesh at this instant is that of an earlier"
-                << " time " << procMeshes()[0].facesInstance() << nl
-                << "Reconstruction must start from this earlier time"
-                << exit(FatalError);
-        }
-
         reconstruct();
     }
 
@@ -747,21 +702,6 @@ void Foam::domainDecomposition::unconformReadReconstruct()
 }
 
 
-void Foam::domainDecomposition::writeReadReconstruct
-(
-    const bool reconstructed,
-    const bool doSets
-)
-{
-    writeComplete(doSets);
-
-    if (reconstructed)
-    {
-        writeCompletePoints(procMeshes()[0].facesInstance());
-    }
-}
-
-
 Foam::fvMesh::readUpdateState Foam::domainDecomposition::readUpdateComplete()
 {
     validateComplete();
@@ -777,63 +717,61 @@ Foam::fvMesh::readUpdateState Foam::domainDecomposition::readUpdateDecompose
 {
     const fvMesh::readUpdateState stat = readUpdate();
 
-    // Topology changes
+    // Topology changes ...
+    const label facesCompare =
+        compareInstances
+        (
+            completeMesh().facesInstance(),
+            procMeshes_[0].facesInstance()
+        );
+
+    // If the complete mesh has newer topology then we need to decompose
+    if (facesCompare == -1)
     {
-        const label facesCompare =
-            compareInstances
-            (
-                completeMesh().facesInstance(),
-                procMeshes_[0].facesInstance()
-            );
-
-        // If the complete mesh has newer topology then we need to decompose
-        if (facesCompare == -1)
-        {
-            decompose();
-        }
-
-        // If there has been matching topology change then reload the addressing
-        if (facesCompare == 0 && stat >= fvMesh::TOPO_CHANGE)
-        {
-            readAddressing();
-        }
-
-        // The processor meshes should not have newer topology when decomposing
-        if (facesCompare == +1)
-        {
-            FatalErrorInFunction
-                << "Cannot decompose at time "
-                << procMeshes_[0].facesInstance()
-                << " because the processor mesh topology has evolved further"
-                << " than the complete mesh topology." << exit(FatalError);
-        }
+        decompose();
     }
 
-    // Geometry changes
+    // If there has been matching topology change then reload the addressing
+    if (facesCompare == 0 && stat >= fvMesh::TOPO_CHANGE)
     {
-        const label pointsCompare =
-            compareInstances
-            (
-                completeMesh().pointsInstance(),
-                procMeshes_[0].pointsInstance()
-            );
+        readAddressing();
+    }
 
-        // If the complete mesh has newer geometry then we need to decompose
-        // the points
-        if (pointsCompare == -1)
-        {
-            decomposePoints();
-        }
+    // The processor meshes should not have newer topology when decomposing
+    if (facesCompare == +1)
+    {
+        FatalErrorInFunction
+            << "Cannot decompose at time "
+            << procMeshes_[0].facesInstance()
+            << " because the processor mesh topology has evolved further"
+            << " than the complete mesh topology." << exit(FatalError);
+    }
 
-        // The processor meshes should not have newer geometry when decomposing
-        if (pointsCompare == +1)
-        {
-            FatalErrorInFunction
-                << "Cannot decompose at time "
-                << procMeshes_[0].pointsInstance()
-                << " because the processor mesh geometry has evolved further"
-                << " than the complete mesh geometry." << exit(FatalError);
-        }
+    // Geometry changes ...
+    const label pointsCompare =
+        compareInstances
+        (
+            completeMesh().pointsInstance(),
+            procMeshes_[0].pointsInstance()
+        );
+
+    // If the complete mesh has newer geometry then we need to decompose
+    // the points
+    if (facesCompare != -1 && pointsCompare == -1)
+    {
+        decomposePoints();
+
+        decomposeZones();
+    }
+
+    // The processor meshes should not have newer geometry when decomposing
+    if (pointsCompare == +1)
+    {
+        FatalErrorInFunction
+            << "Cannot decompose at time "
+            << procMeshes_[0].pointsInstance()
+            << " because the processor mesh geometry has evolved further"
+            << " than the complete mesh geometry." << exit(FatalError);
     }
 
     if (doPost)
@@ -886,64 +824,62 @@ Foam::fvMesh::readUpdateState Foam::domainDecomposition::readUpdateReconstruct
 {
     const fvMesh::readUpdateState stat = readUpdate();
 
-    // Topology changes
+    // Topology changes ...
+    const label facesCompare =
+        compareInstances
+        (
+            completeMesh().facesInstance(),
+            procMeshes_[0].facesInstance()
+        );
+
+    // The complete mesh should not have newer topology when reconstructing
+    if (facesCompare == -1)
     {
-        const label facesCompare =
-            compareInstances
-            (
-                completeMesh().facesInstance(),
-                procMeshes_[0].facesInstance()
-            );
-
-        // The complete mesh should not have newer topology when reconstructing
-        if (facesCompare == -1)
-        {
-            FatalErrorInFunction
-                << "Cannot reconstruct at time "
-                << completeMesh().facesInstance()
-                << " because the complete mesh topology has evolved further"
-                << " than the processor mesh topology." << exit(FatalError);
-        }
-
-        // If there has been matching topology change then reload the addressing
-        if (facesCompare == 0 && stat >= fvMesh::TOPO_CHANGE)
-        {
-            readAddressing();
-        }
-
-        // If the processor meshes have newer topology then we need to
-        // reconstruct
-        if (facesCompare == +1)
-        {
-            reconstruct();
-        }
+        FatalErrorInFunction
+            << "Cannot reconstruct at time "
+            << completeMesh().facesInstance()
+            << " because the complete mesh topology has evolved further"
+            << " than the processor mesh topology." << exit(FatalError);
     }
 
-    // Geometry changes
+    // If there has been matching topology change then reload the addressing
+    if (facesCompare == 0 && stat >= fvMesh::TOPO_CHANGE)
     {
-        const label pointsCompare =
-            compareInstances
-            (
-                completeMesh().pointsInstance(),
-                procMeshes_[0].pointsInstance()
-            );
+        readAddressing();
+    }
 
-        // The complete mesh should not have newer geometry when reconstructing
-        if (pointsCompare == -1)
-        {
-            FatalErrorInFunction
-                << "Cannot reconstruct at time "
-                << completeMesh().pointsInstance()
-                << " because the complete mesh geometry has evolved further"
-                << " than the processor mesh geometry." << exit(FatalError);
-        }
+    // If the processor meshes have newer topology then we need to
+    // reconstruct
+    if (facesCompare == +1)
+    {
+        reconstruct();
+    }
 
-        // If the processor meshes have newer geometry then we need to
-        // reconstruct the points
-        if (pointsCompare == +1)
-        {
-            reconstructPoints();
-        }
+    // Geometry changes ...
+    const label pointsCompare =
+        compareInstances
+        (
+            completeMesh().pointsInstance(),
+            procMeshes_[0].pointsInstance()
+        );
+
+    // The complete mesh should not have newer geometry when reconstructing
+    if (pointsCompare == -1)
+    {
+        FatalErrorInFunction
+            << "Cannot reconstruct at time "
+            << completeMesh().pointsInstance()
+            << " because the complete mesh geometry has evolved further"
+            << " than the processor mesh geometry." << exit(FatalError);
+    }
+
+    // If the processor meshes have newer geometry then we need to
+    // reconstruct the points
+    if (facesCompare != +1 && pointsCompare == +1)
+    {
+        reconstructPoints();
+
+        reconstructZones();
     }
 
     if (doPost)
@@ -1034,7 +970,13 @@ Foam::domainDecomposition::procFaceAddressingBf() const
                        .referPatchIndex();
 
                     procFaceAddressingBf_[proci][procPatchi] =
-                        mag(fvp.patchSlice(procFaceAddressing_[proci]))
+                        mag
+                        (
+                            SubField<label>
+                            (
+                                fvp.patchSlice(procFaceAddressing_[proci])
+                            )
+                        )
                       - completeMesh().poly().boundary()[completePatchi]
                        .start();
                 }
@@ -1046,7 +988,13 @@ Foam::domainDecomposition::procFaceAddressingBf() const
                 else
                 {
                     procFaceAddressingBf_[proci][procPatchi] =
-                        mag(fvp.patchSlice(procFaceAddressing_[proci]))
+                        mag
+                        (
+                            SubField<label>
+                            (
+                                fvp.patchSlice(procFaceAddressing_[proci])
+                            )
+                        )
                       - completeMesh().poly().boundary()[procPatchi].start();
                 }
             }
@@ -1067,7 +1015,22 @@ void Foam::domainDecomposition::writeComplete(const bool doSets) const
     IOstream::defaultPrecision(IOstream::highPrecision());
 
     // Write the complete mesh
-    completeMesh().write();
+    completeMesh().write(false);
+
+    // Write the points out at the faces instance also to ensure that the mesh
+    // is complete at that time
+    if
+    (
+        topologyWrite
+     && compareInstances
+        (
+            completeMesh().facesInstance(),
+            completeMesh().pointsInstance()
+        ) != 0
+    )
+    {
+        writeCompletePoints(completeMesh().facesInstance());
+    }
 
     // Everything written below is topological data, so quit here if not
     // writing topology
@@ -1098,15 +1061,15 @@ void Foam::domainDecomposition::writeComplete(const bool doSets) const
 
         forAllConstIter(IOobjectList, proc0FaceSetObjects, iter)
         {
-            reconstructSet<faceSet>(iter.key())->write();
+            reconstructSet<faceSet>(iter.key())->write(false);
         }
         forAllConstIter(IOobjectList, proc0CellSetObjects, iter)
         {
-            reconstructSet<cellSet>(iter.key())->write();
+            reconstructSet<cellSet>(iter.key())->write(false);
         }
         forAllConstIter(IOobjectList, proc0PointSetObjects, iter)
         {
-            reconstructSet<pointSet>(iter.key())->write();
+            reconstructSet<pointSet>(iter.key())->write(false);
         }
     }
 
@@ -1153,7 +1116,7 @@ void Foam::domainDecomposition::writeComplete(const bool doSets) const
         cellMaps,
         pointMaps,
         refinementDatas
-    ).write();
+    ).write(false);
 
     // Write decomposition addressing
     writeAddressing();
@@ -1175,7 +1138,22 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
         IOstream::defaultPrecision(IOstream::highPrecision());
 
         // Write the processor mesh
-        procMesh.write();
+        procMesh.write(false);
+    }
+
+    // Write the points out at the faces instance also to ensure that the mesh
+    // is complete at that time
+    if
+    (
+        topologyWrite
+     && compareInstances
+        (
+            procMeshes()[0].facesInstance(),
+            procMeshes()[0].pointsInstance()
+        ) != 0
+    )
+    {
+        writeProcPoints(procMeshes()[0].facesInstance());
     }
 
     // Everything written below is topological data, so quit here if not
@@ -1211,7 +1189,7 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
                 decomposeSet<cellSet>(iter.key());
             forAll(procCellSets, proci)
             {
-                procCellSets[proci].write();
+                procCellSets[proci].write(false);
             }
         }
         forAllConstIter(IOobjectList, faceSetObjects, iter)
@@ -1220,7 +1198,7 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
                 decomposeSet<faceSet>(iter.key());
             forAll(procFaceSets, proci)
             {
-                procFaceSets[proci].write();
+                procFaceSets[proci].write(false);
             }
         }
         forAllConstIter(IOobjectList, pointSetObjects, iter)
@@ -1229,7 +1207,7 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
                 decomposeSet<pointSet>(iter.key());
             forAll(procPointSets, proci)
             {
-                procPointSets[proci].write();
+                procPointSets[proci].write(false);
             }
         }
     }
@@ -1267,7 +1245,7 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
             refinementData,
             procCellAddressing_[proci],
             procPointAddressing_[proci]
-        ).write();
+        ).write(false);
     }
 
     // Write decomposition addressing

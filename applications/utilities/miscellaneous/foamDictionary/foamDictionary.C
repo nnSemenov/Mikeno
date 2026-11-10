@@ -167,6 +167,8 @@ Usage
 
 \*---------------------------------------------------------------------------*/
 
+#include <memory>
+
 #include "argList.H"
 #include "Time.H"
 #include "localIOdictionary.H"
@@ -448,10 +450,10 @@ int main(int argc, char *argv[])
 
     const fileName dictPath(args[1]);
 
-    Time* runTimePtr = nullptr;
-    localIOdictionary* localDictPtr = nullptr;
+    std::unique_ptr<Time> runTimePtr{nullptr};
+    std::unique_ptr<localIOdictionary> localDictPtr{nullptr};
 
-    dictionary* dictPtr = nullptr;
+    std::unique_ptr<dictionary> dictPtr{nullptr};
     IOstream::streamFormat dictFormat = IOstream::ASCII;
 
     // When running in parallel read the dictionary as a case localIOdictionary
@@ -463,7 +465,7 @@ int main(int argc, char *argv[])
             FatalError.exit();
         }
 
-        runTimePtr = new Time(Time::controlDictName, args);
+        runTimePtr.reset(new Time(Time::controlDictName, args));
 
         const wordList dictPathComponents(dictPath.components());
 
@@ -487,7 +489,7 @@ int main(int argc, char *argv[])
             runTimePtr->setTime(time, 0);
         }
 
-        localDictPtr = new localIOdictionary
+        localDictPtr.reset(new localIOdictionary
         (
             IOobject
             (
@@ -498,11 +500,11 @@ int main(int argc, char *argv[])
                 IOobject::NO_WRITE,
                 false
             )
-        );
+        )) ;
     }
     else
     {
-        dictPtr = new dictionary(dictPath);
+        dictPtr.reset(new dictionary(dictPath));
         dictFormat =
             readDict
             (
@@ -514,7 +516,7 @@ int main(int argc, char *argv[])
             );
     }
 
-    dictionary& dict = localDictPtr ? *localDictPtr : *dictPtr;
+    dictionary &dict = localDictPtr ? *localDictPtr : *dictPtr;
 
     bool changed = false;
 
@@ -808,9 +810,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    delete dictPtr;
-    delete localDictPtr;
-    delete runTimePtr;
+    // delete dictPtr;
+    // delete localDictPtr;
+    // delete runTimePtr;
 
     return 0;
 }

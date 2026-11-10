@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -233,7 +233,7 @@ Foam::functionObjects::populationBalanceSizeDistribution::averageCoordinateValue
         case coordinateType::projectedAreaDiameter:
         {
             averageCoordinateValue =
-                weightedAverage(popBal, i, sqrt(popBal.a(i)/pi));
+                weightedAverage(popBal, i, eval(sqrt(popBal.a(i)/pi)));
 
             break;
         }
@@ -260,12 +260,20 @@ Foam::functionObjects::populationBalanceSizeDistribution::weightedAverage
     {
         case weightType::numberConcentration:
         {
-            scalarField Ni(filterField(fi*alpha/popBal.v(i).value()));
+            scalarField Ni
+            (
+                filterField
+                (
+                    fi.primitiveField()*alpha.primitiveField()
+                   /popBal.v(i).value()
+                )
+            );
 
             if (gSum(Ni) == 0)
             {
                 weightedAverage =
-                    gSum(filterField(mesh_.V()*field))/zone_.V();
+                    gSum(filterField(mesh_.V().primitiveField()*field))
+                   /zone_.V();
             }
             else
             {
@@ -277,12 +285,16 @@ Foam::functionObjects::populationBalanceSizeDistribution::weightedAverage
         }
         case weightType::volumeConcentration:
         {
-            scalarField Vi(filterField(fi*alpha));
+            scalarField Vi
+            (
+                filterField(fi.primitiveField()*alpha.primitiveField())
+            );
 
             if (gSum(Vi) == 0)
             {
                 weightedAverage =
-                    gSum(filterField(mesh_.V()*field))/zone_.V();
+                    gSum(filterField(mesh_.V().primitiveField()*field))
+                   /zone_.V();
             }
             else
             {
@@ -294,12 +306,19 @@ Foam::functionObjects::populationBalanceSizeDistribution::weightedAverage
         }
         case weightType::areaConcentration:
         {
-            scalarField Ai(filterField(popBal.a(i)()*alpha));
+            scalarField Ai
+            (
+                filterField
+                (
+                    popBal.a(i)().primitiveField()*alpha.primitiveField()
+                )
+            );
 
             if (gSum(Ai) == 0)
             {
                 weightedAverage =
-                    gSum(filterField(mesh_.V()*field))/zone_.V();
+                    gSum(filterField(mesh_.V().primitiveField()*field))
+                   /zone_.V();
             }
             else
             {
@@ -312,7 +331,8 @@ Foam::functionObjects::populationBalanceSizeDistribution::weightedAverage
         case weightType::cellVolume:
         {
             weightedAverage =
-                gSum(filterField(mesh_.V()*field))/zone_.V();
+                gSum(filterField(mesh_.V().primitiveField()*field))
+               /zone_.V();
 
             break;
         }
@@ -378,7 +398,7 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::read
     const dictionary& dict
 )
 {
-    Log << type() << " " << name() << ":" << nl;
+    Log << type() << " " << name() << ':' << nl;
 
     fvMeshFunctionObject::read(dict);
 
@@ -443,8 +463,14 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 const volScalarField& fi = popBal.f(i);
                 const dimensionedScalar& vi = popBal.v(i);
 
-                resultValues[i] =
-                    gSum(filterField(mesh_.V()*fi*alpha/vi))/zone_.V();
+                resultValues[i] = gSum
+                (
+                    filterField
+                    (
+                        mesh_.V().primitiveField()
+                       *fi.primitiveField()*alpha.primitiveField()/vi.value()
+                    )
+                )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)
@@ -462,8 +488,14 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 const volScalarField& fi = popBal.f(i);
                 const dimensionedScalar& vi = popBal.v(i);
 
-                resultValues[i] =
-                    gSum(filterField(mesh_.V()*fi*alpha/vi))/zone_.V();
+                resultValues[i] = gSum
+                (
+                    filterField
+                    (
+                        mesh_.V().primitiveField()*fi.primitiveField()
+                       *alpha.primitiveField()/vi.value()
+                    )
+                )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)
@@ -485,8 +517,14 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 const volScalarField& alpha = popBal.phases()[i];
                 const volScalarField& fi = popBal.f(i);
 
-                resultValues[i] =
-                    gSum(filterField(mesh_.V()*fi*alpha))/zone_.V();
+                resultValues[i] = gSum
+                (
+                    filterField
+                    (
+                        mesh_.V().primitiveField()
+                       *fi.primitiveField()*alpha.primitiveField()
+                    )
+                )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)
@@ -503,8 +541,14 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 const volScalarField& alpha = popBal.phases()[i];
                 const volScalarField& fi = popBal.f(i);
 
-                resultValues[i] =
-                    gSum(filterField(mesh_.V()*fi*alpha))/zone_.V();
+                resultValues[i] = gSum
+                (
+                    filterField
+                    (
+                        mesh_.V().primitiveField()
+                       *fi.primitiveField()*alpha.primitiveField()
+                    )
+                )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)
@@ -527,12 +571,15 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 const volScalarField& fi = popBal.f(i);
                 const dimensionedScalar& vi = popBal.v(i);
 
-                resultValues[i] =
-                    gSum
+                resultValues[i] = gSum
+                (
+                    filterField
                     (
-                        filterField(mesh_.V()*popBal.a(i)()*fi*alpha/vi)
+                         mesh_.V().primitiveField()
+                        *popBal.a(i)().primitiveField()*fi.primitiveField()
+                        *alpha.primitiveField()/vi.value()
                     )
-                   /zone_.V();
+                )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)
@@ -553,9 +600,13 @@ bool Foam::functionObjects::populationBalanceSizeDistribution::write()
                 resultValues[i] =
                     gSum
                     (
-                        filterField(mesh_.V()*popBal.a(i)()*fi*alpha/vi)
-                    )
-                   /zone_.V();
+                        filterField
+                        (
+                            mesh_.V().primitiveField()
+                           *popBal.a(i)().primitiveField()*fi.primitiveField()
+                           *alpha.primitiveField()/vi.value()
+                        )
+                    )/zone_.V();
             }
 
             if (normalise_ && sum(resultValues) != 0)

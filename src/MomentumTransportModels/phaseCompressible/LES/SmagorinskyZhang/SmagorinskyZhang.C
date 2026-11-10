@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "SmagorinskyZhang.H"
+#include "fvcGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 
@@ -124,7 +125,7 @@ void SmagorinskyZhang<BasicMomentumTransportModel>::correctNut()
     const phaseSystem& fluid = liquid.fluid();
     const phaseModel& gas = fluid.otherPhase(liquid);
 
-    volScalarField k(this->k(fvc::grad(this->U_)));
+    const volScalarField k(this->k(fvc::grad(this->U_)));
 
     this->nut_ =
         this->Ck_*sqrt(k)*this->delta()

@@ -1,4 +1,13 @@
-lnInclude(${CMAKE_CURRENT_SOURCE_DIR})
+lnInclude(${CMAKE_CURRENT_SOURCE_DIR}
+    EXCLUDE_DIRS
+    fvModels
+    functionObjects
+    phaseSystem
+    momentumTransportModels
+    populationBalance
+    reactions
+    thermophysicalTransportModels
+)
 
 add_subdirectory(phaseSystem)
 add_subdirectory(populationBalance)
@@ -62,6 +71,7 @@ target_compile_definitions(${target_name} PRIVATE
     LIB_NAME=lib${target_name}.so
 )
 
+add_subdirectory(fvConstraints)
 add_subdirectory(fvModels)
 add_subdirectory(functionObjects)
 

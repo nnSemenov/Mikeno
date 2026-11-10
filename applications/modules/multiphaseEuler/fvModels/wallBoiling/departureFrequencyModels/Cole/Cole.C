@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,7 +64,7 @@ Foam::wallBoilingModels::departureFrequencyModels::Cole::calculate
         mesh.lookupObject<uniformDimensionedVectorField>("g")
     );
 
-    const dimensionedScalar dRhoMin_(dimDensity, 0.1);
+    const dimensionedScalar dRhoMin_(dimensions::density, 0.1);
     auto dRhoMin = coefficient<ScalarFieldType>::value(dRhoMin_);
 
     return
@@ -126,16 +126,16 @@ Foam::wallBoilingModels::departureFrequencyModels::Cole::fDeparture
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::wallBoilingModels::departureFrequencyModels::Cole::fDeparture
 (
     const phaseModel& liquid,
     const phaseModel& vapour,
     const phaseModel& solid,
-    const volScalarField::Internal& Tl,
-    const volScalarField::Internal& Tsatw,
-    const volScalarField::Internal& L,
-    const volScalarField::Internal& dDep
+    const volInternalScalarField& Tl,
+    const volInternalScalarField& Tsatw,
+    const volInternalScalarField& L,
+    const volInternalScalarField& dDep
 ) const
 {
     return

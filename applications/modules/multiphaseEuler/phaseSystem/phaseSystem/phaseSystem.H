@@ -46,7 +46,7 @@ SourceFiles
 
 #include "pimpleNoLoopControl.H"
 
-#include "IOMRFZoneList.H"
+#include "MRFZones.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 
@@ -60,6 +60,7 @@ SourceFiles
 namespace Foam
 {
 
+class blendedInterfaceCompressionCoefficient;
 class surfaceTensionCoefficientModel;
 class momentumTransferSystem;
 class pressureReference;
@@ -132,13 +133,13 @@ protected:
 
         //- Table of interface compression coefficients
         typedef
-            HashTable
+            HashPtrTable
             <
-                scalar,
+                blendedInterfaceCompressionCoefficient,
                 phaseInterfaceKey,
                 phaseInterfaceKey::hash
             >
-            cAlphaTable;
+            interfaceCompressionCoefficientTable;
 
         //- Table of surface tension models
         typedef
@@ -159,8 +160,8 @@ protected:
         //- Reference to pimpleNoLoopControl
         const pimpleNoLoopControl& pimple_;
 
-        //- Optional MRF zones
-        IOMRFZoneList MRF_;
+        //- Reference to the MRFZones MeshObject
+        const MRFZones& MRF_;
 
         //- Name of optional reference phase which is not solved for
         // but obtained from the sum of the other phases
@@ -185,17 +186,16 @@ protected:
         surfaceScalarField phi_;
 
         //- Rate of change of pressure
-        volScalarField dpdt_;
-
-        //- Interface compression coefficients
-        cAlphaTable cAlphas_;
+        volInternalScalarField dpdt_;
 
         //- Stabilisation for normalisation of the interface normal
         dimensionedScalar deltaN_;
 
+        //- Interface compression coefficients
+        interfaceCompressionCoefficientTable interfaceCompressionCoefficients_;
+
         //- Surface tension models
-        surfaceTensionCoefficientModelTable
-            surfaceTensionCoefficientModels_;
+        surfaceTensionCoefficientModelTable surfaceTensionCoefficientModels_;
 
 
     // Protected Member Functions
@@ -314,13 +314,13 @@ public:
             inline surfaceScalarField& phi();
 
             //- Return the rate of change of the pressure
-            inline const volScalarField& dpdt() const;
+            inline const volInternalScalarField& dpdt() const;
 
             //- Access the rate of change of the pressure
-            inline volScalarField& dpdt();
+            inline volInternalScalarField& dpdt();
 
             //- Return MRF zones
-            inline const IOMRFZoneList& MRF() const;
+            inline const MRFZones& MRF() const;
 
             //- Access the fvModels
             inline Foam::fvModels& fvModels(fvMesh& mesh);
@@ -334,8 +334,16 @@ public:
             //- Access the fvConstraints
             inline const Foam::fvConstraints& fvConstraints() const;
 
-
-        // Sub-model lookup
+            inline auto &surfaceTensionCoefficientModels()
+            {
+                return surfaceTensionCoefficientModels_;
+            }
+            
+            inline auto &surfaceTensionCoefficientModels() const
+            {
+                return surfaceTensionCoefficientModels_;
+            }
+            // Sub-model lookup
 
             //- Check availability of a sub model for a given interface
             template<class ModelType>
@@ -360,11 +368,20 @@ public:
             //- Return the mixture velocity
             tmp<volVectorField> U() const;
 
+            //- Return the interface compression coefficient for an interface
+            bool hasCAlphas() const;
+
+            //- Return the interface compression coefficient for an interface
+            bool hasCAlpha(const phaseInterfaceKey& key) const;
+
+            //- Return the interface compression coefficient for an interface
+            tmp<volScalarField> cAlpha(const phaseInterfaceKey& key) const;
+
+            //- Return the interface compression coefficient for an interface
+            tmp<surfaceScalarField> cAlphaf(const phaseInterfaceKey& key) const;
+
             //- Return the surface tension coefficient for an interface
-            tmp<volScalarField> sigma
-            (
-                const phaseInterfaceKey& key
-            ) const;
+            tmp<volScalarField> sigma(const phaseInterfaceKey& key) const;
 
             //- Return the surface tension coefficient for an interface on a
             //  patch
@@ -373,6 +390,9 @@ public:
                 const phaseInterfaceKey& key,
                 const label patchi
             ) const;
+
+            //- Normal to interface between two phases
+            tmp<surfaceVectorField> nHatfv(const phaseInterface&) const;
 
             //- Indicator of the proximity of the interface
             //  Field values are 1 near and 0 away for the interface.
@@ -408,7 +428,7 @@ public:
             //- Correct the continuity errors
             void correctContinuityError
             (
-                const PtrList<volScalarField::Internal>& dmdts
+                const PtrList<volInternalScalarField>& dmdts
             );
 
             //- Correct the kinematics
@@ -445,7 +465,7 @@ public:
             void correctPhi
             (
                 const volScalarField& p_rgh,
-                const autoPtr<volScalarField>& divU,
+                const autoPtr<volInternalScalarField>& divU,
                 const pressureReference& pressureReference,
                 nonOrthogonalSolutionControl& pimple
             );

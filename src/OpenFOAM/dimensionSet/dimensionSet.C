@@ -25,8 +25,6 @@ License
 
 #include "dimensionSet.H"
 #include "dimensionedScalar.H"
-#include "NamedEnum.H"
-#include "OStringStream.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -34,24 +32,6 @@ namespace Foam
 {
     defineTypeNameAndDebug(dimensionSet, 1);
 }
-
-const Foam::autoPtr<Foam::NamedEnum<Foam::dimensionSet::dimensionType, 7>>
-    dimensionTypeNamesPtr_
-    (
-        new Foam::NamedEnum<Foam::dimensionSet::dimensionType, 7>
-        ({
-            "mass",
-            "length",
-            "time",
-            "temperature",
-            "moles",
-            "current",
-            "luminousIntensity"
-        })
-    );
-
-const Foam::NamedEnum<Foam::dimensionSet::dimensionType, 7>&
-    Foam::dimensionSet::dimensionTypeNames_ = dimensionTypeNamesPtr_();
 
 const Foam::scalar Foam::dimensionSet::smallExponent = rootSmall;
 
@@ -81,6 +61,33 @@ Foam::dimensionSet::dimensionSet
 
 Foam::dimensionSet::dimensionSet
 (
+    const word& name,
+    const scalar mass,
+    const scalar length,
+    const scalar time,
+    const scalar temperature,
+    const scalar moles,
+    const scalar current,
+    const scalar luminousIntensity
+)
+:
+    dimensionSet
+    (
+        mass,
+        length,
+        time,
+        temperature,
+        moles,
+        current,
+        luminousIntensity
+    )
+{
+    dimensions::table.insert(name, *this);
+}
+
+
+Foam::dimensionSet::dimensionSet
+(
     const scalar mass,
     const scalar length,
     const scalar time,
@@ -101,6 +108,13 @@ Foam::dimensionSet::dimensionSet
 Foam::dimensionSet::dimensionSet(const dimensionSet& ds)
 {
     reset(ds);
+}
+
+
+Foam::dimensionSet::dimensionSet(const word& name, const dimensionSet& ds)
+{
+    reset(ds);
+    dimensions::table.insert(name, *this);
 }
 
 
@@ -136,30 +150,6 @@ void Foam::dimensionSet::reset(const dimensionSet& ds)
 
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
-Foam::scalar Foam::dimensionSet::operator[](const dimensionType type) const
-{
-    return exponents_[type];
-}
-
-
-Foam::scalar& Foam::dimensionSet::operator[](const dimensionType type)
-{
-    return exponents_[type];
-}
-
-
-Foam::scalar Foam::dimensionSet::operator[](const label type) const
-{
-    return exponents_[type];
-}
-
-
-Foam::scalar& Foam::dimensionSet::operator[](const label type)
-{
-    return exponents_[type];
-}
-
-
 bool Foam::dimensionSet::operator==(const dimensionSet& ds) const
 {
     for (int Dimension=0; Dimension < nDimensions; ++Dimension)
@@ -178,142 +168,7 @@ bool Foam::dimensionSet::operator==(const dimensionSet& ds) const
 }
 
 
-bool Foam::dimensionSet::operator!=(const dimensionSet& ds) const
-{
-    return !(operator==(ds));
-}
-
-
-bool Foam::dimensionSet::operator=(const dimensionSet& ds) const
-{
-    if (dimensionSet::debug && *this != ds)
-    {
-        FatalErrorInFunction
-            << "Different dimensions for =" << endl
-            << "     dimensions : " << info() << " = " << ds.info() << endl
-            << abort(FatalError);
-    }
-
-    return true;
-}
-
-
-bool Foam::dimensionSet::operator+=(const dimensionSet& ds) const
-{
-    if (dimensionSet::debug && *this != ds)
-    {
-        FatalErrorInFunction
-            << "Different dimensions for +=" << endl
-            << "     dimensions : " << info() << " = " << ds.info() << endl
-            << abort(FatalError);
-    }
-
-    return true;
-}
-
-
-bool Foam::dimensionSet::operator-=(const dimensionSet& ds) const
-{
-    if (dimensionSet::debug && *this != ds)
-    {
-        FatalErrorInFunction
-            << "Different dimensions for -=" << endl
-            << "     dimensions : " << info() << " = " << ds.info() << endl
-            << abort(FatalError);
-    }
-
-    return true;
-}
-
-
-bool Foam::dimensionSet::operator*=(const dimensionSet& ds)
-{
-    reset((*this)*ds);
-
-    return true;
-}
-
-
-bool Foam::dimensionSet::operator/=(const dimensionSet& ds)
-{
-    reset((*this)/ds);
-
-    return true;
-}
-
-
 // * * * * * * * * * * * * * * * Friend functions * * * * * * * * * * * * * * //
-
-Foam::dimensionSet Foam::max(const dimensionSet& ds1, const dimensionSet& ds2)
-{
-    if (dimensionSet::debug && ds1 != ds2)
-    {
-        FatalErrorInFunction
-            << "Arguments of max have different dimensions" << endl
-            << "     dimensions : " << ds1.info() << " and " << ds2.info()
-            << endl << abort(FatalError);
-    }
-
-    return ds1;
-}
-
-
-Foam::dimensionSet Foam::min(const dimensionSet& ds1, const dimensionSet& ds2)
-{
-    if (dimensionSet::debug && ds1 != ds2)
-    {
-        FatalErrorInFunction
-            << "Arguments of min have different dimensions" << endl
-            << "     dimensions : " << ds1.info() << " and " << ds2.info()
-            << endl << abort(FatalError);
-    }
-
-    return ds1;
-}
-
-
-Foam::dimensionSet Foam::cmptMultiply
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    return ds1*ds2;
-}
-
-
-Foam::dimensionSet Foam::cmptDivide
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    return ds1/ds2;
-}
-
-
-Foam::dimensionSet Foam::cmptMag(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::pow(const dimensionSet& ds, const scalar p)
-{
-    dimensionSet dimPow
-    (
-        ds[dimensionSet::MASS]*p,
-        ds[dimensionSet::LENGTH]*p,
-        ds[dimensionSet::TIME]*p,
-        ds[dimensionSet::TEMPERATURE]*p,
-        ds[dimensionSet::MOLES]*p,
-        ds[dimensionSet::CURRENT]*p,
-        ds[dimensionSet::LUMINOUS_INTENSITY]*p
-    );
-
-    return dimPow;
-}
-
 
 Foam::dimensionSet Foam::pow
 (
@@ -364,207 +219,7 @@ Foam::dimensionSet Foam::pow
     return ds;
 }
 
-
-Foam::dimensionSet Foam::sqr(const dimensionSet& ds)
-{
-    return pow(ds, 2);
-}
-
-
-Foam::dimensionSet Foam::pow3(const dimensionSet& ds)
-{
-    return pow(ds, 3);
-}
-
-
-Foam::dimensionSet Foam::pow4(const dimensionSet& ds)
-{
-    return pow(ds, 4);
-}
-
-
-Foam::dimensionSet Foam::pow5(const dimensionSet& ds)
-{
-    return pow(ds, 5);
-}
-
-
-Foam::dimensionSet Foam::pow6(const dimensionSet& ds)
-{
-    return pow(ds, 6);
-}
-
-
-Foam::dimensionSet Foam::pow025(const dimensionSet& ds)
-{
-    return sqrt(sqrt(ds));
-}
-
-
-Foam::dimensionSet Foam::sqrt(const dimensionSet& ds)
-{
-    return pow(ds, 0.5);
-}
-
-
-Foam::dimensionSet Foam::cbrt(const dimensionSet& ds)
-{
-    return pow(ds, 1.0/3.0);
-}
-
-
-Foam::dimensionSet Foam::magSqr(const dimensionSet& ds)
-{
-    return pow(ds, 2);
-}
-
-
-Foam::dimensionSet Foam::mag(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::sign(const dimensionSet&)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::pos(const dimensionSet&)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::pos0(const dimensionSet&)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::neg(const dimensionSet&)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::neg0(const dimensionSet&)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::posPart(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::negPart(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::inv(const dimensionSet& ds)
-{
-    return dimless/ds;
-}
-
-
-Foam::dimensionSet Foam::trans(const dimensionSet& ds)
-{
-    if (dimensionSet::debug && !ds.dimensionless())
-    {
-        FatalErrorInFunction
-            << "Argument of trancendental function not dimensionless"
-            << abort(FatalError);
-    }
-
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::atan2(const dimensionSet& ds1, const dimensionSet& ds2)
-{
-    if (dimensionSet::debug && ds1 != ds2)
-    {
-        FatalErrorInFunction
-            << "Arguments of atan2 have different dimensions" << endl
-            << "     dimensions : " << ds1.info() << " and " << ds2.info()
-            << endl << abort(FatalError);
-    }
-
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::transform(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::normalised(const dimensionSet& ds)
-{
-    return dimless;
-}
-
-
-Foam::dimensionSet Foam::perpendicular(const dimensionSet& ds)
-{
-    return dimless;
-}
-
-
 // * * * * * * * * * * * * * * * Friend Operators  * * * * * * * * * * * * * //
-
-Foam::dimensionSet Foam::operator-(const dimensionSet& ds)
-{
-    return ds;
-}
-
-
-Foam::dimensionSet Foam::operator+
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    dimensionSet dimSum(ds1);
-
-    if (dimensionSet::debug && ds1 != ds2)
-    {
-        FatalErrorInFunction
-            << "LHS and RHS of + have different dimensions" << endl
-            << "     dimensions : " << ds1.info() << " + " << ds2.info()
-            << endl << abort(FatalError);
-    }
-
-    return dimSum;
-}
-
-
-Foam::dimensionSet Foam::operator-
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    dimensionSet dimDifference(ds1);
-
-    if (dimensionSet::debug && ds1 != ds2)
-    {
-        FatalErrorInFunction
-            << "LHS and RHS of - have different dimensions" << endl
-            << "     dimensions : " << ds1.info() << " - " << ds2.info()
-            << endl << abort(FatalError);
-    }
-
-    return dimDifference;
-}
-
 
 Foam::dimensionSet Foam::operator*
 (
@@ -597,36 +252,6 @@ Foam::dimensionSet Foam::operator/
     }
 
     return dimQuotient;
-}
-
-
-Foam::dimensionSet Foam::operator&
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    return ds1*ds2;
-}
-
-
-Foam::dimensionSet Foam::operator^
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    return ds1*ds2;
-}
-
-
-Foam::dimensionSet Foam::operator&&
-(
-    const dimensionSet& ds1,
-    const dimensionSet& ds2
-)
-{
-    return ds1*ds2;
 }
 
 

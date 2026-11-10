@@ -60,7 +60,7 @@ public:
     // Public Typedefs
 
         typedef zeroField Internal;
-        typedef zeroField Patch;
+        typedef zeroField PatchField;
         typedef zeroFieldField Boundary;
         typedef zero cmptType;
 
@@ -84,12 +84,20 @@ public:
 
         inline Internal internalField() const;
 
-        inline Internal v() const;
-
         inline typename Internal::FieldType primitiveField() const;
 
         inline Boundary boundaryField() const;
 };
+
+
+namespace expression
+{
+    template<>
+    struct Expressionable<geometricZeroField>
+    :
+        public notExpressionable
+    {};
+}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

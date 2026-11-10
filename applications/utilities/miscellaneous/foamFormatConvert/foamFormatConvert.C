@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -183,8 +183,7 @@ bool writeOptionalMeshObject
 (
     const word& name,
     const fileName& meshDir,
-    Time& runTime,
-    const bool write
+    Time& runTime
 )
 {
     IOobject io
@@ -207,14 +206,14 @@ bool writeOptionalMeshObject
     combineReduce(classNames, uniqueEqOp());
 
     // Check for correct type
-    if (classNames[0] == T::typeName)
+    if (haveFile && classNames[0] == T::typeName)
     {
         Info<< "        Reading " << classNames[0]
             << " : " << name << endl;
-        T meshObject(io, write && haveFile);
+        T meshObject(io);
 
         Info<< "        Writing " << name << endl;
-        writeOk = meshObject.regIOobject::write(write && haveFile);
+        writeOk = meshObject.regIOobject::write();
     }
 
     return writeOk;
@@ -332,11 +331,11 @@ int main(int argc, char *argv[])
              || headerClassName == pointSymmTensorField::typeName
              || headerClassName == pointTensorField::typeName
 
-             || headerClassName == volScalarField::Internal::typeName
-             || headerClassName == volVectorField::Internal::typeName
-             || headerClassName == volSphericalTensorField::Internal::typeName
-             || headerClassName == volSymmTensorField::Internal::typeName
-             || headerClassName == volTensorField::Internal::typeName
+             || headerClassName == volInternalScalarField::typeName
+             || headerClassName == volInternalVectorField::typeName
+             || headerClassName == volInternalSphericalTensorField::typeName
+             || headerClassName == volInternalSymmTensorField::typeName
+             || headerClassName == volInternalTensorField::typeName
             )
             {
                 Info<< "        Reading " << headerClassName
@@ -418,9 +417,8 @@ int main(int argc, char *argv[])
                     runTime.writeFormat(),
                     IOstream::currentVersion,
                     runTime.writeCompression(),
-                    parcels.size()
+                    true
                 );
-
 
                 // Do local scan for valid cloud objects
                 IOobjectList sprayObjs(runTime, runTime.name(), dir);
@@ -451,8 +449,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -460,8 +457,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -469,8 +465,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -478,8 +473,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -487,8 +481,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -496,8 +489,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -505,8 +497,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
                     if (writeOk) continue;
 
@@ -514,8 +505,7 @@ int main(int argc, char *argv[])
                     (
                         name,
                         dir,
-                        runTime,
-                        parcels.size() > 0
+                        runTime
                     );
 
                     if (!writeOk)

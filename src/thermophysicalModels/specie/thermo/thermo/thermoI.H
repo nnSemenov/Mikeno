@@ -24,8 +24,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "thermo.H"
-#include "IOmanip.H"
+#include "thermodynamicConstants.H"
 #include "IOstreams.H"
+#include "IOmanip.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -119,7 +120,9 @@ template<class Thermo, template<class> class Type>
 inline Foam::scalar
 Foam::species::thermo<Thermo, Type>::K(const scalar p, const scalar T) const
 {
-    scalar arg = -this->Y()*this->gStd(T)/(RR*T);
+    using namespace constant::thermodynamic;
+
+    const scalar arg = -this->Y()*this->gStd(T)/(RR*T);
 
     if (arg < 600)
     {
@@ -144,15 +147,39 @@ template<class Thermo, template<class> class Type>
 inline Foam::scalar
 Foam::species::thermo<Thermo, Type>::Kc(const scalar p, const scalar T) const
 {
+    using namespace constant::thermodynamic;
+
+    // !!! This looks wrong, but it's not.
+    //
+    // For a valid reaction (i.e., for which mass is balanced), Y equals zero.
+    // However 'specie::operator==' guarantees that it is set to something
+    // small, and W is correspondingly small, such that their ratio equals the
+    // number of moles created by the reaction minus the number consumed.
+    //
+    // This is unpleasant. Ideally, none of this would be here and thermo would
+    // not store a mass fraction at all. If we reduced these thermo models to
+    // just storing the coefficients relating to the 'change' associated with
+    // the reaction, then the net molar production and implementation of
+    // equilibrium constant could be moved to the reversible reaction itself.
+    //
     const scalar nm = this->Y()/this->W();
 
-    if (equal(nm, small))
+    if (mag(nm) < small)
     {
         return Kp(p, T);
     }
     else
     {
-        return Kp(p, T)*pow(pStd/(RR*T), nm);
+        // Check for integer nm
+        const scalar nmi = std::round(nm);
+        if (mag(nm - nmi) < small)
+        {
+            return Kp(p, T)*pow(pStd/(RR*T), int(nmi));
+        }
+        else
+        {
+            return Kp(p, T)*pow(pStd/(RR*T), nm);
+        }
     }
 }
 
@@ -164,9 +191,12 @@ inline Foam::scalar Foam::species::thermo<Thermo, Type>::Kx
     const scalar T
 ) const
 {
+    using namespace constant::thermodynamic;
+
+    // !!! This looks wrong, but it's not. See comments in 'thermo::Kc'.
     const scalar nm = this->Y()/this->W();
 
-    if (equal(nm, small))
+    if (mag(nm) < small)
     {
         return Kp(p, T);
     }
@@ -185,9 +215,12 @@ inline Foam::scalar Foam::species::thermo<Thermo, Type>::Kn
     const scalar n
 ) const
 {
+    using namespace constant::thermodynamic;
+
+    // !!! This looks wrong, but it's not. See comments in 'thermo::Kc'.
     const scalar nm = this->Y()/this->W();
 
-    if (equal(nm, small))
+    if (mag(nm) < small)
     {
         return Kp(p, T);
     }
@@ -379,11 +412,15 @@ Foam::species::thermo<Thermo, Type>::dKcdTbyKc
     const scalar T
 ) const
 {
+    using namespace constant::thermodynamic;
+
     const scalar dKcdTbyKc =
         (this->s(pStd, T) + this->gStd(T)/T)*this->Y()/(RR*T);
 
+    // !!! This looks wrong, but it's not. See comments in 'thermo::Kc'.
     const scalar nm = this->Y()/this->W();
-    if (equal(nm, small))
+
+    if (mag(nm) < small)
     {
         return dKcdTbyKc;
     }

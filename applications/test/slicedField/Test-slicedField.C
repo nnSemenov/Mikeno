@@ -40,7 +40,7 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
 
     #include "createTime.H"
     #include "createMesh.H"
@@ -84,13 +84,13 @@ int main(int argc, char *argv[])
             mesh
         ),
         mesh,
-        dimLength,
+        dimensions::length,
         mesh.cellCentres(),
         mesh.faceCentres()
     );
 
     Info<< C << endl;
-    Info<< (C & U) << endl;
+    Info<< (C.field() & U) << endl;
 
     SlicedGeometricField<vector, surfaceMesh> Sf
     (
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
             mesh
         ),
         mesh,
-        dimArea,
+        dimensions::area,
         mesh.faceAreas()
     );
 

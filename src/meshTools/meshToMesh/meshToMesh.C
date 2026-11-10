@@ -28,6 +28,8 @@ License
 #include "emptyPolyPatch.H"
 #include "wedgePolyPatch.H"
 #include "processorPolyPatch.H"
+#include "nearestCellsToCellsExtrapolation.H"
+#include "nearestPatchToPatchExtrapolation.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -43,19 +45,24 @@ Foam::meshToMesh::meshToMesh
 (
     const polyMesh& srcMesh,
     const polyMesh& tgtMesh,
-    const word& engineType,
+    const word& cellsInterpolationType,
+    const word& cellsExtrapolationType,
+    const word& patchInterpolationType,
+    const word& patchExtrapolationType,
     const HashTable<word>& patchMap
 )
 :
     srcMesh_(srcMesh),
     tgtMesh_(tgtMesh),
     cellsInterpolation_(),
-    srcCellsStabilisation_(),
-    tgtCellsStabilisation_(),
+    cellsExtrapolationType_(cellsExtrapolationType),
+    srcCellsExtrapolation_(),
+    tgtCellsExtrapolation_(),
     patchIndices_(),
     patchInterpolations_(),
-    srcPatchStabilisations_(),
-    tgtPatchStabilisations_()
+    patchExtrapolationType_(patchExtrapolationType),
+    srcPatchExtrapolations_(),
+    tgtPatchExtrapolations_()
 {
     // If no patch map was supplied, then assume a consistent pair of meshes in
     // which corresponding patches have the same name
@@ -138,23 +145,45 @@ Foam::meshToMesh::meshToMesh
         }
     }
 
-    // Calculate cell addressing and weights
-    Info<< "Creating cellsToCells between source mesh "
-        << srcMesh_.name() << " and target mesh " << tgtMesh_.name()
-        << " using " << engineType << endl << incrIndent;
+    const bool srcIsRegion = srcMesh.name() != polyMesh::defaultRegion;
+    const bool tgtIsRegion = tgtMesh.name() != polyMesh::defaultRegion;
+    static const char* noRegion = "the default region";
+    const char* srcMeshName = srcIsRegion ? srcMesh.name().c_str() : noRegion;
+    const char* tgtMeshName = tgtIsRegion ? tgtMesh.name().c_str() : noRegion;
+    const word srcMeshPrefix = srcIsRegion ? srcMesh.name() + '!' : word();
+    const word tgtMeshPrefix = tgtIsRegion ? tgtMesh.name() + '!' : word();
+    Info<< indent << typeName << ":";
+    if (srcIsRegion || tgtIsRegion)
+    {
+        Info<< " " << srcMeshName << " and " << tgtMeshName;
+    }
+    Info<< endl << incrIndent;
+    static const char* cStr = "cells ";
+    static const char* apfStr = "and patch faces ";
+    static const char* umStr = "using method ";
+    const bool sameInterp = cellsInterpolationType == patchInterpolationType;
+    const bool sameExtrap = cellsExtrapolationType == patchExtrapolationType;
+    Info<< indent << "Interpolating " << cStr;
+    if (sameInterp) Info<< apfStr;
+    Info<< umStr << cellsInterpolationType;
+    if (!sameInterp) Info<< apfStr << umStr << patchInterpolationType;
+    Info<< endl << indent << "Extrapolating " << cStr;
+    if (sameExtrap) Info<< apfStr;
+    Info<< umStr << cellsExtrapolationType;
+    if (!sameExtrap) Info<< apfStr << umStr << patchExtrapolationType;
+    Info<< endl << decrIndent;
 
-    cellsInterpolation_ = cellsToCells::New(engineType);
+    // Calculate cell addressing and weights
+    cellsInterpolation_ = cellsToCells::New(cellsInterpolationType);
     cellsInterpolation_->update(srcMesh_, tgtMesh_);
 
-    srcCellsStabilisation_.clear();
-    tgtCellsStabilisation_.clear();
-
-    Info<< decrIndent;
+    srcCellsExtrapolation_.clear();
+    tgtCellsExtrapolation_.clear();
 
     // Calculate patch addressing and weights
     patchInterpolations_.setSize(patchIndices_.size());
-    srcPatchStabilisations_.setSize(patchIndices_.size());
-    tgtPatchStabilisations_.setSize(patchIndices_.size());
+    srcPatchExtrapolations_.setSize(patchIndices_.size());
+    tgtPatchExtrapolations_.setSize(patchIndices_.size());
     forAll(patchIndices_, i)
     {
         const label srcPatchi = patchIndices_[i].first();
@@ -163,26 +192,69 @@ Foam::meshToMesh::meshToMesh
         const polyPatch& srcPp = srcMesh_.boundary()[srcPatchi];
         const polyPatch& tgtPp = tgtMesh_.boundary()[tgtPatchi];
 
-        Info<< "Creating patchToPatch between source patch "
-            << srcPp.name() << " and target patch " << tgtPp.name()
-            << " using " << engineType << endl << incrIndent;
-
         patchInterpolations_.set
         (
             i,
-            patchToPatch::New(engineType, true)
+            patchToPatch::New(patchInterpolationType, true)
         );
 
         patchInterpolations_[i].update
         (
             srcPp,
             PatchTools::pointNormals(srcMesh_, srcPp),
-            tgtPp
+            tgtPp,
+            NullObjectRef<transformer>(),
+            Pair<const string&>
+            (
+                srcMeshPrefix + srcPp.name(),
+                tgtMeshPrefix + tgtPp.name()
+            )
         );
-
-        Info<< decrIndent;
     }
 }
+
+
+Foam::meshToMesh::meshToMesh
+(
+    const polyMesh& srcMesh,
+    const polyMesh& tgtMesh,
+    const word& cellsInterpolationType,
+    const word& patchInterpolationType,
+    const HashTable<word>& patchMap
+)
+:
+    meshToMesh
+    (
+        srcMesh,
+        tgtMesh,
+        cellsInterpolationType,
+        cellsToCellsExtrapolations::nearest::typeName,
+        patchInterpolationType,
+        patchToPatchExtrapolations::nearest::typeName,
+        patchMap
+    )
+{}
+
+
+Foam::meshToMesh::meshToMesh
+(
+    const polyMesh& srcMesh,
+    const polyMesh& tgtMesh,
+    const word& interpolationType,
+    const HashTable<word>& patchMap
+)
+:
+    meshToMesh
+    (
+        srcMesh,
+        tgtMesh,
+        interpolationType,
+        cellsToCellsExtrapolations::nearest::typeName,
+        interpolationType,
+        patchToPatchExtrapolations::nearest::typeName,
+        patchMap
+    )
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //

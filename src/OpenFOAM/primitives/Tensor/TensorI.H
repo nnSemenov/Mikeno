@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -324,6 +324,8 @@ inline Foam::Vector<Cmpt> Foam::Tensor<Cmpt>::vectorComponent
             return z();
             break;
     }
+
+    return Vector<Cmpt>();
 }
 
 
@@ -514,6 +516,18 @@ operator/(const Vector<Cmpt>& v, const Tensor<Cmpt>& t)
 
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+//- Return the transpose of a tensor
+template<class Cmpt>
+inline Tensor<Cmpt> T(const Tensor<Cmpt>& t)
+{
+    return Tensor<Cmpt>
+    (
+        t.xx(), t.yx(), t.zx(),
+        t.xy(), t.yy(), t.zy(),
+        t.xz(), t.yz(), t.zz()
+    );
+}
 
 //- Return the trace of a tensor
 template<class Cmpt>

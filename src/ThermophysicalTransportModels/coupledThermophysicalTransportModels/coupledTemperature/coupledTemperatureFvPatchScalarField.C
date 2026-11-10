@@ -121,7 +121,13 @@ coupledTemperatureFvPatchScalarField
     (
         qrName_ != word::null
       ? dict.found("qrPrevious")
-      ? scalarField("qrPrevious", dimPower/dimArea, dict, p.size())
+      ? scalarField
+        (
+            "qrPrevious",
+            dimensions::heatFluxDensity,
+            dict,
+            p.size()
+        )
       : scalarField(p.size(), 0)
       : scalarField()
     ),
@@ -133,7 +139,7 @@ coupledTemperatureFvPatchScalarField
             iF.name(),
             "h",
             p,
-            dimPower/dimArea/dimTemperature,
+            dimensions::heatFluxDensity/dimensions::temperature,
             dict
         )
       : nullptr
@@ -158,7 +164,13 @@ coupledTemperatureFvPatchScalarField
                 << exit(FatalIOError);
         }
 
-        qs_ = new scalarField("qs", dimPower/dimTime, dict, p.size());
+        qs_ = new scalarField
+        (
+            "qs",
+            dimensions::power/dimensions::time,
+            dict,
+            p.size()
+       );
     }
     else if (dict.found("Qs"))
     {
@@ -179,7 +191,7 @@ coupledTemperatureFvPatchScalarField
             scalarField
             (
                 "refGradient",
-                iF.dimensions()/dimLength,
+                iF.dimensions()/dimensions::length,
                 dict,
                 p.size()
             );
@@ -222,7 +234,8 @@ coupledTemperatureFvPatchScalarField
       ? new FunctionalDimensionedField<scalar, fvPatch>
         (
             psf.h_(),
-            p
+            p,
+            mapper
         )
       : nullptr
     ),
@@ -308,11 +321,14 @@ void Foam::coupledTemperatureFvPatchScalarField::map
     const fieldMapper& mapper
 )
 {
-    map(refCast<const coupledTemperatureFvPatchScalarField>(ptf), mapper);
+    const coupledTemperatureFvPatchScalarField& ctptf =
+        refCast<const coupledTemperatureFvPatchScalarField>(ptf);
+
+    map(ctptf, mapper);
 
     if (h_.valid())
     {
-        h_->map(!mapper.direct());
+        h_->map(ctptf.h_(), mapper);
     }
 }
 
@@ -431,8 +447,11 @@ void Foam::coupledTemperatureFvPatchScalarField::updateCoeffs()
 
             const scalarField hFactor
             (
-                coupledTemperatureNbr.h_()
-               /(coupledTemperatureNbr.h_() + sumKappaByDeltaNbr())
+                coupledTemperatureNbr.h_().primitiveField()
+               /(
+                   coupledTemperatureNbr.h_().primitiveField()
+                 + sumKappaByDeltaNbr()
+                )
             );
             sumKappaTByDeltaNbr.ref() *= hFactor;
             sumKappaByDeltaNbr.ref() *= hFactor;
@@ -453,7 +472,11 @@ void Foam::coupledTemperatureFvPatchScalarField::updateCoeffs()
         {
             h_->update();
 
-            const scalarField hFactor(h_()/(h_() + sumKappaByDeltaNbrMapped()));
+            const scalarField hFactor
+            (
+                h_().primitiveField()
+               /(h_().primitiveField() + sumKappaByDeltaNbrMapped())
+            );
             sumKappaTByDeltaNbrMapped.ref() *= hFactor;
             sumKappaByDeltaNbrMapped.ref() *= hFactor;
         }
@@ -488,9 +511,9 @@ void Foam::coupledTemperatureFvPatchScalarField::updateCoeffs()
             << this->internalField().name() << " :"
             << " heat transfer rate:" << Q
             << " walltemperature "
-            << " min:" << gMin(*this)
-            << " max:" << gMax(*this)
-            << " avg:" << gAverage(*this)
+            << " min:" << gMin(field())
+            << " max:" << gMax(field())
+            << " avg:" << gAverage(field())
             << endl;
     }
 

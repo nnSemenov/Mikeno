@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,7 @@ Description
 #include "setWriter.H"
 #include "writeFile.H"
 
-#include "fvcGrad.H"
+#include "fviGrad.H"
 
 #include "fvmDdt.H"
 #include "fvmDiv.H"
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     #define NO_CONTROL
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createFields.H"
@@ -66,13 +66,13 @@ int main(int argc, char *argv[])
 
     while (runTime.loop())
     {
-        delta == fvc::grad(V)().component(Foam::vector::X);
+        delta = fvi::grad(V)().component(Foam::vector::X);
 
         solve
         (
             fvm::ddt(V)
           + fvm::div(phi, V)
-          - fvm::Sp(fvc::div(phi), V)
+          - fvm::Sp(fvi::div(phi), V)
           - fvm::laplacian(DV, V)
          ==
           - fvm::Sp(r, V)

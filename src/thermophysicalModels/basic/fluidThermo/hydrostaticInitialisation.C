@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,7 +27,7 @@ License
 
 #include "fluidThermo.H"
 #include "fvmLaplacian.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 #include "fvcSnGrad.H"
 #include "surfaceInterpolate.H"
 #include "constrainPressure.H"
@@ -64,14 +64,15 @@ void Foam::hydrostaticInitialisation
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE
                 ),
-                mesh
+                mesh,
+                dimensions::pressure
             )
         );
 
         if (!mesh.time().restart())
         {
             p = ph_rgh + rho*gh + pRef;
-            thermo.correct();
+            thermo.correct(false);
             rho = thermo.rho();
 
             label nCorr
@@ -94,13 +95,13 @@ void Foam::hydrostaticInitialisation
 
                 fvScalarMatrix ph_rghEqn
                 (
-                    fvm::laplacian(rhof, ph_rgh) == fvc::div(phig)
+                    fvm::laplacian(rhof, ph_rgh) == fvi::div(phig)
                 );
 
                 ph_rghEqn.solve();
 
                 p = ph_rgh + rho*gh + pRef;
-                thermo.correct();
+                thermo.correct(false);
                 rho = thermo.rho();
 
                 Info<< "Hydrostatic pressure variation "

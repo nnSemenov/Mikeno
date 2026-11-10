@@ -54,12 +54,12 @@ bool Foam::SuModels::linearEquilibrium::readCoeffs(const dictionary& dict)
 Foam::SuModels::linearEquilibrium::linearEquilibrium
 (
     const dictionary& dict,
-    const uRhoMulticomponentThermo& thermo,
+    const ubRhoThermo& thermo,
     const compressibleMomentumTransportModel& turbulence
 )
 :
     unstrained(dict, thermo, turbulence),
-    sigmaExt_("sigmaExt", dimless/dimTime, dict)
+    sigmaExt_("sigmaExt", dimless/dimensions::time, dict)
 {
     Su_.writeOpt() = IOobject::AUTO_WRITE;
 }

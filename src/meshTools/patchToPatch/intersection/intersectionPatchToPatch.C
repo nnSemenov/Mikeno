@@ -588,7 +588,8 @@ Foam::label Foam::patchToPatches::intersection::finalise
     const vectorField& srcPointNormals,
     const vectorField& srcPointNormals0,
     const primitiveOldTimePatch& tgtPatch,
-    const transformer& tgtToSrc
+    const transformer& tgtToSrc,
+    const unsigned char report
 )
 {
     const label nCouples =
@@ -598,8 +599,12 @@ Foam::label Foam::patchToPatches::intersection::finalise
             srcPointNormals,
             srcPointNormals0,
             tgtPatch,
-            tgtToSrc
+            tgtToSrc,
+            report
         );
+
+    // Store whether or not the patches are intersecting
+    intersecting_ = nCouples;
 
     // Convert face-edge-parts to edge-parts
     labelList srcEdgeNParts(srcEdgeParts_.size(), 0);
@@ -713,8 +718,8 @@ Foam::label Foam::patchToPatches::intersection::finalise
             coverage[facei] = magACouple/magA;
         }
 
-        reduce(area, sumOp<scalar>());
-        reduce(coupleArea, sumOp<scalar>());
+        reduce(area, sumOp());
+        reduce(coupleArea, sumOp());
     };
     scalar srcArea = 0, srcCoupleArea = 0;
     scalar tgtArea = 0, tgtCoupleArea = 0;
@@ -795,21 +800,28 @@ Foam::label Foam::patchToPatches::intersection::finalise
             srcDepth[srcFacei] = mag(projectionV)/pow3(sqrt(magA));
         }
 
-        reduce(tgtArea, sumOp<scalar>());
-        reduce(tgtCoupleArea, sumOp<scalar>());
+        reduce(tgtArea, sumOp());
+        reduce(tgtCoupleArea, sumOp());
 
-        Info<< indent << "Source min/average/max coverage = "
-            << gMin(srcCoverage_) << '/' << srcCoupleArea/srcArea << '/'
-            << gMax(srcCoverage_) << endl
-            << indent << "Target min/average/max coverage = "
-            << gMin(tgtCoverage_) << '/' << tgtCoupleArea/tgtArea << '/'
-            << gMax(tgtCoverage_) << endl
-            << indent << "Source average openness/error/depth/angle = "
-            << gAverage(srcOpenness) << '/' << gAverage(srcError) << '/'
-            << gAverage(srcDepth) << '/' << gAverage(srcAngleDeg) << endl
-            << indent << "Source max openness/error/depth/angle = "
-            << gMax(srcOpenness) << '/' << gMax(srcError) << '/'
-            << gMax(srcDepth) << '/' << gMax(srcAngleDeg) << endl;
+        if (report & patchToPatch::report::extent)
+        {
+            Info<< indent << "Source min/average/max coverage = "
+                << gMin(srcCoverage_) << '/' << srcCoupleArea/srcArea << '/'
+                << gMax(srcCoverage_) << endl
+                << indent << "Target min/average/max coverage = "
+                << gMin(tgtCoverage_) << '/' << tgtCoupleArea/tgtArea << '/'
+                << gMax(tgtCoverage_) << endl;
+        }
+
+        if (report & patchToPatch::report::quality)
+        {
+            Info<< indent << "Average openness/error/depth/angle = "
+                << gAverage(srcOpenness) << '/' << gAverage(srcError) << '/'
+                << gAverage(srcDepth) << '/' << gAverage(srcAngleDeg) << endl
+                << indent << "Maximum openness/error/depth/angle = "
+                << gMax(srcOpenness) << '/' << gMax(srcError) << '/'
+                << gMax(srcDepth) << '/' << gMax(srcAngleDeg) << endl;
+        }
 
         if (debug)
         {

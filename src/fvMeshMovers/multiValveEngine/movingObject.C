@@ -113,7 +113,7 @@ void Foam::fvMeshMovers::multiValveEngine::movingObject::calcScale
 }
 
 
-void Foam::fvMeshMovers::multiValveEngine::movingObject::transformPoints
+void Foam::fvMeshMovers::multiValveEngine::movingObject::pointTransform
 (
     pointField& newPoints,
     const vector& translationVector
@@ -271,27 +271,45 @@ Foam::fvMeshMovers::multiValveEngine::movingObject::movingObject
     meshMover_(engine),
     name(objectName),
     axis(dict.lookup<vector>("axis", dimless)),
-    motion_(Function1<scalar>::New("motion", units::none, dimLength, dict)),
+    motion_
+    (
+        Function1<scalar>::New("motion", units::none, dimensions::length, dict)
+    ),
     patchNames_(dict.lookup("patches")),
     maxMotionDistance_
     (
-        dict.lookupOrDefault<scalar>("maxMotionDistance", dimLength, great)
+        dict.lookupOrDefault<scalar>
+        (
+            "maxMotionDistance",
+            dimensions::length,
+            great
+        )
     ),
     movingFrozenLayerThickness_
     (
-        dict.lookupOrDefault<scalar>("movingFrozenLayerThickness", dimLength, 0)
+        dict.lookupOrDefault<scalar>
+        (
+            "movingFrozenLayerThickness",
+            dimensions::length,
+            0
+        )
     ),
     staticFrozenLayerThickness_
     (
-        dict.lookupOrDefault<scalar>("staticFrozenLayerThickness", dimLength, 0)
+        dict.lookupOrDefault<scalar>
+        (
+            "staticFrozenLayerThickness",
+            dimensions::length,
+            0
+        )
     ),
     movingPointZones_
     (
-        dict.lookupOrDefault("movingZones", wordReList::null())
+        dict.lookupOrDefault("movingZones", wordReList{})
     ),
     frozenPointZones_
     (
-        dict.lookupOrDefault("frozenZones", wordReList::null())
+        dict.lookupOrDefault("frozenZones", wordReList{})
     ),
     scale_
     (
@@ -312,7 +330,12 @@ Foam::fvMeshMovers::multiValveEngine::movingObject::movingObject
     ),
     travelInterval_
     (
-        dict.lookupOrDefault<scalar>("travelInterval", dimLength, great)
+        dict.lookupOrDefault<scalar>
+        (
+            "travelInterval",
+            dimensions::length,
+            great
+        )
     ),
     executionCount_(0),
     position0_(-great),

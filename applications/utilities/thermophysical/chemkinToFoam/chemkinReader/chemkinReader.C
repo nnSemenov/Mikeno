@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,6 +32,7 @@ License
 #include "NonEquilibriumReversibleReaction.H"
 #include "ArrheniusReactionRate.H"
 #include "thirdBodyArrheniusReactionRate.H"
+#include "pLogReactionRate.H"
 #include "FallOffReactionRate.H"
 #include "ChemicallyActivatedReactionRate.H"
 #include "LindemannFallOffFunction.H"
@@ -53,10 +54,11 @@ const char* Foam::chemkinReader::reactionTypeNames[4] =
     "unknownReactionType"
 };
 
-const char* Foam::chemkinReader::reactionRateTypeNames[8] =
+const char* Foam::chemkinReader::reactionRateTypeNames[9] =
 {
     "Arrhenius",
     "thirdBodyArrhenius",
+    "pLog",
     "unimolecularFallOff",
     "chemicallyActivatedBimolecular",
     "LandauTeller",
@@ -88,6 +90,7 @@ void Foam::chemkinReader::initReactionKeywordTable()
     reactionKeywordTable_.insert("RLT", reverseLandauTellerReactionType);
     reactionKeywordTable_.insert("JAN", JanevReactionType);
     reactionKeywordTable_.insert("FIT1", powerSeriesReactionRateType);
+    reactionKeywordTable_.insert("PLOG", pLogReactionType);
     reactionKeywordTable_.insert("HV", radiationActivatedReactionType);
     reactionKeywordTable_.insert("TDEP", speciesTempReactionType);
     reactionKeywordTable_.insert("EXCI", energyLossReactionType);
@@ -156,6 +159,19 @@ void Foam::chemkinReader::checkCoeffs
             << exit(FatalError);
     }
 }
+
+
+void Foam::chemkinReader::setTlimits
+(
+    const scalar Tlow,
+    const scalar Thigh
+)
+{
+
+    reactions_.Tlow() = max(reactions_.Tlow(), Tlow);
+    reactions_.Thigh() = min(reactions_.Thigh(), Thigh);
+}
+
 
 template<class ReactionRateType>
 void Foam::chemkinReader::addReactionType
@@ -233,7 +249,8 @@ void Foam::chemkinReader::addPressureDependentReaction
     const fallOffFunctionType fofType,
     DynamicList<specieCoeffs>& lhs,
     DynamicList<specieCoeffs>& rhs,
-    const scalarList& efficiencies,
+    const scalar defaultThirdBodyEfficiency,
+    const List<Tuple2<word, scalar>>& efficiencies,
     const scalarList& k0Coeffs,
     const scalarList& kInfCoeffs,
     const HashTable<scalarList>& reactionCoeffsTable,
@@ -269,7 +286,12 @@ void Foam::chemkinReader::addPressureDependentReaction
                         kInfCoeffs[2]/RR
                     ),
                     LindemannFallOffFunction(),
-                    thirdBodyEfficiencies(speciesTable_, efficiencies)
+                    thirdBodyEfficiencies
+                    (
+                        speciesTable_,
+                        defaultThirdBodyEfficiency,
+                        efficiencies
+                    )
                 )
             );
             break;
@@ -324,7 +346,12 @@ void Foam::chemkinReader::addPressureDependentReaction
                         TroeCoeffs[2],
                         TroeCoeffs[3]
                     ),
-                    thirdBodyEfficiencies(speciesTable_, efficiencies)
+                    thirdBodyEfficiencies
+                    (
+                        speciesTable_,
+                        defaultThirdBodyEfficiency,
+                        efficiencies
+                    )
                 )
             );
             break;
@@ -381,7 +408,12 @@ void Foam::chemkinReader::addPressureDependentReaction
                         SRICoeffs[3],
                         SRICoeffs[4]
                     ),
-                    thirdBodyEfficiencies(speciesTable_, efficiencies)
+                    thirdBodyEfficiencies
+                    (
+                        speciesTable_,
+                        defaultThirdBodyEfficiency,
+                        efficiencies
+                    )
                 )
             );
             break;
@@ -403,7 +435,8 @@ void Foam::chemkinReader::addReaction
 (
     DynamicList<specieCoeffs>& lhs,
     DynamicList<specieCoeffs>& rhs,
-    const scalarList& efficiencies,
+    const scalar defaultThirdBodyEfficiency,
+    const List<Tuple2<word, scalar>>& efficiencies,
     const reactionType rType,
     const reactionRateType rrType,
     const fallOffFunctionType fofType,
@@ -551,14 +584,24 @@ void Foam::chemkinReader::addReaction
                             Afactor*concFactor*ArrheniusCoeffs[0],
                             ArrheniusCoeffs[1],
                             ArrheniusCoeffs[2]/RR,
-                            thirdBodyEfficiencies(speciesTable_, efficiencies)
+                            thirdBodyEfficiencies
+                            (
+                                speciesTable_,
+                                defaultThirdBodyEfficiency,
+                                efficiencies
+                            )
                         ),
                         thirdBodyArrheniusReactionRate
                         (
                             AfactorRev*concFactor*reverseArrheniusCoeffs[0],
                             reverseArrheniusCoeffs[1],
                             reverseArrheniusCoeffs[2]/RR,
-                            thirdBodyEfficiencies(speciesTable_, efficiencies)
+                            thirdBodyEfficiencies
+                            (
+                                speciesTable_,
+                                defaultThirdBodyEfficiency,
+                                efficiencies
+                            )
                         )
                     )
                 );
@@ -574,10 +617,48 @@ void Foam::chemkinReader::addReaction
                         Afactor*concFactor*ArrheniusCoeffs[0],
                         ArrheniusCoeffs[1],
                         ArrheniusCoeffs[2]/RR,
-                        thirdBodyEfficiencies(speciesTable_, efficiencies)
+                        thirdBodyEfficiencies
+                        (
+                            speciesTable_,
+                            defaultThirdBodyEfficiency,
+                            efficiencies
+                        )
                     )
                 );
             }
+            break;
+        }
+        case pLog:
+        {
+            const scalarList& pLogCoeffs =
+                reactionCoeffsTable[reactionRateTypeNames[rrType]];
+
+            List<pLogReactionRate::pCoeffs> pLogCoeffList
+            (
+                pLogCoeffs.size()/4
+            );
+
+            label pi = 0;
+            for(label i=0; i<pLogCoeffs.size(); i+=4)
+            {
+                pLogCoeffList[pi].p = 101325*pLogCoeffs[i];
+                pLogCoeffList[pi].A = Afactor*pLogCoeffs[i + 1];
+                pLogCoeffList[pi].beta = pLogCoeffs[i + 2];
+                pLogCoeffList[pi].Ta = pLogCoeffs[i + 3]/RR;
+
+                pLogCoeffList[pi].lnp = log(pLogCoeffList[pi].p);
+                pLogCoeffList[pi].lnA = log(pLogCoeffList[pi].A);
+
+                pi++;
+            }
+
+            addReactionType
+            (
+                rType,
+                lhs, rhs,
+                pLogReactionRate(pLogCoeffList)
+            );
+
             break;
         }
         case unimolecularFallOff:
@@ -588,6 +669,7 @@ void Foam::chemkinReader::addReaction
                 fofType,
                 lhs,
                 rhs,
+                defaultThirdBodyEfficiency,
                 efficiencies,
                 reactionCoeffsTable[reactionRateTypeNames[rrType]],
                 ArrheniusCoeffs,
@@ -606,6 +688,7 @@ void Foam::chemkinReader::addReaction
                 fofType,
                 lhs,
                 rhs,
+                defaultThirdBodyEfficiency,
                 efficiencies,
                 ArrheniusCoeffs,
                 reactionCoeffsTable[reactionRateTypeNames[rrType]],
@@ -775,9 +858,6 @@ void Foam::chemkinReader::read
     const fileName& transportFileName
 )
 {
-    Reaction<thermoPhysics>::TlowDefault = 0;
-    Reaction<thermoPhysics>::ThighDefault = great;
-
     transportDict_.read(IFstream(transportFileName)());
 
     if (thermoFileName != fileName::null)

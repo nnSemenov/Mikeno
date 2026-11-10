@@ -57,9 +57,9 @@ BirdCarreau
 )
 :
     strainRateViscosityModel(viscosityProperties, viscosity, U),
-    nuInf_("nuInf", dimKinematicViscosity, 0),
-    k_("k", dimTime, 0),
-    tauStar_("tauStar", dimKinematicViscosity/dimTime, 0),
+    nuInf_("nuInf", dimensions::kinematicViscosity, 0),
+    k_("k", dimensions::time, 0),
+    tauStar_("tauStar", dimensions::kinematicViscosity/dimensions::time, 0),
     n_("n", dimless, 0),
     a_("a", dimless, 2)
 {
@@ -107,21 +107,30 @@ nu
     const volScalarField& strainRate
 ) const
 {
-    return
-        nuInf_
-      + (nu0 - nuInf_)
-       *pow
-        (
-            scalar(1)
-          + pow
+    if (tauStar_.value() > 0)
+    {
+        return
+            nuInf_
+          + (nu0 - nuInf_)
+           *pow
             (
-                tauStar_.value() > 0
-              ? nu0*strainRate/tauStar_
-              : k_*strainRate,
-                a_
-            ),
-            (n_ - 1.0)/a_
-        );
+                scalar(1)
+              + pow(nu0*strainRate/tauStar_, a_),
+                (n_ - 1.0)/a_
+            );
+    }
+    else
+    {
+        return
+            nuInf_
+          + (nu0 - nuInf_)
+           *pow
+            (
+                scalar(1)
+              + pow(k_*strainRate, a_),
+                (n_ - 1.0)/a_
+            );
+    }
 }
 
 

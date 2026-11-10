@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "kEqn.H"
+#include "fviGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 
@@ -53,8 +54,8 @@ tmp<fvScalarMatrix> kEqn<BasicMomentumTransportModel>::kSource() const
         new fvScalarMatrix
         (
             k_,
-            dimVolume*this->rho_.dimensions()*k_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*k_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -95,7 +96,8 @@ kEqn<BasicMomentumTransportModel>::kEqn
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
 
     Ck_("Ck", this->typeDict(type), 0.094)
@@ -155,10 +157,14 @@ void kEqn<BasicMomentumTransportModel>::correct()
 
     LESeddyViscosity<BasicMomentumTransportModel>::correct();
 
-    volScalarField divU(fvc::div(fvc::absolute(this->phi(), U)));
+    volInternalScalarField divU(fvi::div(fvc::absolute(this->phi(), U)));
 
-    tmp<volTensorField> tgradU(fvc::grad(U));
-    volScalarField G(this->GName(), nut*(tgradU() && dev(twoSymm(tgradU()))));
+    tmp<volInternalTensorField> tgradU(fvi::grad(U));
+    volInternalScalarField G
+    (
+        this->GName(),
+        nut()*(tgradU() && dev(twoSymm(tgradU())))
+    );
     tgradU.clear();
 
     tmp<fvScalarMatrix> kEqn
@@ -167,9 +173,9 @@ void kEqn<BasicMomentumTransportModel>::correct()
       + fvm::div(alphaRhoPhi, k_)
       - fvm::laplacian(alpha*rho*DkEff(), k_)
      ==
-        alpha*rho*G
-      - fvm::SuSp((2.0/3.0)*alpha*rho*divU, k_)
-      - fvm::Sp(this->Ce_*alpha*rho*sqrt(k_)/this->delta(), k_)
+        alpha()*rho()*G
+      - fvm::SuSp((2.0/3.0)*alpha()*rho()*divU, k_)
+      - fvm::Sp(this->Ce_*alpha()*rho()*sqrt(k_())/this->delta()(), k_)
       + kSource()
       + fvModels.source(alpha, rho, k_)
     );

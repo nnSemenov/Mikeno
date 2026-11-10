@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,6 +26,7 @@ License
 #include "compressibleMultiphaseVoF.H"
 #include "subCycle.H"
 #include "CMULES.H"
+#include "fviDiv.H"
 #include "fvcFlux.H"
 #include "fvcMeshPhi.H"
 
@@ -53,7 +54,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
             phasei,
             new surfaceScalarField
             (
-                "phi" + alpha.name() + "Corr",
+                word("phi", alpha.name(), "Corr"),
                 fvc::flux
                 (
                     phi,
@@ -85,7 +86,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
         MULES::limit
         (
             MULEScontrols,
-            1.0/mesh.time().deltaT().value(),
+            1/mesh.time().deltaT().value(),
             geometricOneField(),
             alpha,
             phi,
@@ -114,7 +115,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
         dimensionedScalar(dimless, 0)
     );
 
-    const volScalarField divU(fvc::div(fvc::absolute(phi, U)));
+    const volInternalScalarField divU(fvi::div(fvc::absolute(phi, U)));
 
     forAll(phases, phasei)
     {
@@ -122,7 +123,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
 
         surfaceScalarField& alphaPhi = alphaPhis[phasei];
 
-        volScalarField::Internal Sp
+        volInternalScalarField Sp
         (
             IOobject
             (
@@ -134,7 +135,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
             dimensionedScalar(alpha.vDot().dimensions(), 0)
         );
 
-        volScalarField::Internal Su
+        volInternalScalarField Su
         (
             IOobject
             (
@@ -144,7 +145,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
             ),
             // Divergence term is handled explicitly to be
             // consistent with the explicit transport solution
-            divU.v()*min(alpha.v(), scalar(1))
+            divU*min(alpha(), scalar(1))
         );
 
         {
@@ -199,9 +200,9 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
         rhoPhi += fvc::interpolate(alpha.thermo().rho())*alphaPhi;
 
         Info<< alpha.name() << " volume fraction, min, max = "
-            << alpha.weightedAverage(mesh.V()).value()
-            << ' ' << min(alpha).value()
-            << ' ' << max(alpha).value()
+            << weightedAverage(alpha(), mesh.V()).value()
+            << ' ' << min(alpha.alpha()).value()
+            << ' ' << max(alpha.alpha()).value()
             << endl;
 
         sumAlpha += alpha;
@@ -211,7 +212,7 @@ void Foam::solvers::compressibleMultiphaseVoF::alphaSolve()
     const volScalarField sumCorr(1.0 - sumAlpha);
     forAll(phases, phasei)
     {
-        compressibleVoFphase& alpha = phases[phasei];
+        volScalarField& alpha = phases[phasei];
         alpha += alpha*sumCorr;
     }
 }

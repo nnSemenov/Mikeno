@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,8 @@ License
 
 #include "compressibleMultiphaseVoF.H"
 #include "geometricZeroField.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -105,7 +105,7 @@ Foam::solvers::compressibleMultiphaseVoF::compressibleMultiphaseVoF
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar(dimTime/dimDensity, 1)
+            dimensionedScalar(dimensions::time/dimensions::density, 1)
         );
     }
 }
@@ -123,7 +123,7 @@ void Foam::solvers::compressibleMultiphaseVoF::prePredictor()
 {
     multiphaseVoFSolver::prePredictor();
 
-    contErr = fvc::ddt(rho)()() + fvc::div(rhoPhi)()();
+    contErr = fvi::ddt(rho) + fvi::div(rhoPhi);
 
     forAll(mixture.phases(), phasei)
     {

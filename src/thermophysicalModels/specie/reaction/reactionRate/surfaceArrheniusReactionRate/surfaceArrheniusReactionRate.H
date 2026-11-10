@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -73,7 +73,7 @@ class surfaceArrheniusReactionRate
         const objectRegistry& ob_;
 
         //- The surface area per unit volume field
-        mutable tmp<volScalarField::Internal> tAv_;
+        mutable tmp<volInternalScalarField> tAv_;
 
 
 public:
@@ -104,23 +104,11 @@ public:
         //- Post-evaluation hook
         inline void postEvaluate() const;
 
-        //- Evaluate the rate
-        inline scalar operator()
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        //- Evaluate the rate constant
+        inline scalar k(const reaction::state& s) const;
 
         //- Evaluate the derivative
-        inline scalar ddT
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        inline scalar ddT(const reaction::state& s) const;
 
         //- Write to stream
         inline void write(Ostream& os) const;

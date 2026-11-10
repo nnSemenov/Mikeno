@@ -133,7 +133,7 @@ Foam::volPointInterpolation::volPointInterpolation(const fvMesh& vm)
     (
         mesh(),
         pointBoundaryFactor,
-        maxEqOp<scalar>(),
+        maxEqOp(),
         scalar(0)
     );
 
@@ -160,7 +160,7 @@ Foam::volPointInterpolation::volPointInterpolation(const fvMesh& vm)
     typename volVectorField::Boundary CBnf
     (
         mesh().boundary(),
-        volVectorField::Internal::null(),
+        volInternalVectorField::null(),
         calculatedFvPatchField<vector>::typeName
     );
     forAll(fvbm, patchi)
@@ -289,7 +289,7 @@ Foam::volPointInterpolation::volPointInterpolation(const fvMesh& vm)
     (
         mesh(),
         sumWeights,
-        plusEqOp<scalar>(),
+        addEqOp(),
         scalar(0)
     );
 

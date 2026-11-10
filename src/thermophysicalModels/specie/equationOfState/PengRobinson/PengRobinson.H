@@ -399,7 +399,7 @@ class PengRobinson : public Specie
     //- Return the instantiated type name
     static word typeName()
     {
-        return "PengRobinson<" + word(Specie::typeName_()) + '>';
+        return word("PengRobinson<", word(Specie::typeName_()), '>');
     }
 
     // Fundamental properties

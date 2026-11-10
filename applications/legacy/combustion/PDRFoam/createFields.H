@@ -71,7 +71,7 @@ turbulenceThermophysicalTransportModels::unityLewisEddyDiffusivity
 > thermophysicalTransport(turbulence(), thermo, true);
 
 Info<< "Creating field dpdt\n" << endl;
-volScalarField dpdt
+volInternalScalarField dpdt
 (
     IOobject
     (
@@ -80,7 +80,7 @@ volScalarField dpdt
         mesh
     ),
     mesh,
-    dimensionedScalar(p.dimensions()/dimTime, 0)
+    dimensionedScalar(p.dimensions()/dimensions::time, 0)
 );
 
 Info<< "Creating field kinetic energy K\n" << endl;

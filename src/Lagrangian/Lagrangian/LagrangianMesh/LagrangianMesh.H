@@ -46,6 +46,7 @@ SourceFiles
 #include "LagrangianSolution.H"
 #include "LagrangianState.H"
 #include "LagrangianSubMesh.H"
+#include "globalLagrangianMeshData.H"
 #include "labelIODynamicField.H"
 #include "polyMesh.H"
 
@@ -160,13 +161,16 @@ private:
         autoPtr<LagrangianDynamicField<label>> nTracksBehindPtr_;
 
         //- Sub-mesh index
-        mutable label subMeshIndex_;
+        mutable uint64_t subMeshIndex_;
 
         //- Schemes created on demand
         mutable autoPtr<LagrangianSchemes> schemesPtr_;
 
         //- Solution controls created on demand
         mutable autoPtr<LagrangianSolution> solutionPtr_;
+
+        //- Global mesh data
+        globalLagrangianMeshData globalData_;
 
 
     // Private Member Functions
@@ -671,13 +675,16 @@ public:
             ) const;
 
             //- Get a sub-mesh index
-            inline label subMeshIndex() const;
+            inline uint64_t subMeshIndex() const;
 
             //- Access the schemes
             const LagrangianSchemes& schemes() const;
 
             //- Access the solution controls
             const LagrangianSolution& solution() const;
+
+            //- Access the global mesh data
+            inline const globalLagrangianMeshData& globalData() const;
 
             //- Lookup all current-time fields of the given type
             template<class GeoField>
@@ -935,11 +942,11 @@ public:
                 IOstream::streamFormat fmt,
                 IOstream::versionNumber ver,
                 IOstream::compressionType cmp,
-                const bool write = true
+                const bool updateInstance
             ) const;
 
             //- Write settings from the database
-            virtual bool write(const bool write = true) const;
+            virtual bool write(const bool updateInstance = true) const;
 
 
     // Member Operators

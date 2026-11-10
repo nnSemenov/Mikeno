@@ -99,11 +99,11 @@ void Foam::pressureNormalInletOutletVelocityFvPatchVectorField::updateCoeffs()
     tmp<vectorField> n = patch().nf();
     const Field<scalar>& magS = patch().magSf();
 
-    if (phi.dimensions() == dimVolumetricFlux)
+    if (phi.dimensions() == dimensions::volumetricFlux)
     {
         refValue() = n*phip/magS;
     }
-    else if (phi.dimensions() == dimMassFlux)
+    else if (phi.dimensions() == dimensions::massFlux)
     {
         const fvPatchField<scalar>& rhop =
             patch().lookupPatchField<volScalarField, scalar>(rhoName_);
@@ -114,9 +114,9 @@ void Foam::pressureNormalInletOutletVelocityFvPatchVectorField::updateCoeffs()
     {
         FatalErrorInFunction
             << "dimensions of phi are not correct"
-            << "\n    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "\n    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
 

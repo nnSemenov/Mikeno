@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -286,19 +286,19 @@ Foam::StationaryPhaseModel<BasePhaseModel>::DUDt() const
 
 
 template<class BasePhaseModel>
-Foam::tmp<Foam::volScalarField>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::StationaryPhaseModel<BasePhaseModel>::continuityError() const
 {
     FatalErrorInFunction
         << "Cannot access the continuityError of a stationary phase"
         << abort(FatalError);
 
-    return volScalarField::null();
+    return volInternalScalarField::null();
 }
 
 
 template<class BasePhaseModel>
-Foam::tmp<Foam::volScalarField>
+const Foam::volScalarField&
 Foam::StationaryPhaseModel<BasePhaseModel>::K() const
 {
     FatalErrorInFunction
@@ -310,14 +310,14 @@ Foam::StationaryPhaseModel<BasePhaseModel>::K() const
 
 
 template<class BasePhaseModel>
-const Foam::autoPtr<Foam::volScalarField>&
+const Foam::autoPtr<Foam::volInternalScalarField>&
 Foam::StationaryPhaseModel<BasePhaseModel>::divU() const
 {
     FatalErrorInFunction
         << "Cannot access the dilatation rate of a stationary phase"
         << abort(FatalError);
 
-    static autoPtr<volScalarField> divU_;
+    static autoPtr<volInternalScalarField> divU_;
     return divU_;
 }
 
@@ -325,7 +325,7 @@ Foam::StationaryPhaseModel<BasePhaseModel>::divU() const
 template<class BasePhaseModel>
 void Foam::StationaryPhaseModel<BasePhaseModel>::divU
 (
-    tmp<volScalarField> divU
+    tmp<volInternalScalarField> divU
 )
 {
     FatalErrorInFunction
@@ -342,7 +342,7 @@ Foam::StationaryPhaseModel<BasePhaseModel>::k() const
     (
         IOobject::groupName("k", this->name()),
         this->mesh(),
-        dimensionedScalar(sqr(dimVelocity), 0)
+        dimensionedScalar(sqr(dimensions::velocity), 0)
     );
 }
 

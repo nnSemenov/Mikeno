@@ -24,9 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "diffusion.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 #include "addToRunTimeSelectionTable.H"
-
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -72,8 +71,7 @@ Foam::reactionModels::diffusion::~diffusion()
 
 void Foam::reactionModels::diffusion::correct()
 {
-    this->wFuel_ ==
-        dimensionedScalar(dimMass/pow3(dimLength)/dimTime, 0);
+    this->wFuel_ = dimensionedScalar(dimensions::density/dimensions::time, 0);
 
     this->fresCorrect();
 
@@ -85,10 +83,10 @@ void Foam::reactionModels::diffusion::correct()
     {
         const volScalarField& YO2 = this->thermo().Y(oxidantName_);
 
-        this->wFuel_ ==
-            C_*this->thermo().rho()*this->turbulence().nuEff()
-           *mag(fvc::grad(YFuel) & fvc::grad(YO2))
-           *pos0(YFuel)*pos0(YO2);
+        this->wFuel_ =
+            C_*this->thermo().rho()()()*this->turbulence().nuEff()()()
+           *mag(fvi::grad(YFuel) & fvi::grad(YO2))
+           *pos0(YFuel())*pos0(YO2());
     }
 }
 

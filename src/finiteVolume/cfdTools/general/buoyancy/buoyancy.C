@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,7 +42,8 @@ Foam::solvers::buoyancy::buoyancy(const fvMesh& mesh_)
             mesh,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
-        )
+        ),
+        dimensions::acceleration
     ),
 
     hRef
@@ -55,7 +56,7 @@ Foam::solvers::buoyancy::buoyancy(const fvMesh& mesh_)
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        dimensionedScalar(dimLength, 0)
+        dimensionedScalar(dimensions::length, 0)
     ),
 
     pRef
@@ -68,7 +69,7 @@ Foam::solvers::buoyancy::buoyancy(const fvMesh& mesh_)
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        dimensionedScalar(dimPressure, 0)
+        dimensionedScalar(dimensions::pressure, 0)
     ),
 
     ghRef(-mag(g)*hRef),
@@ -87,7 +88,8 @@ Foam::solvers::buoyancy::buoyancy(const fvMesh& mesh_)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::pressure
     )
 {
     mesh.schemes().setFluxRequired(p_rgh.name());

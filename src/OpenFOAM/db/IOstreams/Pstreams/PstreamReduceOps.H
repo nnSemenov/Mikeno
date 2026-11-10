@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,6 +35,7 @@ Description
 #include "Pstream.H"
 #include "ops.H"
 #include "vector2D.H"
+#include "IOstreams.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -125,21 +126,6 @@ T returnReduce
 }
 
 
-// Reduce with sum of both value and count (for averaging)
-template<class T>
-void sumReduce
-(
-    T& Value,
-    label& Count,
-    const int tag = Pstream::msgType(),
-    const label comm = UPstream::worldComm
-)
-{
-    reduce(Value, sumOp<T>(), tag, comm);
-    reduce(Count, sumOp<label>(), tag, comm);
-}
-
-
 // Non-blocking version of reduce. Sets request.
 template<class T, class BinaryOp>
 void reduce
@@ -159,7 +145,7 @@ void reduce
 void reduce
 (
     scalar& Value,
-    const sumOp<scalar>& bop,
+    const sumOp& bop,
     const int tag = Pstream::msgType(),
     const label comm = UPstream::worldComm
 );
@@ -167,7 +153,7 @@ void reduce
 void reduce
 (
     scalar& Value,
-    const minOp<scalar>& bop,
+    const minOp& bop,
     const int tag = Pstream::msgType(),
     const label comm = UPstream::worldComm
 );
@@ -175,7 +161,7 @@ void reduce
 void reduce
 (
     vector2D& Value,
-    const sumOp<vector2D>& bop,
+    const sumOp& bop,
     const int tag = Pstream::msgType(),
     const label comm = UPstream::worldComm
 );
@@ -191,11 +177,44 @@ void sumReduce
 void reduce
 (
     scalar& Value,
-    const sumOp<scalar>& bop,
+    const sumOp& bop,
     const int tag,
     const label comm,
     label& request
 );
+
+
+//- Return the largest element of the global list
+// or pTraits<ListType::value_type>::min if the list is empty
+template<class Type>
+Type gMax(const UList<Type>& l, const label comm = UPstream::worldComm)
+{
+    Type m = max(l);
+    reduce(m, maxOp(), Pstream::msgType(), comm);
+    return m;
+}
+
+
+//- Return the smallest element of the global list
+// or pTraits<ListType::value_type>::max if the list is empty
+template<class Type>
+Type gMin(const UList<Type>& l, const label comm = UPstream::worldComm)
+{
+    Type m = min(l);
+    reduce(m, minOp(), Pstream::msgType(), comm);
+    return m;
+}
+
+
+//- Return the sum of the element of the global list
+// or zero if the list is empty
+template<class Type>
+Type gSum(const UList<Type>& l, const label comm = UPstream::worldComm)
+{
+    Type s = sum(l);
+    reduce(s, sumOp(), Pstream::msgType(), comm);
+    return s;
+}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

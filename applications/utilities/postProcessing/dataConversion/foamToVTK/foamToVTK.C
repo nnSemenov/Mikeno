@@ -566,19 +566,19 @@ int main(int argc, char *argv[])
 
         // Construct the vol internal fields (on the original mesh if subsetted)
 
-        PtrList<const volScalarField::Internal> visf;
-        PtrList<const volVectorField::Internal> vivf;
-        PtrList<const volSphericalTensorField::Internal> visptf;
-        PtrList<const volSymmTensorField::Internal> visytf;
-        PtrList<const volTensorField::Internal> vitf;
+        PtrList<const volInternalScalarField> visf;
+        PtrList<const volInternalVectorField> vivf;
+        PtrList<const volInternalSphericalTensorField> visptf;
+        PtrList<const volInternalSymmTensorField> visytf;
+        PtrList<const volInternalTensorField> vitf;
 
         if (!specifiedFields || selectedFields.size())
         {
             readFields(vMesh, vMesh.baseMesh(), objects, selectedFields, visf);
-            print("    volScalarField::Internal   :", Info, visf);
+            print("    volInternalScalarField   :", Info, visf);
 
             readFields(vMesh, vMesh.baseMesh(), objects, selectedFields, vivf);
-            print("    volVectorField::Internal   :", Info, vivf);
+            print("    volInternalVectorField   :", Info, vivf);
 
             readFields
             (
@@ -848,7 +848,7 @@ int main(int argc, char *argv[])
 
                 forAll(ssf, i)
                 {
-                    surfaceVectorField* ssfiPtr = (ssf[i]*n).ptr();
+                    surfaceVectorField* ssfiPtr = eval(ssf[i]*n).ptr();
                     ssfiPtr->rename(ssf[i].name());
                     svf.set(sz+i, ssfiPtr);
                 }

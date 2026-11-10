@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -144,29 +144,29 @@ public:
                 {
                     return tmp<fvVectorMatrix>
                     (
-                        new fvVectorMatrix(U, dimMass*dimAcceleration)
+                        new fvVectorMatrix(U, dimensions::force)
                     );
                 }
 
                 //- Momentum transfer [kg m/s]
-                tmp<volVectorField::Internal> UTrans() const
+                tmp<volInternalVectorField> UTrans() const
                 {
-                    return volVectorField::Internal::New
+                    return volInternalVectorField::New
                     (
                         this->name() + ":UTrans",
                         this->mesh(),
-                        dimensionedVector(dimMass*dimVelocity, Zero)
+                        dimensionedVector(dimensions::momentum, Zero)
                     );
                 }
 
                 //- Momentum transfer coefficient [kg]
-                tmp<volScalarField::Internal> UCoeff() const
+                tmp<volInternalScalarField> UCoeff() const
                 {
-                    return volScalarField::Internal::New
+                    return volInternalScalarField::New
                     (
                         this->name() + ":UCoeffs",
                         this->mesh(),
-                        dimensionedScalar(dimMass, Zero)
+                        dimensionedScalar(dimensions::mass, Zero)
                     );
                 }
 
@@ -178,29 +178,33 @@ public:
                 {
                     return tmp<fvScalarMatrix>
                     (
-                        new fvScalarMatrix(hs, dimEnergy/dimTime)
+                        new fvScalarMatrix(hs, dimensions::power)
                     );
                 }
 
                 //- Sensible enthalpy transfer [J]
-                tmp<volScalarField::Internal> hsTrans() const
+                tmp<volInternalScalarField> hsTrans() const
                 {
-                    return volScalarField::Internal::New
+                    return volInternalScalarField::New
                     (
                         this->name() + ":hsTrans",
                         this->mesh(),
-                        dimensionedScalar(dimEnergy, Zero)
+                        dimensionedScalar(dimensions::energy, Zero)
                     );
                 }
 
                 //- Sensible enthalpy transfer coefficient [J/T]
-                tmp<volScalarField::Internal> hsCoeff() const
+                tmp<volInternalScalarField> hsCoeff() const
                 {
-                    return volScalarField::Internal::New
+                    return volInternalScalarField::New
                     (
                         this->name() + ":hsCoeffs",
                         this->mesh(),
-                        dimensionedScalar(dimEnergy/dimTemperature, Zero)
+                        dimensionedScalar
+                        (
+                            dimensions::energy/dimensions::temperature,
+                            Zero
+                        )
                     );
                 }
 
@@ -211,7 +215,7 @@ public:
                     (
                         this->name() + ":radiation:Ep",
                         this->mesh(),
-                        dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
+                        dimensionedScalar(dimensions::powerDensity, Zero)
                     );
                 }
 
@@ -222,7 +226,7 @@ public:
                     (
                         this->name() + ":radiation:ap",
                         this->mesh(),
-                        dimensionedScalar(dimless/dimLength, 0)
+                        dimensionedScalar(inv(dimensions::length), 0)
                     );
                 }
 
@@ -233,7 +237,7 @@ public:
                     (
                         this->name() + ":radiation:sigmap",
                         this->mesh(),
-                        dimensionedScalar(dimless/dimLength, 0)
+                        dimensionedScalar(inv(dimensions::length), 0)
                     );
                 }
 
@@ -249,7 +253,11 @@ public:
                 {
                     return tmp<fvScalarMatrix>
                     (
-                        new fvScalarMatrix(Yi, dimMass/dimTime)
+                        new fvScalarMatrix
+                        (
+                            Yi,
+                            dimensions::mass/dimensions::time
+                        )
                     );
                 }
 
@@ -258,20 +266,28 @@ public:
                 {
                     return tmp<fvScalarMatrix>
                     (
-                        new fvScalarMatrix(rho, dimMass/dimTime)
+                        new fvScalarMatrix
+                        (
+                            rho,
+                            dimensions::mass/dimensions::time
+                        )
                     );
                 }
 
                 //- Return total mass source [kg/m^3/s]
-                tmp<volScalarField::Internal> Srho() const
+                tmp<volInternalScalarField> Srho() const
                 {
-                    return tmp<volScalarField::Internal>
+                    return tmp<volInternalScalarField>
                     (
-                        volScalarField::Internal::New
+                        volInternalScalarField::New
                         (
                             this->name() + ":Srho",
                             this->mesh(),
-                            dimensionedScalar(dimDensity/dimTime, Zero)
+                            dimensionedScalar
+                            (
+                                dimensions::density/dimensions::time,
+                                Zero
+                            )
                         )
                     );
                 }

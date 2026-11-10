@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,7 +46,8 @@ Foam::label Foam::patchToPatches::matching::finalise
     const vectorField& srcPointNormals,
     const vectorField& srcPointNormals0,
     const primitiveOldTimePatch& tgtPatch,
-    const transformer& tgtToSrc
+    const transformer& tgtToSrc,
+    const unsigned char report
 )
 {
     const label nCouples =
@@ -56,7 +57,8 @@ Foam::label Foam::patchToPatches::matching::finalise
             srcPointNormals,
             srcPointNormals0,
             tgtPatch,
-            tgtToSrc
+            tgtToSrc,
+            report
         );
 
     // Make sure every face references exactly one face
@@ -119,7 +121,7 @@ Foam::label Foam::patchToPatches::matching::finalise
                 mapPtr->subMap(),
                 false,
                 count,
-                plusEqOp<label>(),
+                addEqOp(),
                 flipOp(),
                 label(0)
             );

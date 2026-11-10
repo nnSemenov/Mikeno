@@ -66,7 +66,7 @@ lumpedMassTemperatureFvPatchScalarField
             time().name(),
             db()
         ),
-        dimensionedScalar(dimTemperature, dict.lookup<scalar>("T"))
+        dimensionedScalar(dimensions::temperature, dict.lookup<scalar>("T"))
     ),
     Q_
     (
@@ -75,7 +75,7 @@ lumpedMassTemperatureFvPatchScalarField
         (
             "Q",
             time().userUnits(),
-            dimPower,
+            dimensions::power,
             dict
         )
       : autoPtr<Function1<scalar>>(new Function1s::ZeroConstant<scalar>("Q"))
@@ -204,7 +204,7 @@ void Foam::lumpedMassTemperatureFvPatchScalarField::write
     writeEntry(os, "rho", rho_);
     writeEntry(os, "Cv", Cv_);
     writeEntry(os, "T", T_.value());
-    writeEntry(os, Q_());
+    writeEntry(os, time().userUnits(), dimensions::power, Q_());
     writeEntry(os, "volume", V_);
     writeEntry(os, "value", *this);
 }

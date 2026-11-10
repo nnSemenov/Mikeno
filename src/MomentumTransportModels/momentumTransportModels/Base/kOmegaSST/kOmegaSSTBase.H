@@ -164,9 +164,9 @@ protected:
             return F1*(psi1 - psi2) + psi2;
         }
 
-        tmp<volScalarField::Internal> blend
+        tmp<volInternalScalarField> blend
         (
-            const volScalarField::Internal& F1,
+            const volInternalScalarField& F1,
             const dimensionedScalar& psi1,
             const dimensionedScalar& psi2
         ) const
@@ -184,17 +184,17 @@ protected:
             return blend(F1, alphaOmega1_, alphaOmega2_);
         }
 
-        tmp<volScalarField::Internal> beta
+        tmp<volInternalScalarField> beta
         (
-            const volScalarField::Internal& F1
+            const volInternalScalarField& F1
         ) const
         {
             return blend(F1, beta1_, beta2_);
         }
 
-        tmp<volScalarField::Internal> gamma
+        tmp<volInternalScalarField> gamma
         (
-            const volScalarField::Internal& F1
+            const volInternalScalarField& F1
         ) const
         {
             return blend(F1, gamma1_, gamma2_);
@@ -212,16 +212,16 @@ protected:
         virtual void correctNut();
 
         //- Return k production rate
-        virtual tmp<volScalarField::Internal> Pk
+        virtual tmp<volInternalScalarField> Pk
         (
-            const volScalarField::Internal& G
+            const volInternalScalarField& G
         ) const;
 
         //- Return epsilon/k which for standard RAS is betaStar*omega
-        virtual tmp<volScalarField::Internal> epsilonByk
+        virtual tmp<volInternalScalarField> epsilonByk
         (
-            const volScalarField::Internal& F1,
-            const volScalarField::Internal& F2
+            const volInternalScalarField& F1,
+            const volInternalScalarField& F2
         ) const;
 
         virtual tmp<fvScalarMatrix> kSource() const;
@@ -230,9 +230,9 @@ protected:
 
         virtual tmp<fvScalarMatrix> Qsas
         (
-            const volScalarField::Internal& S2,
-            const volScalarField::Internal& gamma,
-            const volScalarField::Internal& beta
+            const volInternalScalarField& S2,
+            const volInternalScalarField& gamma,
+            const volInternalScalarField& beta
         ) const;
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -173,7 +173,7 @@ Type Foam::LduMatrix<Type, DType, LUType>::solver::normFactor
 {
     // --- Calculate A dot reference value of psi
     matrix_.sumA(tmpField);
-    cmptMultiply(tmpField, tmpField, gAverage(psi));
+    tmpField = cmptMultiply(tmpField, gAverage(psi));
 
     return stabilise
     (
@@ -182,7 +182,7 @@ Type Foam::LduMatrix<Type, DType, LUType>::solver::normFactor
     );
 
     // At convergence this simpler method is equivalent to the above
-    // return stabilise(2*gSumCmptMag(matrix_.source()), matrix_.small_);
+    // return stabilise(2*gSum(cmptMag(matrix_.source())), matrix_.small_);
 }
 
 

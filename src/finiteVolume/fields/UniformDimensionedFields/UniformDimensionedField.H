@@ -79,8 +79,28 @@ protected:
 
     // Protected Member Functions
 
-        //- Read the field
-        void read(const IOobject::readOption& ro);
+        //- Construct from IOobject and dimensions without reading
+        UniformDimensionedField
+        (
+            const IOobject&,
+            const dimensionSet& dims,
+            const bool
+        );
+
+        //- Construct from IOobject and default value without reading
+        UniformDimensionedField
+        (
+            const IOobject&,
+            const dimensioned<Type>&,
+            const bool
+        );
+
+        //- Read the field and check the dimensions
+        void read
+        (
+            const IOobject::readOption& ro,
+            const dimensionSet& dims
+        );
 
 
 public:
@@ -100,16 +120,15 @@ public:
 
     // Constructors
 
-        //- Construct from IO object
-        UniformDimensionedField(const IOobject&, const bool read = true);
+        //- Construct from IOobject
+        UniformDimensionedField(const IOobject&);
 
-        //- Construct from IO object. Either reads or uses supplied value.
-        UniformDimensionedField
-        (
-            const IOobject&,
-            const dimensioned<Type>&,
-            const bool read = true
-        );
+        //- Construct from IOobject and dimensions
+        UniformDimensionedField(const IOobject&, const dimensionSet& dims);
+
+        //- Construct from IOobject and default value
+        //  reading from the IOobject file according to read option
+        UniformDimensionedField(const IOobject&, const dimensioned<Type>&);
 
         //- Copy constructor
         UniformDimensionedField(const UniformDimensionedField<Type>&);
@@ -134,11 +153,14 @@ public:
             return true;
         }
 
-        //- Return a reference to the value
+        //- Return a reference to the value after storing old-time values
         Type& value();
 
         //- Return a const-reference to the value
-        const Type& value() const;
+        const Type& value() const
+        {
+            return dimensioned<Type>::value();
+        }
 
         //- Reset the field values to the given field
         //  Equivalent to operator=
@@ -148,7 +170,7 @@ public:
         using regIOobject::read;
 
         //- WriteData function required for regIOobject write operation
-        bool writeData(Ostream&) const;
+        virtual bool writeData(Ostream&) const;
 
 
     // Member Operators
@@ -172,6 +194,8 @@ public:
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "UniformDimensionedFieldExpression.H"
 
 #ifdef NoRepository
     #include "UniformDimensionedField.C"

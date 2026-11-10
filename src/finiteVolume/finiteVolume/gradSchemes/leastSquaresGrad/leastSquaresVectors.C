@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,6 +25,7 @@ License
 
 #include "leastSquaresVectors.H"
 #include "volFields.H"
+#include "symmTensorField.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -32,7 +33,6 @@ namespace Foam
 {
     defineTypeNameAndDebug(leastSquaresVectors, 0);
 }
-
 
 // * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
 
@@ -56,7 +56,7 @@ Foam::leastSquaresVectors::leastSquaresVectors(const fvMesh& mesh)
             false
         ),
         mesh,
-        dimensionedVector(dimless/dimLength, Zero)
+        dimensionedVector(dimless/dimensions::length, Zero)
     ),
     nVectors_
     (
@@ -70,7 +70,7 @@ Foam::leastSquaresVectors::leastSquaresVectors(const fvMesh& mesh)
             false
         ),
         mesh,
-        dimensionedVector(dimless/dimLength, Zero)
+        dimensionedVector(dimless/dimensions::length, Zero)
     )
 {
     calcLeastSquaresVectors();
@@ -119,7 +119,7 @@ void Foam::leastSquaresVectors::calcLeastSquaresVectors()
     }
 
 
-    surfaceVectorField::Boundary& pVectorsBf =
+    surfaceVectorField::BoundaryField& pVectorsBf =
         pVectors_.boundaryFieldRef();
 
     forAll(pVectorsBf, patchi)
@@ -157,7 +157,7 @@ void Foam::leastSquaresVectors::calcLeastSquaresVectors()
 
 
     // Invert the dd tensor
-    const symmTensorField invDd(inv(dd));
+    const symmTensorField invDd(inv(dd, mesh.solutionD()));
 
 
     // Revisit all faces and calculate the pVectors_ and nVectors_ vectors

@@ -86,6 +86,7 @@ SourceFiles
 #include "phaseChange.H"
 #include "phaseSystem.H"
 #include "diffusiveMassTransferModel.H"
+#include "DimensionedFunction1.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -97,8 +98,6 @@ namespace solvers
 {
     class multiphaseEuler;
 }
-
-class saturationPressureModel;
 
 namespace fv
 {
@@ -132,8 +131,8 @@ class phaseSurfaceCondensation
         autoPtr<blendedSidedDiffusiveMassTransferModel>
             diffusiveMassTransferModel_;
 
-        //- The saturation curve
-        autoPtr<saturationPressureModel> saturationModelPtr_;
+        //- Saturation pressure as a function of temperature
+        autoPtr<DimensionedFunction1<scalar>> pSat_;
 
         //- Counter for the evaluations of the pressure equation sources
         mutable label pressureEquationIndex_;
@@ -142,13 +141,13 @@ class phaseSurfaceCondensation
         bool specieSemiImplicit_;
 
         //- Heat transfer rate
-        mutable volScalarField::Internal q_;
+        mutable volInternalScalarField q_;
 
         //- Mass transfer rate
-        mutable volScalarField::Internal mDot_;
+        mutable volInternalScalarField mDot_;
 
         //- The derivative of mass transfer rate
-        mutable volScalarField::Internal mDotDy_;
+        mutable volInternalScalarField mDotDy_;
 
 
     // Private Member Functions

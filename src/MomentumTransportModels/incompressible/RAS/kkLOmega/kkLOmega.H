@@ -125,7 +125,10 @@ class kkLOmega
 
         tmp<volScalarField> Cmu(const volScalarField& S) const;
 
-        tmp<volScalarField> BetaTS(const volScalarField& Rew) const;
+        tmp<volScalarField> BetaTS
+        (
+            const volScalarField& Rew
+        ) const;
 
         tmp<volScalarField> fTaul
         (
@@ -141,18 +144,21 @@ class kkLOmega
             const volScalarField& ktS
         ) const;
 
-        tmp<volScalarField> fOmega
+        tmp<volInternalScalarField> fOmega
         (
-            const volScalarField& lambdaEff,
-            const volScalarField& lambdaT
+            const volInternalScalarField& lambdaEff,
+            const volInternalScalarField& lambdaT
         ) const;
 
-        tmp<volScalarField> phiBP(const volScalarField& omega) const;
-
-        tmp<volScalarField> phiNAT
+        tmp<volInternalScalarField> phiBP
         (
-            const volScalarField& ReOmega,
-            const volScalarField& fNatCrit
+            const volInternalScalarField& omega
+        ) const;
+
+        tmp<volInternalScalarField> phiNAT
+        (
+            const volInternalScalarField& ReOmega,
+            const volInternalScalarField& fNatCrit
         ) const;
 
         tmp<volScalarField> D(const volScalarField& k) const;

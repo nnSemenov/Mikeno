@@ -62,7 +62,7 @@ void Foam::Lagrangian::volumeInjection::readCoeffs(const dictionary& modelDict)
     numberOrNumberDensity_ =
         haveNumber_
       ? modelDict.lookup<scalar>("number", dimless)
-      : modelDict.lookup<scalar>("numberDensity", dimless/dimVolume);
+      : modelDict.lookup<scalar>("numberDensity", inv(dimensions::volume));
 
     time_ =
         modelDict.lookupOrDefault<scalar>
@@ -211,7 +211,7 @@ Foam::LagrangianSubMesh Foam::Lagrangian::volumeInjection::modify
     scalarList procSumVolume(Pstream::nProcs(), -vGreat);
     procSumVolume[Pstream::myProcNo()] =
         setCells.size() ? setCellSumVolume.last() : scalar(0);
-    Pstream::listCombineGather(procSumVolume, maxEqOp<scalar>());
+    Pstream::listCombineGather(procSumVolume, maxEqOp());
     Pstream::listCombineScatter(procSumVolume);
     for (label proci = 1; proci < Pstream::nProcs(); proci ++)
     {

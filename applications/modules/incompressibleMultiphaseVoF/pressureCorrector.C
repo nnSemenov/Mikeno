@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,7 +31,7 @@ License
 #include "fvcMeshPhi.H"
 #include "fvcFlux.H"
 #include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 #include "fvcSnGrad.H"
 #include "fvcReconstruct.H"
 #include "fvmLaplacian.H"
@@ -82,7 +82,11 @@ void Foam::solvers::incompressibleMultiphaseVoF::pressureCorrector()
         constrainPressure(p_rgh, U, phiHbyA, rAUf, MRF);
 
         // Evaluate any phase sources
-        fvScalarMatrix p_rghEqnSource(p_rgh, dimVolume/dimTime);
+        fvScalarMatrix p_rghEqnSource
+        (
+            p_rgh,
+            dimensions::volume/dimensions::time
+        );
         forAll(phases, phasei)
         {
             p_rghEqnSource +=
@@ -93,7 +97,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::pressureCorrector()
         {
             fvScalarMatrix p_rghEqn
             (
-                fvc::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh)
+                fvi::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh)
              == p_rghEqnSource
             );
 

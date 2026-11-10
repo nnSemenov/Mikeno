@@ -26,8 +26,8 @@ License
 #include "kineticTheoryModel.H"
 #include "mathematicalConstants.H"
 #include "phaseSystem.H"
-#include "fvcDdt.H"
-#include "fvcSup.H"
+#include "fviDdt.H"
+#include "fviSup.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 
@@ -162,7 +162,8 @@ Foam::RASModels::kineticTheoryModel::kineticTheoryModel
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        U.mesh()
+        U.mesh(),
+        dimensions::kinematicStress
     ),
 
     lambda_
@@ -336,7 +337,7 @@ Foam::RASModels::kineticTheoryModel::pPrime() const
         )
     );
 
-    volScalarField::Boundary& bpPrime = tpPrime.ref().boundaryFieldRef();
+    volScalarField::BoundaryField& bpPrime = tpPrime.ref().boundaryFieldRef();
 
     forAll(bpPrime, patchi)
     {
@@ -392,7 +393,7 @@ Foam::RASModels::kineticTheoryModel::divDevTau
 
     return
     (
-      - fvc::div
+      - fvi::div
         (
             rhoNuEff
            *fvc::dotInterpolate(mesh().Sf(), dev2(T(fvc::grad(U))))
@@ -509,14 +510,14 @@ void Foam::RASModels::kineticTheoryModel::correct()
         fvScalarMatrix ThetaEqn
         (
             1.5*(fvm::ddt(alpha, rho, Theta_) + fvm::div(alphaRhoPhi, Theta_))
-          - 0.5*fvm::Sp(fvc::ddt(alpha, rho) + fvc::div(alphaRhoPhi), Theta_)
+          - 0.5*fvm::Sp(fvi::ddt(alpha, rho) + fvi::div(alphaRhoPhi), Theta_)
           - fvm::laplacian(kappa_, Theta_, "laplacian(kappa,Theta)")
          ==
-          - fvm::SuSp((PsCoeff*I) && gradU, Theta_)
-          + (tau && gradU)
-          + fvm::Sp(-gammaCoeff, Theta_)
-          + fvm::Sp(-J1, Theta_)
-          + fvm::Sp(J2/(Theta_ + ThetaSmall), Theta_)
+          - fvm::SuSp((PsCoeff()*I) && gradU(), Theta_)
+          + (tau() && gradU())
+          + fvm::Sp(-gammaCoeff(), Theta_)
+          + fvm::Sp(-J1(), Theta_)
+          + fvm::Sp(J2()/(Theta_() + ThetaSmall), Theta_)
           + fvModels.source(alpha, rho, Theta_)
         );
 
@@ -579,8 +580,11 @@ void Foam::RASModels::kineticTheoryModel::correct()
         kappa_ = conductivityModel_->kappa(alpha, Theta_, gs0_, rho, da, e_);
     }
 
-    Theta_.max(0);
-    Theta_.min(100);
+    Theta_.bound
+    (
+        dimensionedScalar(Theta_.dimensions(), 0),
+        dimensionedScalar(Theta_.dimensions(), 100)
+    );
 
     {
         // particle viscosity (Table 3.2, p.47)
@@ -603,7 +607,7 @@ void Foam::RASModels::kineticTheoryModel::correct()
         );
 
         // Limit viscosity
-        nut_.min(maxNut_);
+        nut_.boundUpper(maxNut_);
 
         nuFric_ = min
         (

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,7 +27,7 @@ License
 #include "basicThermo.H"
 #include "fvmSup.H"
 #include "zeroGradientFvPatchFields.H"
-#include "fvcVolumeIntegrate.H"
+#include "fvcDomainIntegrate.H"
 #include "fvModels.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -58,7 +58,7 @@ void Foam::fv::heatTransfer::readCoeffs(const dictionary& dict)
 
     TName_ = dict.lookupOrDefault<word>("T", "T");
 
-    Ta_ = dimensionedScalar("Ta", dimTemperature, dict);
+    Ta_ = dimensionedScalar("Ta", dimensions::temperature, dict);
 
     heatTransferAv_.reset(new heatTransferAv(dict, mesh()));
 
@@ -82,17 +82,22 @@ void Foam::fv::heatTransfer::add
             IOobject::groupName(TName_, phaseName_)
         );
 
-    tmp<volScalarField> mask =
-        volScalarField::New("mask", mesh(), dimensionedScalar(dimless, 0));
-    UIndirectList<scalar>(mask.ref().primitiveFieldRef(), zone_.zone()) = 1;
-    const volScalarField htcAv
+    tmp<volInternalScalarField> mask = volInternalScalarField::New
     (
-        alpha*mask*heatTransferCoefficientModel_->htc()*heatTransferAv_->Av()
+        "mask",
+        mesh(),
+        dimensionedScalar(dimless, 0)
+    );
+    UIndirectList<scalar>(mask.ref().primitiveFieldRef(), zone_.zone()) = 1;
+    const volInternalScalarField htcAv
+    (
+        alpha()*mask
+       *heatTransferCoefficientModel_->htc()()()*heatTransferAv_->Av()()()
     );
 
     if (semiImplicit_)
     {
-        if (he.dimensions() == dimEnergy/dimMass)
+        if (he.dimensions() == dimensions::specificEnergy)
         {
             const basicThermo& thermo =
                mesh().lookupObject<basicThermo>
@@ -100,18 +105,19 @@ void Foam::fv::heatTransfer::add
                    IOobject::groupName(physicalProperties::typeName, phaseName_)
                );
 
-            const volScalarField htcAvByCpv(htcAv/thermo.Cpv());
+            const volInternalScalarField htcAvByCpv(htcAv/thermo.Cpv()());
 
-            eqn += htcAv*(Ta_ - T) + htcAvByCpv*he - fvm::Sp(htcAvByCpv, he);
+            eqn += htcAv*(Ta_ - T()) + htcAvByCpv*he()
+                - fvm::Sp(htcAvByCpv, he);
         }
-        else if (he.dimensions() == dimTemperature)
+        else if (he.dimensions() == dimensions::temperature)
         {
             eqn += htcAv*Ta_ - fvm::Sp(htcAv, he);
         }
     }
     else
     {
-        eqn += htcAv*(Ta_ - T);
+        eqn += htcAv*(Ta_ - T());
     }
 }
 
@@ -131,7 +137,7 @@ Foam::fv::heatTransfer::heatTransfer
     phaseName_(word::null),
     semiImplicit_(false),
     TName_(word::null),
-    Ta_("Ta", dimTemperature, NaN),
+    Ta_("Ta", dimensions::temperature, NaN),
     heatTransferAv_(nullptr),
     heatTransferCoefficientModel_(nullptr)
 {

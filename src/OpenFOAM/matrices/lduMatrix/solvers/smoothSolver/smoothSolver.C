@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,8 +45,8 @@ Foam::smoothSolver::smoothSolver
 (
     const word& fieldName,
     const lduMatrix& matrix,
-    const FieldField<Field, scalar>& interfaceBouCoeffs,
-    const FieldField<Field, scalar>& interfaceIntCoeffs,
+    const Field<Field<scalar>>& interfaceBouCoeffs,
+    const Field<Field<scalar>>& interfaceIntCoeffs,
     const lduInterfaceFieldPtrsList& interfaces,
     const dictionary& solverControls
 )
@@ -122,9 +122,9 @@ Foam::solverPerformance Foam::smoothSolver::solve
             normFactor = this->normFactor(psi, source, Apsi, temp);
 
             // Calculate residual magnitude
-            solverPerf.initialResidual() = gSumMag
+            solverPerf.initialResidual() = gSum
             (
-                (source - Apsi)(),
+                mag(source - Apsi),
                 matrix().mesh().comm()
             )/normFactor;
             solverPerf.finalResidual() = solverPerf.initialResidual();
@@ -166,16 +166,19 @@ Foam::solverPerformance Foam::smoothSolver::solve
                 );
 
                 // Calculate the residual to check convergence
-                solverPerf.finalResidual() = gSumMag
+                solverPerf.finalResidual() = gSum
                 (
-                    matrix_.residual
+                    mag
                     (
-                        psi,
-                        source,
-                        interfaceBouCoeffs_,
-                        interfaces_,
-                        cmpt
-                    )(),
+                        matrix_.residual
+                        (
+                            psi,
+                            source,
+                            interfaceBouCoeffs_,
+                            interfaces_,
+                            cmpt
+                        )
+                    ),
                     matrix().mesh().comm()
                 )/normFactor;
             } while

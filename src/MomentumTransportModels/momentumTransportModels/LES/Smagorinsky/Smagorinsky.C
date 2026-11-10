@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Smagorinsky.H"
+#include "fviGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 
@@ -59,7 +60,7 @@ tmp<volScalarField> Smagorinsky<BasicMomentumTransportModel>::k
 template<class BasicMomentumTransportModel>
 void Smagorinsky<BasicMomentumTransportModel>::correctNut()
 {
-    volScalarField k(this->k(fvc::grad(this->U_)));
+    const volScalarField k(this->k(fvc::grad(this->U_)));
 
     this->nut_ = this->Ck_*this->delta()*sqrt(k);
     this->nut_.correctBoundaryConditions();

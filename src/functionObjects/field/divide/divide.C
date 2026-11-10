@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,11 +23,6 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// There is some include hell going on with regards to the scalar-divided-by-
-// sphericalTensor operation. This rather odd include sequence resolves it.
-
-#include "Field.H"
-#include "sphericalTensorFieldField.H"
 #include "divide.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -43,28 +38,11 @@ namespace functionObjects
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-template
-<
-    class A,
-    class B,
-    class R = decltype(std::declval<A>()/std::declval<B>())
->
-struct divideOpAuto
-{
-    R operator()(const A& a, const B& b)
-    {
-        return a/b;
-    }
-};
-
-
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 bool Foam::functionObjects::divide::calc()
 {
-    return calcOp<divideOpAuto>();
+    return calcOp<divideOp>();
 }
 
 

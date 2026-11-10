@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,6 +44,7 @@ SourceFiles
 
 #include "LESeddyViscosity.H"
 #include "simpleFilter.H"
+#include "bound.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -81,7 +82,7 @@ protected:
     // Protected Member Functions
 
         //- Update sub-grid eddy-viscosity
-        void correctNut(const tmp<volTensorField>& gradU);
+        void correctNut(const volTensorField& gradU);
 
         virtual void correctNut();
 
@@ -127,9 +128,9 @@ public:
         tmp<volScalarField> k(const tmp<volTensorField>& gradU) const
         {
             return
-                pow(2.0*flm_/fmm_, 2.0/3.0)
-              * pow(this->Ce_, -2.0/3.0)
-              * sqr(this->delta())*magSqr(dev(symm(gradU)));
+                pow(2 * flm_ / fmm_, static_cast<scalar>(2.0 / 3.0)) *
+                pow(this->Ce_, static_cast<scalar>(-2.0 / 3.0)) *
+                sqr(this->delta()) * magSqr(dev(symm(gradU)));
         }
 
         //- Return SGS kinetic energy

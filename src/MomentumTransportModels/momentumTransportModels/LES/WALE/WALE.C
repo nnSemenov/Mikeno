@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "WALE.H"
-#include "fvModels.H"
+#include "fviGrad.H"
 #include "fvConstraints.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -40,6 +40,16 @@ template<class BasicMomentumTransportModel>
 tmp<volSymmTensorField> WALE<BasicMomentumTransportModel>::Sd
 (
     const volTensorField& gradU
+) const
+{
+    return dev(symm(gradU & gradU));
+}
+
+
+template<class BasicMomentumTransportModel>
+tmp<volInternalSymmTensorField> WALE<BasicMomentumTransportModel>::Sd
+(
+    const volInternalTensorField& gradU
 ) const
 {
     return dev(symm(gradU & gradU));

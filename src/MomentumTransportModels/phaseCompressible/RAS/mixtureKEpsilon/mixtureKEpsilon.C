@@ -33,6 +33,7 @@ License
 #include "inletOutletFvPatchFields.H"
 #include "epsilonWallFunctionFvPatchScalarField.H"
 #include "epsilonmWallFunctionFvPatchScalarField.H"
+#include "fviGrad.H"
 #include "fvmSup.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -114,7 +115,8 @@ mixtureKEpsilon<BasicMomentumTransportModel>::mixtureKEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
     epsilon_
     (
@@ -126,7 +128,8 @@ mixtureKEpsilon<BasicMomentumTransportModel>::mixtureKEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, this->kMin_);
@@ -148,7 +151,8 @@ mixtureKEpsilon<BasicMomentumTransportModel>::mixtureKEpsilon
                     IOobject::MUST_READ,
                     IOobject::AUTO_WRITE
                 ),
-                this->mesh_
+                this->mesh_,
+                dimensions::turbulentKineticEnergy
             )
         );
 
@@ -164,7 +168,8 @@ mixtureKEpsilon<BasicMomentumTransportModel>::mixtureKEpsilon
                     IOobject::MUST_READ,
                     IOobject::AUTO_WRITE
                 ),
-                this->mesh_
+                this->mesh_,
+                dimensions::turbulentEpsilon
             )
         );
 
@@ -198,7 +203,7 @@ mixtureKEpsilon<BasicMomentumTransportModel>::mixtureKEpsilon
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh_,
-                dimensionedScalar(dimDensity, 0)
+                dimensionedScalar(dimensions::density, 0)
             )
         );
     }
@@ -358,6 +363,20 @@ tmp<volScalarField> mixtureKEpsilon<BasicMomentumTransportModel>::mix
 
 
 template<class BasicMomentumTransportModel>
+tmp<volInternalScalarField> mixtureKEpsilon<BasicMomentumTransportModel>::mix
+(
+    const volInternalScalarField& fc,
+    const volInternalScalarField& fd
+) const
+{
+    const volInternalScalarField& alphal = this->alpha_;
+    const volInternalScalarField& alphag = this->gasTurbulence().alpha_;
+
+    return (alphal*rholEff()()()*fc + alphag*rhogEff()()()*fd)/rhom_()();
+}
+
+
+template<class BasicMomentumTransportModel>
 tmp<volScalarField> mixtureKEpsilon<BasicMomentumTransportModel>::mixU
 (
     const volScalarField& fc,
@@ -370,6 +389,22 @@ tmp<volScalarField> mixtureKEpsilon<BasicMomentumTransportModel>::mixU
     return
         (alphal*rholEff()*fc + alphag*rhogEff()*Ct2_()*fd)
        /(alphal*rholEff() + alphag*rhogEff()*Ct2_());
+}
+
+
+template<class BasicMomentumTransportModel>
+tmp<volInternalScalarField> mixtureKEpsilon<BasicMomentumTransportModel>::mixU
+(
+    const volInternalScalarField& fc,
+    const volInternalScalarField& fd
+) const
+{
+    const volInternalScalarField& alphal = this->alpha_;
+    const volInternalScalarField& alphag = this->gasTurbulence().alpha_;
+
+    return
+        (alphal*rholEff()()()*fc + alphag*rhogEff()()()*Ct2_()()*fd)
+       /(alphal*rholEff()()() + alphag*rhogEff()()()*Ct2_()());
 }
 
 
@@ -416,20 +451,20 @@ mixtureKEpsilon<BasicMomentumTransportModel>::bubbleG() const
     tmp<volScalarField> bubbleG
     (
         Cp_
-       *pos(alphap_ - gas)*liquid*liquid.rho()
+       *pos(alphap_ - gas.alpha())*liquid.alpha()*liquid.rho()
        *(
             pow3(magUr)
           + pow(drag.CdRe()*liquid.fluidThermo().nu()/gas.d(), 4.0/3.0)
            *pow(magUr, 5.0/3.0)
         )
-       *gas
+       *gas.alpha()
        /gas.d()
     );
 
     // Simple model
     // tmp<volScalarField> bubbleG
     // (
-    //     Cp_*liquid*drag.K()*sqr(magUr)
+    //     Cp_*liquid.alpha()*drag.K()*sqr(magUr)
     // );
 
     return bubbleG;
@@ -440,7 +475,7 @@ template<class BasicMomentumTransportModel>
 tmp<fvScalarMatrix>
 mixtureKEpsilon<BasicMomentumTransportModel>::kSource() const
 {
-    return fvm::Su(bubbleG()/rhom_(), km_());
+    return fvm::Su(bubbleG()()()/rhom_()(), km_());
 }
 
 
@@ -448,7 +483,11 @@ template<class BasicMomentumTransportModel>
 tmp<fvScalarMatrix>
 mixtureKEpsilon<BasicMomentumTransportModel>::epsilonSource() const
 {
-    return fvm::Su(C3_*epsilonm_()*bubbleG()/(rhom_()*km_()), epsilonm_());
+    return fvm::Su
+    (
+        C3_*epsilonm_()()*bubbleG()()()/(rhom_()()*km_()()),
+        epsilonm_()
+    );
 }
 
 
@@ -514,57 +553,57 @@ void mixtureKEpsilon<BasicMomentumTransportModel>::correct()
     const surfaceScalarField phim("phim", mixFlux(phil, phig));
 
     // Mixture velocity divergence
-    const volScalarField divUm
+    const volInternalScalarField divUm
     (
         mixU
         (
-            fvc::div(fvc::absolute(phil, Ul)),
-            fvc::div(fvc::absolute(phig, Ug))
+            fvi::div(fvc::absolute(phil, Ul)),
+            fvi::div(fvc::absolute(phig, Ug))
         )
     );
 
-    tmp<volScalarField> Gc;
+    tmp<volInternalScalarField> Gc;
     {
-        tmp<volTensorField> tgradUl = fvc::grad(Ul);
-        Gc = tmp<volScalarField>
+        tmp<volInternalTensorField> tgradUl = fvi::grad(Ul);
+        Gc = tmp<volInternalScalarField>
         (
-            new volScalarField
+            new volInternalScalarField
             (
                 this->GName(),
-                nutl*(tgradUl() && dev(twoSymm(tgradUl())))
+                nutl()*(tgradUl() && dev(twoSymm(tgradUl())))
             )
         );
         tgradUl.clear();
 
         // Update k, epsilon and G at the wall
-        kl.boundaryFieldRef().updateCoeffs();
-        epsilonl.boundaryFieldRef().updateCoeffs();
+        kl.boundaryRef().updateCoeffs();
+        epsilonl.boundaryRef().updateCoeffs();
 
         Gc.ref().checkOut();
     }
 
-    tmp<volScalarField> Gd;
+    tmp<volInternalScalarField> Gd;
     {
-        tmp<volTensorField> tgradUg = fvc::grad(Ug);
-        Gd = tmp<volScalarField>
+        tmp<volInternalTensorField> tgradUg = fvi::grad(Ug);
+        Gd = tmp<volInternalScalarField>
         (
-            new volScalarField
+            new volInternalScalarField
             (
                 this->GName(),
-                nutg*(tgradUg() && dev(twoSymm(tgradUg())))
+                nutg()*(tgradUg() && dev(twoSymm(tgradUg())))
             )
         );
         tgradUg.clear();
 
         // Update k, epsilon and G at the wall
-        kg.boundaryFieldRef().updateCoeffs();
-        epsilong.boundaryFieldRef().updateCoeffs();
+        kg.boundaryRef().updateCoeffs();
+        epsilong.boundaryRef().updateCoeffs();
 
         Gd.ref().checkOut();
     }
 
     // Mixture turbulence generation
-    const volScalarField Gm(mix(Gc, Gd));
+    const volInternalScalarField Gm(mix(Gc, Gd));
 
     // Mixture turbulence viscosity
     const volScalarField nutm(mixU(nutl, nutg));
@@ -578,19 +617,19 @@ void mixtureKEpsilon<BasicMomentumTransportModel>::correct()
     (
         fvm::ddt(epsilonm)
       + fvm::div(phim, epsilonm)
-      + fvm::SuSp(-fvc::div(phim), epsilonm)
+      + fvm::SuSp(-fvi::div(phim), epsilonm)
       - fvm::laplacian(DepsilonEff(nutm), epsilonm)
      ==
-        C1_*Gm*epsilonm/km
+        C1_*Gm*epsilonm()/km()
       - fvm::SuSp(((2.0/3.0)*C1_)*divUm, epsilonm)
-      - fvm::Sp(C2_*epsilonm/km, epsilonm)
+      - fvm::Sp(C2_*epsilonm()/km(), epsilonm)
       + epsilonSource()
       + fvModels.source(rhom, epsilonm)/rhom
     );
 
     epsEqn.ref().relax();
     fvConstraints.constrain(epsEqn.ref());
-    epsEqn.ref().boundaryManipulate(epsilonm.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilonm.boundaryRef());
     solve(epsEqn);
     fvConstraints.constrain(epsilonm);
 
@@ -602,12 +641,12 @@ void mixtureKEpsilon<BasicMomentumTransportModel>::correct()
     (
         fvm::ddt(km)
       + fvm::div(phim, km)
-      + fvm::SuSp(-fvc::div(phim), km)
+      + fvm::SuSp(-fvi::div(phim), km)
       - fvm::laplacian(DkEff(nutm), km)
      ==
         Gm
       - fvm::SuSp((2.0/3.0)*divUm, km)
-      - fvm::Sp(epsilonm/km, km)
+      - fvm::Sp(epsilonm()/km(), km)
       + kSource()
       + fvModels.source(rhom, km)/rhom
     );

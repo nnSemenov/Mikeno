@@ -72,7 +72,7 @@ KocamustafaogullariIshiiDepartureDiameter::calculate
     auto phi = coefficient<ScalarFieldType>::value(phi_);
 
     return
-        0.0012*pow((rhoLiquid - rhoVapour)/rhoVapour, 0.9)*0.0208*phi
+        scalar{0.0012}*pow((rhoLiquid - rhoVapour)/rhoVapour, scalar{0.9})*scalar{0.0208}*phi
        *sqrt(sigma/(mag(g)*(rhoLiquid - rhoVapour)));
 }
 
@@ -146,16 +146,16 @@ KocamustafaogullariIshiiDepartureDiameter::dDeparture
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::wallBoilingModels::departureDiameterModels::
 KocamustafaogullariIshiiDepartureDiameter::dDeparture
 (
     const phaseModel& liquid,
     const phaseModel& vapour,
     const phaseModel& solid,
-    const volScalarField::Internal& Tf,
-    const volScalarField::Internal& Tsatw,
-    const volScalarField::Internal& L
+    const volInternalScalarField& Tf,
+    const volInternalScalarField& Tsatw,
+    const volInternalScalarField& L
 ) const
 {
     return calculate

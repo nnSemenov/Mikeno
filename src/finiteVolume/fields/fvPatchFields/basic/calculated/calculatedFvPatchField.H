@@ -123,6 +123,10 @@ public:
 
     // Member Functions
 
+        using fvPatchField<Type>::patch;
+        using fvPatchField<Type>::internalField;
+
+
         // Mapping functions
 
             //- Map the given fvPatchField onto this fvPatchField
@@ -162,6 +166,9 @@ public:
 
         //- Inherit assignment
         using fvPatchField<Type>::operator=;
+
+        //- Inherit forced assignment
+        using fvPatchField<Type>::operator==;
 };
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -67,7 +67,7 @@ Foam::fv::clouds::clouds
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        dimensionedVector(dimAcceleration, Zero)
+        dimensionedVector(dimensions::acceleration, Zero)
     ),
     carrierHasThermo_
     (
@@ -106,7 +106,12 @@ Foam::fv::clouds::clouds
                     mesh
                 ),
                 mesh,
-                dimensionedScalar("rho", dimDensity, tCarrierViscosity_())
+                dimensionedScalar
+                (
+                    "rho",
+                    dimensions::density,
+                    tCarrierViscosity_()
+                )
             )
         )
     ),
@@ -157,6 +162,11 @@ Foam::fv::clouds::clouds
 
 Foam::wordList Foam::fv::clouds::addSupFields() const
 {
+    if (!cloudsPtr_->coupled())
+    {
+        return wordList();
+    }
+
     wordList fieldNames(1, UName_);
 
     if (carrierHasThermo_)

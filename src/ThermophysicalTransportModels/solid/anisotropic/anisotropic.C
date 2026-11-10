@@ -25,7 +25,7 @@ License
 
 #include "anisotropic.H"
 #include "fvmLaplacian.H"
-#include "fvcLaplacian.H"
+#include "fviLaplacian.H"
 #include "fvcSnGrad.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -157,7 +157,7 @@ anisotropic<SolidThermophysicalTransportModel>::anisotropic
         if
         (
             !bMesh[patchi].coupled()
-          && returnReduce(bMesh[patchi].size(), sumOp<label>())
+          && returnReduce(bMesh[patchi].size(), sumOp())
         )
         {
             const vectorField n(bMesh[patchi].nf());
@@ -449,7 +449,7 @@ anisotropic<SolidThermophysicalTransportModel>::divq
     // Return heat flux source as an implicit energy correction
     // to the temperature gradient flux
     return
-       -fvc::laplacian(this->alpha()*Kappa, thermo.T())
+       -fvi::laplacian(this->alpha()*Kappa, thermo.T())
        -fvm::laplacianCorrection
         (
             (Sf & fvc::interpolate(this->alpha()*Kappa/thermo.Cv()) & Sf)

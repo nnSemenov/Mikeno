@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,7 +57,7 @@ powerLawUniformBinary
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::breakupModels::powerLawUniformBinary::rate
 (
     const label i,
@@ -67,13 +67,13 @@ Foam::populationBalance::breakupModels::powerLawUniformBinary::rate
     const dimensionedScalar& vj = popBal_.vs()[j];
 
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "binaryBreakupRate",
             popBal_.mesh(),
             dimensionedScalar
             (
-                inv(dimVolume*dimTime),
+                inv(dimensions::volume*dimensions::time),
                 pow(vj.value(), power_)*2/vj.value()
             )
         );

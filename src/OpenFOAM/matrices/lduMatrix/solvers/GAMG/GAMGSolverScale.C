@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,7 @@ void Foam::GAMGSolver::scale
     scalarField& field,
     scalarField& Acf,
     const lduMatrix& A,
-    const FieldField<Field, scalar>& interfaceLevelBouCoeffs,
+    const Field<Field<scalar>>& interfaceLevelBouCoeffs,
     const lduInterfaceFieldPtrsList& interfaceLevel,
     const scalarField& source,
     const direction cmpt
@@ -58,7 +58,7 @@ void Foam::GAMGSolver::scale
     }
 
     vector2D scalingVector(scalingFactorNum, scalingFactorDenom);
-    A.mesh().reduce(scalingVector, sumOp<vector2D>());
+    A.mesh().reduce(scalingVector, sumOp());
 
     const scalar sf = scalingVector.x()/stabilise(scalingVector.y(), vSmall);
 

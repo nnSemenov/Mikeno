@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,12 +52,12 @@ Foam::compressible::cavitationModels::Merkle::Merkle
 :
     cavitationModel(dict, phases, liquidIndex),
 
-    UInf_("UInf", dimVelocity, dict),
-    tInf_("tInf", dimTime, dict),
+    UInf_("UInf", dimensions::velocity, dict),
+    tInf_("tInf", dimensions::time, dict),
     Cv_("Cv", dimless, dict),
     Cc_("Cc", dimless, dict),
 
-    p0_("0", dimPressure, 0),
+    p0_("0", dimensions::pressure, 0),
 
     mcCoeff_(Cc_/(0.5*sqr(UInf_)*tInf_))
 {
@@ -67,19 +67,19 @@ Foam::compressible::cavitationModels::Merkle::Merkle
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::compressible::cavitationModels::Merkle::mvCoeff() const
 {
     return Cv_*rhol()/(0.5*sqr(UInf_)*tInf_*rhov());
 }
 
 
-Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
+Foam::Pair<Foam::tmp<Foam::volInternalScalarField>>
 Foam::compressible::cavitationModels::Merkle::mDotcvAlphal() const
 {
-    const volScalarField::Internal& p = thermol().p();
+    const volInternalScalarField& p = thermol().p();
 
-    return Pair<tmp<volScalarField::Internal>>
+    return Pair<tmp<volInternalScalarField>>
     (
         mcCoeff_*max(p - pSatv(), p0_),
        -mvCoeff()*min(p - pSatl(), p0_)
@@ -87,22 +87,22 @@ Foam::compressible::cavitationModels::Merkle::mDotcvAlphal() const
 }
 
 
-Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
+Foam::Pair<Foam::tmp<Foam::volInternalScalarField>>
 Foam::compressible::cavitationModels::Merkle::mDotcvP() const
 {
-    const volScalarField::Internal& p = thermol().p();
+    const volInternalScalarField& p = thermol().p();
 
-    const volScalarField::Internal alphav
+    const volInternalScalarField alphav
     (
         min(max(this->alphav(), scalar(0)), scalar(1))
     );
 
-    const volScalarField::Internal alphal
+    const volInternalScalarField alphal
     (
         min(max(this->alphal(), scalar(0)), scalar(1))
     );
 
-    return Pair<tmp<volScalarField::Internal>>
+    return Pair<tmp<volInternalScalarField>>
     (
         mcCoeff_*alphav*pos0(p - pSatv()),
        -mvCoeff()*alphal*neg(p - pSatl())

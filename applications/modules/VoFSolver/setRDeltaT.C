@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "VoFSolver.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -42,20 +42,20 @@ void Foam::solvers::VoFSolver::setRDeltaT()
     const volScalarField rDeltaT0("rDeltaT0", rDeltaT);
 
     // Set the reciprocal time-step from the local Courant number
-    rDeltaT.internalFieldRef() = fvc::surfaceSum(mag(phi))/((2*maxCo)*mesh.V());
+    rDeltaT.internalFieldRef() = fvi::surfaceSum(mag(phi))/((2*maxCo)*mesh.V());
 
     // Clip to user-defined maximum and minimum time-steps
     scalar minRDeltaT = gMin(rDeltaT.primitiveField());
     if (pimpleDict.found("maxDeltaT") || minRDeltaT < rootVSmall)
     {
         const scalar clipRDeltaT = 1/pimpleDict.lookup<scalar>("maxDeltaT");
-        rDeltaT.max(clipRDeltaT);
+        rDeltaT.primitiveFieldRef().boundLower(clipRDeltaT);
         minRDeltaT = max(minRDeltaT, clipRDeltaT);
     }
     if (pimpleDict.found("minDeltaT"))
     {
         const scalar clipRDeltaT = 1/pimpleDict.lookup<scalar>("minDeltaT");
-        rDeltaT.min(clipRDeltaT);
+        rDeltaT.primitiveFieldRef().boundUpper(clipRDeltaT);
         minRDeltaT = min(minRDeltaT, clipRDeltaT);
     }
 

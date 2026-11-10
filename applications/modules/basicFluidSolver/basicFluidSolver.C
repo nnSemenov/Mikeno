@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,9 +25,9 @@ License
 
 #include "basicFluidSolver.H"
 #include "surfaceFields.H"
-#include "fvcDiv.H"
-#include "fvcSurfaceIntegrate.H"
-#include "fvcVolumeIntegrate.H"
+#include "fviDiv.H"
+#include "fviSurfaceIntegrate.H"
+#include "fviDomainIntegrate.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -52,6 +52,15 @@ bool Foam::solvers::basicFluidSolver::read()
 {
     solver::read();
 
+    maxMeshCo =
+        runTime.controlDict().lookupOrDefault<scalar>("maxMeshCo", vGreat);
+
+    checkMeshCourantNo = pimple.dict().lookupOrDefault
+    (
+        "checkMeshCourantNo",
+        runTime.controlDict().found("maxMeshCo")
+    );
+
     maxCo =
         runTime.controlDict().lookupOrDefault<scalar>("maxCo", vGreat);
 
@@ -66,28 +75,20 @@ bool Foam::solvers::basicFluidSolver::read()
         mesh.dynamic()
     );
 
-    checkMeshCourantNo = pimple.dict().lookupOrDefault
-    (
-        "checkMeshCourantNo",
-        false
-    );
-
     return true;
 }
 
-void Foam::solvers::basicFluidSolver::meshCourantNo() const
+void Foam::solvers::basicFluidSolver::correctMeshCourantNo()
 {
     if (checkMeshCourantNo)
     {
         const scalarField sumPhi
         (
-            fvc::surfaceSum(mag(mesh.phi()))().primitiveField()
+            fvi::surfaceSum(mag(mesh.phi()))().primitiveField()
         );
 
-        const scalar meshCoNum
-        (
-            0.5*gMax(sumPhi/mesh.V().primitiveField())*runTime.deltaTValue()
-        );
+        meshCoNum_ =
+            0.5*gMax(sumPhi/mesh.V().primitiveField())*runTime.deltaTValue();
 
         const scalar meanMeshCoNum
         (
@@ -97,7 +98,7 @@ void Foam::solvers::basicFluidSolver::meshCourantNo() const
         );
 
         Info<< "Mesh Courant Number mean: " << meanMeshCoNum
-            << " max: " << meshCoNum << endl;
+            << " max: " << meshCoNum_ << endl;
     }
 }
 
@@ -111,7 +112,7 @@ void Foam::solvers::basicFluidSolver::correctCoNum
 {
     const scalarField sumPhi
     (
-        fvc::surfaceSum(mag(phi))().primitiveField()/rho.primitiveField()
+        fvi::surfaceSum(mag(phi))().primitiveField()/rho.primitiveField()
     );
 
     CoNum_ = 0.5*gMax(sumPhi/mesh.V().primitiveField())*runTime.deltaTValue();
@@ -150,15 +151,15 @@ void Foam::solvers::basicFluidSolver::continuityErrors
     const surfaceScalarField& phi
 )
 {
-    const volScalarField contErr(fvc::div(phi));
+    const volInternalScalarField contErr(fvi::div(phi));
 
     const scalar sumLocalContErr =
         runTime.deltaTValue()
-       *mag(contErr)().weightedAverage(mesh.V()).value();
+       *weightedAverage(mag(contErr), mesh.V()).value();
 
     const scalar globalContErr =
         runTime.deltaTValue()
-       *contErr.weightedAverage(mesh.V()).value();
+       *weightedAverage(contErr, mesh.V()).value();
 
     Info<< "time step continuity errors : sum local = " << sumLocalContErr
         << ", global = " << globalContErr;
@@ -187,13 +188,13 @@ void Foam::solvers::basicFluidSolver::continuityErrors
     }
     else
     {
-        const dimensionedScalar totalMass = fvc::domainIntegrate(rho);
+        const dimensionedScalar totalMass = fvi::domainIntegrate(rho());
 
         const scalar sumLocalContErr =
-            (fvc::domainIntegrate(mag(rho - thermoRho))/totalMass).value();
+            (fvi::domainIntegrate(mag(rho() - thermoRho()))/totalMass).value();
 
         const scalar globalContErr =
-            (fvc::domainIntegrate(rho - thermoRho)/totalMass).value();
+            (fvi::domainIntegrate(rho() - thermoRho())/totalMass).value();
 
         cumulativeContErr += globalContErr;
 
@@ -210,9 +211,11 @@ void Foam::solvers::basicFluidSolver::continuityErrors
 Foam::solvers::basicFluidSolver::basicFluidSolver(fvMesh& mesh)
 :
     solver(mesh),
-    maxCo(0),
-    maxDeltaT_(0),
+    maxMeshCo(vGreat),
+    maxCo(vGreat),
+    maxDeltaT_(vGreat),
     cumulativeContErr(0),
+    meshCoNum_(0),
     CoNum_(0),
     CoNum(CoNum_)
 {
@@ -236,6 +239,11 @@ Foam::scalar Foam::solvers::basicFluidSolver::maxDeltaT() const
     if (maxCo < vGreat && CoNum > small)
     {
         deltaT = min(deltaT, maxCo/CoNum*runTime.deltaTValue());
+    }
+
+    if (maxMeshCo < vGreat && meshCoNum_ > small)
+    {
+        deltaT = min(deltaT, maxMeshCo/meshCoNum_*runTime.deltaTValue());
     }
 
     return deltaT;

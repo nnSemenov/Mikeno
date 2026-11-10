@@ -33,44 +33,22 @@ License
 #include "DistanceFunction_DimensionedFieldFunction.H"
 #include "Coded_DimensionedFieldFunction.H"
 #include "Surfaces_DimensionedFieldFunction.H"
+#include "FieldFunction_DimensionedFieldFunction.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #define makeDimensionedVolFieldFunctions(Type, nullArg)                        \
                                                                                \
-    typedef DimensionedField<Type, fvMesh, Field>                              \
-        DimensionedField##Type##fvMesh##Field;                                 \
-    defineDimensionedFieldFunction                                             \
-    (                                                                          \
-        DimensionedField##Type##fvMesh##Field                                  \
-    );                                                                         \
+    typedef DimensionedField<Type, fvMesh, Field> Type##FvMesh;                \
+    defineDimensionedFieldFunction(Type##FvMesh);                              \
     namespace DimensionedFieldFunctions                                        \
     {                                                                          \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            TimeFunction,                                                      \
-            DimensionedField##Type##fvMesh##Field                              \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Zonal,                                                             \
-            DimensionedField##Type##fvMesh##Field                              \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            DistanceFunction,                                                  \
-            DimensionedField##Type##fvMesh##Field                              \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Coded,                                                             \
-            DimensionedField##Type##fvMesh##Field                              \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Surfaces,                                                          \
-            DimensionedField##Type##fvMesh##Field                              \
-        );                                                                     \
+        addDimensionedFieldFunction(TimeFunction, Type##FvMesh);               \
+        addDimensionedFieldFunction(Zonal, Type##FvMesh);                      \
+        addDimensionedFieldFunction(DistanceFunction, Type##FvMesh);           \
+        addDimensionedFieldFunction(Coded, Type##FvMesh);                      \
+        addDimensionedFieldFunction(Surfaces, Type##FvMesh);                   \
+        addDimensionedFieldFunction(FieldFunction, Type##FvMesh);              \
     }
 
 namespace Foam

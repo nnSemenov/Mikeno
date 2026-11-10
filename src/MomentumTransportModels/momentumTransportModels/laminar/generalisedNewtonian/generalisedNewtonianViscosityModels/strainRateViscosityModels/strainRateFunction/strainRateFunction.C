@@ -63,8 +63,8 @@ strainRateFunction
         Function1<scalar>::New
         (
             "function",
-            dimless/dimTime,
-            dimKinematicViscosity,
+            dimensions::rate,
+            dimensions::kinematicViscosity,
             viscosityProperties.optionalTypeDict(typeName)
         )
     )
@@ -87,8 +87,8 @@ strainRateFunction::read
     strainRateFunction_ = Function1<scalar>::New
     (
         "function",
-        dimless/dimTime,
-        dimKinematicViscosity,
+        dimensions::rate,
+        dimensions::kinematicViscosity,
         viscosityProperties.optionalTypeDict(typeName)
     );
 
@@ -110,14 +110,14 @@ nu
         (
             IOobject::groupName(typedName("nu"), nu0.group()),
             nu0.mesh(),
-            dimensionedScalar(dimKinematicViscosity, 0)
+            dimensionedScalar(dimensions::kinematicViscosity, 0)
         )
     );
 
     tnu.ref().primitiveFieldRef() = strainRateFunction_->value(strainRate);
 
-    volScalarField::Boundary& nuBf = tnu.ref().boundaryFieldRef();
-    const volScalarField::Boundary& sigmaBf = strainRate.boundaryField();
+    volScalarField::BoundaryField& nuBf = tnu.ref().boundaryFieldRef();
+    const volScalarField::BoundaryField& sigmaBf = strainRate.boundaryField();
 
     forAll(nuBf, patchi)
     {

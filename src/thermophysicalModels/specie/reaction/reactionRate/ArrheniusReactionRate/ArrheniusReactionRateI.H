@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,12 +49,12 @@ inline Foam::ArrheniusReactionRate::ArrheniusReactionRate
 )
 :
     beta_(dict.lookup<scalar>("beta", dimless)),
-    A_(dict.lookup<scalar>("A", dims/pow(dimTemperature, beta_))),
+    A_(dict.lookup<scalar>("A", dims/pow(dimensions::temperature, beta_))),
     Ta_
     (
         dict.found("Ta") || !dict.found("Ea")
-      ? dict.lookup<scalar>("Ta", dimTemperature)
-      : dict.lookup<scalar>("Ea", dimEnergy/dimMoles)
+      ? dict.lookup<scalar>("Ta", dimensions::temperature)
+      : dict.lookup<scalar>("Ea", dimensions::energy/dimensions::moles)
        /constant::physicoChemical::RR.value()
     )
 {}
@@ -70,51 +70,21 @@ inline void Foam::ArrheniusReactionRate::postEvaluate() const
 {}
 
 
-inline Foam::scalar Foam::ArrheniusReactionRate::operator()
+inline Foam::scalar Foam::ArrheniusReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar ak = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        ak *= pow(T, beta_);
-    }
-
-    if (mag(Ta_) > vSmall)
-    {
-        ak *= exp(-Ta_/T);
-    }
-
-    return ak;
+    return A_*exp(beta_*s.lnT - Ta_*s.rT);
 }
 
 
 inline Foam::scalar Foam::ArrheniusReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar ak = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        ak *= pow(T, beta_);
-    }
-
-    if (mag(Ta_) > vSmall)
-    {
-        ak *= exp(-Ta_/T);
-    }
-
-    return ak*(beta_+Ta_/T)/T;
+    return A_*exp(beta_*s.lnT - Ta_*s.rT)*(beta_ + Ta_*s.rT)*s.rT;
 }
 
 
@@ -126,14 +96,11 @@ inline bool Foam::ArrheniusReactionRate::hasDdc() const
 
 inline void Foam::ArrheniusReactionRate::ddc
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const reaction::state& s,
     scalarField& ddc
 ) const
 {
-    ddc = 0;
+    NotImplemented;
 }
 
 

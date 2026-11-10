@@ -99,12 +99,12 @@ void Foam::polyMesh::calcDirections() const
         }
     }
 
-    reduce(nEmptyPatches, maxOp<label>());
-    reduce(nWedgePatches, maxOp<label>());
+    reduce(nEmptyPatches, maxOp());
+    reduce(nWedgePatches, maxOp());
 
     if (nEmptyPatches)
     {
-        reduce(emptyDirVec, sumOp<vector>());
+        reduce(emptyDirVec, sumOp());
 
         emptyDirVec /= mag(emptyDirVec);
 
@@ -128,7 +128,7 @@ void Foam::polyMesh::calcDirections() const
 
     if (nWedgePatches)
     {
-        reduce(wedgeDirVec, sumOp<vector>());
+        reduce(wedgeDirVec, sumOp());
 
         wedgeDirVec /= mag(wedgeDirVec);
 
@@ -341,12 +341,12 @@ Foam::polyMesh::polyMesh(const IOobject& io)
     boundary_.calcGeometry();
 
     // Warn if global empty mesh
-    if (time().completeCase() && returnReduce(nPoints(), sumOp<label>()) == 0)
+    if (time().completeCase() && returnReduce(nPoints(), sumOp()) == 0)
     {
         WarningInFunction
             << "no points in mesh" << endl;
     }
-    if (time().completeCase() && returnReduce(nCells(), sumOp<label>()) == 0)
+    if (time().completeCase() && returnReduce(nCells(), sumOp()) == 0)
     {
         WarningInFunction
             << "no cells in mesh" << endl;
@@ -799,8 +799,8 @@ void Foam::polyMesh::resetPrimitives
         // Warn if global empty mesh
         if
         (
-            (returnReduce(nPoints(), sumOp<label>()) == 0)
-         || (returnReduce(nCells(), sumOp<label>()) == 0)
+            (returnReduce(nPoints(), sumOp()) == 0)
+         || (returnReduce(nCells(), sumOp()) == 0)
         )
         {
             FatalErrorInFunction
@@ -971,7 +971,7 @@ Foam::polyMesh::~polyMesh()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::polyMesh::found(const IOobject& io)
+Foam::fileName Foam::polyMesh::meshDirInstance(const IOobject& io)
 {
     // Create an IO object for the current-time polyMesh directory
     const IOobject curDirIo
@@ -989,8 +989,11 @@ bool Foam::polyMesh::found(const IOobject& io)
     const IOobject latestDirIo =
         fileHandler().findInstance(curDirIo, io.time().value(), word::null);
 
-    // Return whether or not this latest-time polyMesh directory exists
-    return fileHandler().isDir(fileHandler().objectPath(latestDirIo));
+    // Return the instance if the polyMesh directory exists, or null if not
+    return
+        fileHandler().isDir(fileHandler().objectPath(latestDirIo))
+      ? latestDirIo.instance()
+      : fileName::null;
 }
 
 

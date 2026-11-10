@@ -26,7 +26,7 @@ License
 #include "displacementSBRStress_fvMotionSolver.H"
 #include "motionDiffusivity.H"
 #include "fvmLaplacian.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 #include "fvcGrad.H"
 #include "surfaceInterpolate.H"
 #include "fvcLaplacian.H"
@@ -86,7 +86,7 @@ Foam::fvMotionSolvers::displacementSBRStress::displacementSBRStress
             pointDisplacement().dimensions(),
             Zero
         ),
-        cellMotionBoundaryTypes<vector>(pointDisplacement().boundaryField())
+        cellMotionBoundaryTypes<vector>(pointDisplacement().boundary())
     ),
     diffusivityType_(dict.lookup("diffusivity")),
     diffusivityPtr_
@@ -122,7 +122,7 @@ Foam::fvMotionSolvers::displacementSBRStress::newPoints()
     movePoints(mesh().points());
 
     diffusivityPtr_->correct();
-    pointDisplacement_.boundaryFieldRef().updateCoeffs();
+    pointDisplacement_.boundaryRef().updateCoeffs();
 
     surfaceScalarField Df(diffusivityPtr_->operator()());
 
@@ -137,7 +137,7 @@ Foam::fvMotionSolvers::displacementSBRStress::newPoints()
             "laplacian(diffusivity,cellDisplacement)"
         )
 
-      + fvc::div
+      + fvi::div
         (
             Df
            *(
@@ -153,14 +153,14 @@ Foam::fvMotionSolvers::displacementSBRStress::newPoints()
         )
 
         /*
-      - fvc::laplacian
+      - fvi::laplacian
         (
             2*Df,
             cellDisplacement_,
             "laplacian(diffusivity,cellDisplacement)"
         )
 
-      + fvc::div
+      + fvi::div
         (
             Df
            *(

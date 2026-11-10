@@ -41,7 +41,7 @@ inline void Foam::multicomponentThermo::setSpecieActive
     const label speciei
 ) const
 {
-    const_cast<boolList&>(speciesActive())[speciei] = true;
+    activeSpecies()[speciei] = true;
     const_cast<volScalarField&>(Y()[speciei]).writeOpt() = IOobject::AUTO_WRITE;
 }
 
@@ -51,14 +51,14 @@ inline void Foam::multicomponentThermo::setSpecieInactive
     const label speciei
 ) const
 {
-    const_cast<boolList&>(speciesActive())[speciei] = false;
+    activeSpecies()[speciei] = false;
     const_cast<volScalarField&>(Y()[speciei]).writeOpt() = IOobject::NO_WRITE;
 }
 
 
 inline bool Foam::multicomponentThermo::solveSpecie(const label speciei) const
 {
-    return speciei != defaultSpecie() && speciesActive()[speciei];
+    return speciei != defaultSpecie() && activeSpecies()[speciei];
 }
 
 
@@ -138,7 +138,7 @@ inline Foam::DimensionedFieldListAndSlicer<Foam::scalar, Foam::fvMesh>
 Foam::multicomponentThermo::implementation::Yslicer
 (
     const fvSource& model,
-    const volScalarField::Internal& source
+    const volInternalScalarField& source
 ) const
 {
     PtrList<DimensionedField<scalar, fvMesh>> result(Y_.size());
@@ -163,14 +163,14 @@ inline Foam::scalarFieldListSlice
 Foam::multicomponentThermo::implementation::sourceCellComposition
 (
     const DimensionedFieldListAndSlicer<scalar, fvMesh>& Yslicer,
-    const label i
+    const label celli
 ) const
 {
-    return Yslicer.slice(i);
+    return Yslicer.slice(celli);
 }
 
 
-inline Foam::PtrList<Foam::scalarField>
+inline Foam::FieldListAndSlicer<Foam::scalar>
 Foam::multicomponentThermo::implementation::Yslicer
 (
     const fvSource& model,
@@ -199,11 +199,11 @@ Foam::multicomponentThermo::implementation::Yslicer
 inline Foam::scalarFieldListSlice
 Foam::multicomponentThermo::implementation::sourceCellComposition
 (
-    const PtrList<scalarField>& Yslicer,
+    const FieldListAndSlicer<scalar>& Yslicer,
     const label i
 ) const
 {
-    return scalarFieldListSlice(Yslicer, i);
+    return Yslicer.slice(i);
 }
 
 

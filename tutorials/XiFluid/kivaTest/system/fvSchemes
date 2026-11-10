@@ -30,25 +30,22 @@ divSchemes
 
     div(phi,U)          Gauss upwind;
 
-    div(phi,b)          Gauss vanAlbada01;
-    div(phiXi,Xi)       Gauss limitedVanAlbada 1 10;
+    div(phi,b)          Gauss vanAlbada;
+    div(phiXi,Xi)       Gauss vanAlbada;
 
-    div(phib,fu.u)      Gauss vanAlbada01;
-    div(phib,egr.u)     Gauss vanAlbada01;
-    div(phib,h.u)       Gauss vanAlbada;
-    div(phib,K)         Gauss vanAlbada;
+    div(alphaPhi,fu)    Gauss vanAlbada;
+    div(alphaPhi,ft)    Gauss vanAlbada;
+    div(alphaPhi,egr)   Gauss vanAlbada;
+    div(alphaPhi,h)     Gauss vanAlbada;
+    div(alphaPhi,K)     Gauss vanAlbada;
 
-    div(phic,ft.b)      Gauss vanAlbada01;
-    div(phic,h.b)       Gauss vanAlbada;
-    div(phic,K)         Gauss vanAlbada;
-
-    div(phi,(p|rho))    Gauss vanAlbada;
+    div(phi,p|rho)     Gauss vanAlbada;
     div(meshPhi,p)      Gauss vanAlbada;
 
     div(phi,k)          Gauss vanAlbada;
     div(phi,epsilon)    Gauss vanAlbada;
 
-    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(rho*nuEff*dev2(T(grad(U)))) Gauss linear;
 }
 
 laplacianSchemes

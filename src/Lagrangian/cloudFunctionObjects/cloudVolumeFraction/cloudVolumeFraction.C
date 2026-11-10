@@ -66,7 +66,7 @@ Foam::functionObjects::cloudVolumeFraction::~cloudVolumeFraction()
 
 Foam::wordList Foam::functionObjects::cloudVolumeFraction::fields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
@@ -78,15 +78,18 @@ bool Foam::functionObjects::cloudVolumeFraction::execute()
     (
         "v",
         isCloud<clouds::grouped>()
-      ? cloud<clouds::grouped>().number(c.mesh())
-       *cloud<clouds::shaped>().v(c.mesh())
+      ? eval
+        (
+            cloud<clouds::grouped>().number(c.mesh())()
+            *cloud<clouds::shaped>().v(c.mesh())()
+        )
       : cloud<clouds::shaped>().v(c.mesh())
     );
 
     objectRegistryFunctionObject::store
     (
         alphaName_,
-        Lagrangianc::accumulate<fvMesh>(v)/fvMeshFunctionObject::mesh_.V()
+        eval(Lagrangianc::accumulate<fvMesh>(v)/fvMeshFunctionObject::mesh_.V())
     );
 
     return true;

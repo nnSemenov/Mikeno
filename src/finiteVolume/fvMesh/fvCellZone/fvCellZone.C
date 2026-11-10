@@ -33,14 +33,14 @@ void Foam::fvCellZone::update()
     const labelList& cells(this->zone());
 
     nGlobalCells_ = cells.size();
-    reduce(nGlobalCells_, sumOp<label>());
+    reduce(nGlobalCells_, sumOp());
 
     V_ = 0;
     forAll(cells, i)
     {
         V_ += mesh_.V()[cells[i]];
     }
-    reduce(V_, sumOp<scalar>());
+    reduce(V_, sumOp());
 }
 
 
@@ -50,8 +50,8 @@ Foam::fvCellZone::fvCellZone(const fvMesh& mesh)
 :
     generatedCellZone(mesh),
     mesh_(mesh),
-    nGlobalCells_(returnReduce(mesh.nCells(), sumOp<label>())),
-    V_(gSum(mesh_.V()))
+    nGlobalCells_(returnReduce(mesh.nCells(), sumOp())),
+    V_(gSum(mesh_.V()).value())
 {}
 
 

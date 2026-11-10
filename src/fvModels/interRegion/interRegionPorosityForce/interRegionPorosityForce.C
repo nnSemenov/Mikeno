@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "interRegionPorosityForce.H"
 #include "fvMesh.H"
-#include "fvMatrices.H"
+#include "fvMatrix.H"
 #include "porosityModel.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -71,7 +71,7 @@ Foam::fv::interRegionPorosityForce::interRegionPorosityForce
     UName_(word::null),
     filter_
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "filter",
             mesh,
@@ -125,7 +125,7 @@ Foam::fv::interRegionPorosityForce::interRegionPorosityForce
     (
         name,
         mesh,
-        coeffs(dict),
+        coeffs(dict).subDict("porosity"),
         zoneName
     );
 }
@@ -174,7 +174,7 @@ void Foam::fv::interRegionPorosityForce::addSup
 {
     fvMatrix<vector> porosityEqn(eqn.psi(), eqn.dimensions());
     porosityPtr_->addResistance(porosityEqn);
-    eqn -= alpha*filter_*porosityEqn;
+    eqn -= alpha()*filter_*porosityEqn;
 }
 
 

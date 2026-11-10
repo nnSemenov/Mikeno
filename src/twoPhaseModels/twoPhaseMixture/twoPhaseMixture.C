@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,7 @@ License
 #include "twoPhaseMixture.H"
 #include "viscosityModel.H"
 #include "surfaceInterpolate.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -186,7 +186,8 @@ Foam::twoPhaseMixture::twoPhaseMixture(const fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimless
     ),
 
     alpha2_
@@ -210,21 +211,21 @@ bool Foam::twoPhaseMixture::read()
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::twoPhaseMixture::interfaceFraction() const
 {
     const fvMesh& mesh = alpha1_.mesh();
 
-    tmp<volScalarField::Internal> tA
+    tmp<volInternalScalarField> tA
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "A",
             mesh,
             dimensionedScalar(dimless, 0)
         )
     );
-    volScalarField::Internal& A = tA.ref();
+    volInternalScalarField& A = tA.ref();
 
     const surfaceVectorField& Sf = mesh.Sf();
     const labelUList& own = mesh.owner();
@@ -232,10 +233,11 @@ Foam::twoPhaseMixture::interfaceFraction() const
 
     const surfaceScalarField alphaf(fvc::interpolate(alpha1_));
 
-    const volVectorField::Internal gradAlpha(fvc::grad(alpha1_));
-    const volVectorField::Internal n
+    const volInternalVectorField gradAlpha(fvi::grad(alpha1_));
+    const volInternalVectorField n
     (
-        gradAlpha/(mag(gradAlpha) + dimensionedScalar(dimless/dimLength, small))
+        gradAlpha
+       /(mag(gradAlpha) + dimensionedScalar(inv(dimensions::length), small))
     );
 
     const scalarField& ialpha = alpha1_;

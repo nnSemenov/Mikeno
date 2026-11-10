@@ -61,7 +61,7 @@ void Foam::fv::limitPressure::readCoeffs(const dictionary& dict)
     else
     {
         const volScalarField& p = mesh().lookupObject<volScalarField>(pName_);
-        const volScalarField::Boundary& pbf = p.boundaryField();
+        const volScalarField::BoundaryField& pbf = p.boundaryField();
 
         bool pLimits = false;
         scalar pMin = vGreat;
@@ -77,16 +77,16 @@ void Foam::fv::limitPressure::readCoeffs(const dictionary& dict)
             {
                 pLimits = true;
 
-                pMin = min(pMin, min(pbf[patchi]));
-                pMax = max(pMax, max(pbf[patchi]));
+                pMin = min(pMin, min(pbf[patchi].field()));
+                pMax = max(pMax, max(pbf[patchi].field()));
             }
         }
 
-        reduce(pLimits, andOp<bool>());
+        reduce(pLimits, andOp());
         if (pLimits)
         {
-            reduce(pMax, maxOp<scalar>());
-            reduce(pMin, minOp<scalar>());
+            reduce(pMax, maxOp());
+            reduce(pMin, minOp());
         }
 
         if (dict.found("min"))
@@ -148,8 +148,8 @@ Foam::fv::limitPressure::limitPressure
 :
     fvConstraint(name, modelType, mesh, dict),
     pName_(word::null),
-    pMin_("pMin", dimPressure, 0),
-    pMax_("pMax", dimPressure, great),
+    pMin_("pMin", dimensions::pressure, 0),
+    pMax_("pMax", dimensions::pressure, great),
     limitMinP_(false),
     limitMaxP_(false)
 {

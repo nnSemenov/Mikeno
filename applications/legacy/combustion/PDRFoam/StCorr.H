@@ -6,10 +6,10 @@
         dimensionedScalar Vk
         (
             "Vk",
-            dimVolume,
-            gSum(c*mesh.V().primitiveField())
+            dimensions::volume,
+            gSum(c.primitiveField()*mesh.V().primitiveField())
         );
-        dimensionedScalar Ak("Ak", dimArea, 0.0);
+        dimensionedScalar Ak("Ak", dimensions::area, 0.0);
 
         if (Vk.value() > small)
         {
@@ -79,13 +79,14 @@
 
             // Calculate kernel area from b field consistent with the
             // discretisation of the b equation.
-            const volScalarField mgb
+            const volInternalScalarField mgb
             (
-                fvc::div(nf, b, "div(phiSt,b)") - b*fvc::div(nf) + dMgb
+                fvi::div(nf, b, "div(phiSt,b)") - b()*fvi::div(nf) + dMgb
             );
-            dimensionedScalar AkEst = gSum(mgb*mesh.V().primitiveField());
+            const scalar AkEst =
+                gSum(mgb.primitiveField()*mesh.V().primitiveField());
 
-            StCorr.value() = max(min((Ak/AkEst).value(), 10.0), 1.0);
+            StCorr.value() = max(min((Ak.value()/AkEst), 10.0), 1.0);
 
             Info<< "StCorr = " << StCorr.value() << endl;
         }

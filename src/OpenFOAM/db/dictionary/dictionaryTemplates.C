@@ -405,7 +405,7 @@ T Foam::dictionary::lookupScoped
             << name() << exit(FatalIOError);
     }
 
-    return pTraits<T>(entryPtr->stream());
+    return Foam::readAndMaybeConvert<T>(entryPtr->stream());
 }
 
 
@@ -483,6 +483,18 @@ void Foam::dictionary::set
 
 
 // * * * * * * * * * * * * * * * IOstream Functions  * * * * * * * * * * * * //
+
+template<class ... Entries>
+void Foam::writeEntry
+(
+    Ostream& os,
+    const word& entryName,
+    const std::tuple<const Entries& ...>& entries
+)
+{
+    writeEntry(os, entryName, dictionary(entries));
+}
+
 
 template<class EntryType>
 void Foam::writeEntry

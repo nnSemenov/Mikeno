@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,7 +60,7 @@ BrownianCollisions
     A1_(dict.lookupOrDefault<scalar>("A1", 2.514)),
     A2_(dict.lookupOrDefault<scalar>("A2", 0.8)),
     A3_(dict.lookupOrDefault<scalar>("A3", 0.55)),
-    sigma_("sigma", dimLength, dict),
+    sigma_("sigma", dimensions::length, dict),
     lambda_
     (
         IOobject
@@ -73,7 +73,7 @@ BrownianCollisions
         dimensionedScalar
         (
             "lambda",
-            dimLength,
+            dimensions::length,
             Zero
         )
     )
@@ -88,16 +88,16 @@ precompute()
     using Foam::constant::physicoChemical::k;
     using Foam::constant::mathematical::pi;
 
-    const volScalarField::Internal& p =
+    const volInternalScalarField& p =
         popBal_.continuousPhase().fluidThermo().p();
 
-    const volScalarField::Internal& Tc = popBal_.continuousPhase().thermo().T();
+    const volInternalScalarField& Tc = popBal_.continuousPhase().thermo().T();
 
     lambda_ = k*Tc/(sqrt(2.0)*pi*p*sqr(sigma_));
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::coalescenceModels::BrownianCollisions::rate
 (
     const label i,
@@ -107,21 +107,21 @@ Foam::populationBalance::coalescenceModels::BrownianCollisions::rate
     using Foam::constant::physicoChemical::k;
 
     tmp<volScalarField> tdi = popBal_.d(i);
-    const volScalarField::Internal& di = tdi();
+    const volInternalScalarField& di = tdi();
     tmp<volScalarField> tdj = popBal_.d(j);
-    const volScalarField::Internal& dj = tdj();
+    const volInternalScalarField& dj = tdj();
 
-    const volScalarField::Internal& Tc = popBal_.continuousPhase().thermo().T();
+    const volInternalScalarField& Tc = popBal_.continuousPhase().thermo().T();
 
     tmp<volScalarField> tmuc(popBal_.continuousPhase().fluidThermo().mu());
-    const volScalarField::Internal& muc = tmuc();
+    const volInternalScalarField& muc = tmuc();
 
-    const volScalarField::Internal Cci
+    const volInternalScalarField Cci
     (
         1 + lambda_/di*(A1_ + A2_*exp(-A3_*di/lambda_))
     );
 
-    const volScalarField::Internal Ccj
+    const volInternalScalarField Ccj
     (
         1 + lambda_/dj*(A1_ + A2_*exp(-A3_*dj/lambda_))
     );

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -21,157 +21,598 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-InClass
-    Foam::Pstream
+Global
+    Foam::*Op
 
 Description
-    Combination-Reduction operation for a parallel run.
-
-    The information from all nodes is collected on the master node,
-    combined using the given combination function and the result is
-    broadcast to all nodes
+    Operation classes containing functions and operators used by
+    templated reduction and distribution functions.
 
 \*---------------------------------------------------------------------------*/
 
 #ifndef ops_H
 #define ops_H
 
+#include "expressionName.H"
+#include "VoidT.H"
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
+/*---------------------------------------------------------------------------*\
+                          Class nopOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct nopOp
+{
+    inline static const word::Null prefix;
+    inline static const word::Null postfix;
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    template<class X>
+    static X value(const X& x)
+    {
+        return x;
+    }
+
+    template<class X>
+    auto operator()(const X& x) const
+    {
+        return x;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                          Class promoteOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct promoteOp
+{
+    inline static const word::Null prefix;
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 2;
+
+    template<class X>
+    static X value(const X& x)
+    {
+        return x;
+    }
+
+    template<class X>
+    auto operator()(const X& x) const
+    {
+        return x;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                          Class negateOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct negateOp
+{
+    static constexpr char prefix = '-';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 2;
+
+    template<class X>
+    static auto value(const X& x)
+    {
+        return -x;
+    }
+
+    template<class X>
+    auto operator()(const X& x) const
+    {
+        return -x;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                          Class notOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct notOp
+{
+    static constexpr char prefix = '!';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 2;
+
+    template<class X>
+    static auto value(const X& x)
+    {
+        return !x;
+    }
+
+    template<class X>
+    auto operator()(const X& x) const
+    {
+        return !x;
+    }
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Unary functions
+
+#define UnaryFunctionOp(Func)                                                  \
+    struct Func##Op                                                            \
+    {                                                                          \
+        static constexpr const char* prefix = #Func"(";                        \
+        static constexpr char postfix = ')';                                       \
+                                                                               \
+        static const signed char precedence =                                  \
+            expression::Operation<void>::precedence;                           \
+                                                                               \
+        template<class Type>                                                   \
+        static auto value(const Type x)                                        \
+        {                                                                      \
+            return Func(x);                                                    \
+        }                                                                      \
+                                                                               \
+        template<class Type>                                                   \
+        auto operator()(const Type x) const                                    \
+        {                                                                      \
+            return Func(x);                                                    \
+        }                                                                      \
+    };
+
+UnaryFunctionOp(sqr)
+UnaryFunctionOp(mag)
+UnaryFunctionOp(magSqr)
+UnaryFunctionOp(cmptMax)
+UnaryFunctionOp(cmptMin)
+UnaryFunctionOp(cmptAv)
+UnaryFunctionOp(cmptMag)
+
+/*---------------------------------------------------------------------------*\
+                            Class addOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct addOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '+';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 0;
+
+    static const bool associative = true;
+
+    template<class A, class B>
+    using EnableIfDefinedFor =
+        VoidT<decltype(std::declval<A>() + std::declval<B>())>;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a + b;
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return a + b;
+    }
+
+    static word name(const word& x)
+    {
+        return word("sum(", x, ')');
+    }
+
+    template<class X>
+    static const X& identity()
+    {
+        return pTraits<X>::zero;
+    }
+};
+
+// Alias for addOp for readability of summation reduction operations
+using sumOp = addOp;
+
+/*---------------------------------------------------------------------------*\
+                          Class subtractOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct subtractOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '-';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 0;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    using EnableIfDefinedFor =
+        VoidT<decltype(std::declval<A>() - std::declval<B>())>;
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return a - b;
+    }
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a - b;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                          Class multiplyOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct multiplyOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '*';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 1;
+
+    static const bool associative = true;
+
+    template<class A, class B>
+    using EnableIfDefinedFor =
+        VoidT<decltype(std::declval<A>()*std::declval<B>())>;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a*b;
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return a*b;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                            Class divideOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct divideOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '|';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 1;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    using EnableIfDefinedFor =
+        VoidT<decltype(std::declval<A>()/std::declval<B>())>;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a/b;
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return a/b;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                            Class innerOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct innerOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '&';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 1;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a & b;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                            Class crossOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct crossOp
+{
+    inline static const word::Null prefix;
+    static constexpr char infix = '^';
+    inline static const word::Null postfix;
+
+    static const signed char precedence = 1;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return a ^ b;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                            Class stabiliseOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct stabiliseOp
+{
+    static constexpr const char* prefix = "stabilise(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return stabilise(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return stabilise(a, b);
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                           Class maxOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct maxOp
+{
+    static constexpr const char* prefix = "max(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return max(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return max(a, b);
+    }
+
+    static word name(const word& x)
+    {
+        return word("max(", x, ')');
+    }
+
+    template<class X>
+    static const X& identity()
+    {
+        return pTraits<X>::min;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                             Class minOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct minOp
+{
+    static constexpr const char* prefix = "min(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return min(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return min(a, b);
+    }
+
+    static word name(const word& x)
+    {
+        return word("min(", x, ')');
+    }
+
+    template<class X>
+    static const X& identity()
+    {
+        return pTraits<X>::max;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                             Class minModOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct minModOp
+{
+    inline static const char* prefix = "minMod(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return minMod(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return minMod(a, b);
+    }
+
+    template<class X>
+    static const X& identity()
+    {
+        return pTraits<X>::max;
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                          Class cmptMultiplyOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct cmptMultiplyOp
+{
+    inline static const char* prefix = "cmptMultiply(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence = 1;
+
+    static const bool associative = true;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return cmptMultiply(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return cmptMultiply(a, b);
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                         Class cmptDivideOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct cmptDivideOp
+{
+    inline static const char* prefix = "cmptDivide(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence = 1;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return cmptDivide(a, b);
+    }
+
+    template<class A, class B>
+    auto operator()(const A& a, const B& b) const
+    {
+        return cmptDivide(a, b);
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                           Class cmptPowOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct cmptPowOp
+{
+    inline static const char* prefix = "cmptPow(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static const signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static const bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return cmptPow(a, b);
+    }
+};
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #define EqOp(opName, op)                                                       \
-                                                                               \
-    template<class T1, class T2>                                               \
-    class opName##Op2                                                          \
+    struct opName##Op                                                          \
     {                                                                          \
-    public:                                                                    \
-                                                                               \
+        template<class T1, class T2>                                           \
         void operator()(T1& x, const T2& y) const                              \
-        {                                                                      \
-            op;                                                                \
-        }                                                                      \
-    };                                                                         \
-                                                                               \
-    template<class T>                                                          \
-    class opName##Op                                                           \
-    {                                                                          \
-    public:                                                                    \
-                                                                               \
-        void operator()(T& x, const T& y) const                                \
         {                                                                      \
             op;                                                                \
         }                                                                      \
     };
 
 EqOp(eq, x = y)
-EqOp(eqNeg, x = -y)
-EqOp(eqSqr, x = sqr(y))
-EqOp(eqMag, x = mag(y))
-
-EqOp(plusEq, x += y)
-EqOp(minusEq, x -= y)
-EqOp(multiplyEq, x *= y)
-EqOp(divideEq, x /= y)
-EqOp(plusEqMagSqr, x += magSqr(y))
+EqOp(addEq, x += y)
 EqOp(maxEq, x = max(x, y))
 EqOp(minEq, x = min(x, y))
 EqOp(minMagSqrEq, x = (magSqr(x) <= magSqr(y) ? x : y))
 EqOp(maxMagSqrEq, x = (magSqr(x) >= magSqr(y) ? x : y))
 EqOp(andEq, x = (x && y))
 EqOp(orEq, x = (x || y))
-EqOp(notEq, x = (x != y))
-
-EqOp(nopEq, (void)x)
 
 #undef EqOp
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#if __GNUC__
-#define WARNRETURN __attribute__((warn_unused_result))
-#else
-#define WARNRETURN
-#endif
-
 #define Op(opName, op)                                                         \
-                                                                               \
-    template<class T, class T1, class T2>                                      \
-    class opName##Op3                                                          \
+    struct opName##Op                                                          \
     {                                                                          \
-    public:                                                                    \
-                                                                               \
-        T operator()(const T1& x, const T2& y) const WARNRETURN                \
-        {                                                                      \
-            return op;                                                         \
-        }                                                                      \
-    };                                                                         \
-                                                                               \
-    template<class T1, class T2>                                               \
-    class opName##Op2                                                          \
-    {                                                                          \
-    public:                                                                    \
-                                                                               \
-        T1 operator()(const T1& x, const T2& y) const WARNRETURN               \
-        {                                                                      \
-            return op;                                                         \
-        }                                                                      \
-    };                                                                         \
-                                                                               \
-    template<class T>                                                          \
-    class opName##Op                                                           \
-    {                                                                          \
-    public:                                                                    \
-                                                                               \
-        T operator()(const T& x, const T& y) const WARNRETURN                  \
+        template<class T1, class T2>                                           \
+        auto operator()(const T1& x, const T2& y) const                        \
         {                                                                      \
             return op;                                                         \
         }                                                                      \
     };
 
-Op(sum, x + y)
-Op(plus, x + y)
-Op(minus, x - y)
-Op(multiply, x * y)
-Op(divide, x / y)
-Op(cmptMultiply, cmptMultiply(x, y))
-Op(cmptPow, cmptPow(x, y))
-Op(cmptDivide, cmptDivide(x, y))
-Op(stabilise, stabilise(x, y))
-Op(max, max(x, y))
-Op(min, min(x, y))
 Op(minMagSqr, (magSqr(x) <= magSqr(y) ? x : y))
 Op(maxMagSqr, (magSqr(x) >= magSqr(y) ? x : y))
-Op(minMod, minMod(x, y))
 Op(and, x && y)
 Op(or, x || y)
-Op(equal, x == y)
 Op(less, x < y)
 Op(lessEq, x <= y)
 Op(greater, x > y)
 Op(greaterEq, x >= y)
 
-#define UOp(opName, op)                                                        \
-                                                                               \
-    template<class T>                                                          \
-    class opName##Op                                                           \
-    {                                                                          \
-    public:                                                                    \
-                                                                               \
-        T operator()(const T& x) const WARNRETURN                              \
-        {                                                                      \
-            return op;                                                         \
-        }                                                                      \
-    };
-
-UOp(nop, x)
-UOp(not, !x)
-
 #undef Op
-#undef WARNRETURN
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

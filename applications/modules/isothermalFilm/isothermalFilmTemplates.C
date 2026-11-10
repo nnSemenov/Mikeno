@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,7 +29,7 @@ void Foam::solvers::isothermalFilm::constrainField
     FieldType& field
 ) const
 {
-    typename FieldType::Boundary& fieldBf = field.boundaryFieldRef();
+    typename FieldType::BoundaryField& fieldBf = field.boundaryFieldRef();
 
     forAll(wallPatchIDs, i)
     {
@@ -44,25 +44,25 @@ void Foam::solvers::isothermalFilm::constrainField
 }
 
 
-template<class FieldType>
-Foam::tmp<FieldType> Foam::solvers::isothermalFilm::constrainedField
-(
-    const FieldType& field
-) const
-{
-    tmp<FieldType> tresult
-    (
-        FieldType::New
-        (
-            "constrained(" + field.name() + ')',
-            field
-        )
-    );
+// template<class FieldType>
+// Foam::tmp<FieldType> Foam::solvers::isothermalFilm::constrainedField
+// (
+//     const FieldType& field
+// ) const
+// {
+//     tmp<FieldType> tresult
+//     (
+//         FieldType::New
+//         (
+//             word("constrained(", field.name(), ')'),
+//             field
+//         )
+//     );
 
-    constrainField(tresult.ref());
+//     constrainField(tresult.ref());
 
-    return tresult;
-}
+//     return tresult;
+// }
 
 
 template<class FieldType>
@@ -75,7 +75,7 @@ Foam::tmp<FieldType> Foam::solvers::isothermalFilm::constrainedField
     (
         FieldType::New
         (
-            "constrained(" + tfield().name() + ')',
+            word("constrained(", tfield().name(), ')'),
             tfield
         )
     );

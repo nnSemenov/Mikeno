@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -175,11 +175,17 @@ public:
         //- Return the name of this phase
         const word& name() const;
 
-        //- Return the name of the phase for use as the keyword in PtrDictionary
+        //- Return the name of the phase for use as the keyword
         const word& keyword() const;
 
         //- Return the index of the phase
         label index() const;
+
+        //- Return the phase volume fraction
+        const volScalarField& alpha() const
+        {
+            return *this;
+        }
 
         //- Return the system to which this phase belongs
         const phaseSystem& fluid() const;
@@ -204,7 +210,10 @@ public:
         virtual void correct();
 
         //- Correct the continuity error
-        virtual void correctContinuityError(const volScalarField& source);
+        virtual void correctContinuityError
+        (
+            const volInternalScalarField& source
+        );
 
         //- Correct the kinematics
         virtual void correctKinematics();
@@ -249,10 +258,10 @@ public:
             virtual bool isochoric() const = 0;
 
             //- Return the phase dilatation rate (d(alpha)/dt + div(alpha*phi))
-            virtual const autoPtr<volScalarField>& divU() const = 0;
+            virtual const autoPtr<volInternalScalarField>& divU() const = 0;
 
             //- Set the phase dilatation rate (d(alpha)/dt + div(alpha*phi))
-            virtual void divU(tmp<volScalarField> divU) = 0;
+            virtual void divU(tmp<volInternalScalarField> divU) = 0;
 
 
         // Thermo
@@ -310,7 +319,7 @@ public:
             virtual bool inert() const = 0;
 
             //- Return the consumption rate for a specie
-            virtual tmp<volScalarField::Internal> R(const label) const = 0;
+            virtual tmp<volInternalScalarField> R(const label) const = 0;
 
             //- Return consumption rate matrix for a specie
             virtual tmp<fvScalarMatrix> R(volScalarField& Yi) const = 0;
@@ -382,10 +391,10 @@ public:
             virtual tmp<fvVectorMatrix> DUDt() const = 0;
 
             //- Return the continuity error
-            virtual tmp<volScalarField> continuityError() const = 0;
+            virtual tmp<volInternalScalarField> continuityError() const = 0;
 
             //- Return the phase kinetic energy
-            virtual tmp<volScalarField> K() const = 0;
+            virtual const volScalarField& K() const = 0;
 
 
         // Transport

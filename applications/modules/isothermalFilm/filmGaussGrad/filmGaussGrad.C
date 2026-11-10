@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,36 +29,18 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::tmp
-<
-    Foam::VolField<typename Foam::outerProduct<Foam::vector, Type>::type>
->
-Foam::fv::filmGaussGrad<Type>::calcGrad
+void Foam::fv::filmGaussGrad<Type>::calcGrad
 (
-    const VolField<Type>& vsf,
-    const word& name
+    VolInternalField
+    <
+        typename Foam::outerProduct<Foam::vector, Type>::type
+    >& fGrad,
+    const VolField<Type>& vsf
 ) const
 {
     typedef typename outerProduct<vector, Type>::type GradType;
 
     const fvMesh& mesh = vsf.mesh();
-
-    tmp<VolField<GradType>> tfGrad
-    (
-        VolField<GradType>::New
-        (
-            name,
-            mesh,
-            dimensioned<GradType>
-            (
-                "zero",
-                vsf.dimensions()/dimLength,
-                Zero
-            ),
-            extrapolatedCalculatedFvPatchField<GradType>::typeName
-        )
-    );
-    VolField<GradType>& fGrad = tfGrad.ref();
 
     SurfaceField<Type> ssf(this->tinterpScheme_().interpolate(vsf));
 
@@ -68,6 +50,8 @@ Foam::fv::filmGaussGrad<Type>::calcGrad
     const scalarField& V = mesh.V();
 
     Field<GradType>& ifGrad = fGrad;
+    ifGrad = Zero;
+
     const Field<Type>& issf = ssf;
 
     forAll(owner, facei)
@@ -107,12 +91,7 @@ Foam::fv::filmGaussGrad<Type>::calcGrad
         }
     }
 
-    ifGrad /= mesh.V();
-
-    fGrad.correctBoundaryConditions();
-    gaussGrad<Type>::correctBoundaryConditions(vsf, fGrad);
-
-    return tfGrad;
+    ifGrad /= mesh.V().primitiveField();
 }
 
 

@@ -24,10 +24,10 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Field.H"
-#include "FieldM.H"
 #include "units.H"
 #include "dictionary.H"
 #include "contiguous.H"
+#include "expressionAssert.H"
 
 // * * * * * * * * * * * * * * * Static Members  * * * * * * * * * * * * * * //
 
@@ -261,9 +261,53 @@ Foam::Field<Type>::Field
 
 
 template<class Type>
+template<class Expression, class>
+Foam::Field<Type>::Field(const Expression& e)
+:
+    List<Type>(expression::getFirst<expression::Size>(e))
+{
+    #ifdef FULLDEBUG
+    expression::assertSameAllContainerProperty<expression::Size>(e);
+    #endif
+
+    std::copy
+    (
+        expression::beginNew<Type, false>(e),
+        expression::endNew<Type, false>(e),
+        this->begin()
+    );
+}
+
+
+template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::clone() const
 {
     return tmp<Field<Type>>(new Field<Type>(*this));
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::New
+(
+    const tmp<Field<Type>>& tf1,
+    const bool initRet
+)
+{
+    if (tf1.isTmp())
+    {
+        return tf1;
+    }
+    else
+    {
+        tmp<Field<Type>> rtf(new Field<Type>(tf1().size()));
+
+        if (initRet)
+        {
+            rtf.ref() = tf1();
+        }
+
+        return rtf;
+    }
 }
 
 
@@ -476,20 +520,10 @@ void Foam::Field<Type>::reset(const UList<Type>& rhs)
 template<class Type>
 void Foam::Field<Type>::negate()
 {
-    TFOR_ALL_F_OP_OP_F(Type, *this, =, -, Type, *this)
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<typename Foam::Field<Type>::cmptType>>
-Foam::Field<Type>::component
-(
-    const direction d
-) const
-{
-    tmp<Field<cmptType>> Component(new Field<cmptType>(this->size()));
-    ::Foam::component(Component.ref(), *this, d);
-    return Component;
+    forAll(*this, i)
+    {
+        this->operator[](i) = -this->operator[](i);
+    }
 }
 
 
@@ -500,8 +534,10 @@ void Foam::Field<Type>::replace
     const UList<cmptType>& sf
 )
 {
-    TFOR_ALL_F_OP_FUNC_S_F(Type, *this, ., replace, const direction, d,
-        cmptType, sf)
+    forAll(sf, i)
+    {
+        setComponent(this->operator[](i), d) = sf[i];
+    }
 }
 
 
@@ -518,14 +554,61 @@ void Foam::Field<Type>::replace
 
 
 template<class Type>
+template<class Expression, class>
+void Foam::Field<Type>::replace
+(
+    const direction d,
+    const Expression& e
+)
+{
+    forAll(*this, i)
+    {
+        setComponent(this->operator[](i), d) = expression::access(e, i);
+    }
+}
+
+
+template<class Type>
 void Foam::Field<Type>::replace
 (
     const direction d,
     const cmptType& c
 )
 {
-    TFOR_ALL_F_OP_FUNC_S_S(Type, *this, ., replace, const direction, d,
-        cmptType, c)
+    forAll(*this, i)
+    {
+        setComponent(this->operator[](i), d) = c;
+    }
+}
+
+
+template<class Type>
+void Foam::Field<Type>::boundLower(const Type& lower)
+{
+
+    forAll(*this, i)
+    {
+        this->operator[](i) = max(this->operator[](i), lower);
+    }
+}
+
+template<class Type>
+void Foam::Field<Type>::boundUpper(const Type& upper)
+{
+
+    forAll(*this, i)
+    {
+        this->operator[](i) = min(this->operator[](i), upper);
+    }
+}
+
+template<class Type>
+void Foam::Field<Type>::bound(const Type& lower, const Type& upper)
+{
+    forAll(*this, i)
+    {
+        this->operator[](i) = maxMin(this->operator[](i), lower, upper);
+    }
 }
 
 
@@ -543,11 +626,46 @@ VSForm Foam::Field<Type>::block(const label start) const
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::T() const
+void Foam::Field<Type>::append(const Type& t)
 {
-    tmp<Field<Type>> transpose(new Field<Type>(this->size()));
-    ::Foam::T(transpose.ref(), *this);
-    return transpose;
+    List<Type>::append(t);
+}
+
+template<class Type>
+void Foam::Field<Type>::append(const Field<Type>& f)
+{
+    List<Type>::append(f);
+}
+
+template<class Type>
+void Foam::Field<Type>::append(const tmp<Field<Type>>& tf)
+{
+    List<Type>::append(tf);
+    tf.clear();
+}
+
+template<class Type>
+template<class Expression, class>
+void Foam::Field<Type>::append(const Expression& e)
+{
+    // Error if any field in the expression is a different size
+    #ifdef FULLDEBUG
+    expression::assertSameAllContainerProperty<expression::Size>(e);
+    #endif
+
+    // If expression contains this
+    {
+        append(eval(e));
+    }
+    // else
+    // {
+    //     const label s = this->size();
+
+    //     // Resize the field to that of the first field in the expression
+    //     List<Type>::resize(s + expression::getFirst<expression::Size>(e));
+
+    //     std::copy(expression::begin(e), expression::end(e), this->begin()+s);
+    // }
 }
 
 
@@ -610,7 +728,7 @@ void Foam::Field<Type>::operator=(const tmp<Field>& rhs)
 
 
 template<class Type>
-void Foam::Field<Type>::operator=(const Type& t)
+void Foam::Field<Type>::operator=(const typename Foam::Field<Type>::pType& t)
 {
     List<Type>::operator=(t);
 }
@@ -627,16 +745,47 @@ template<class Type>
 template<class Form, class Cmpt, Foam::direction nCmpt>
 void Foam::Field<Type>::operator=(const VectorSpace<Form,Cmpt,nCmpt>& vs)
 {
-    TFOR_ALL_F_OP_S(Type, *this, =, VSType, vs)
+    forAll(*this, i)
+    {
+        this->operator[](i) = vs;
+    }
 }
 
 
-#define COMPUTED_ASSIGNMENT(TYPE, op)                                          \
+template<class Type>
+template<class Expression, class>
+void Foam::Field<Type>::operator=(const Expression& e)
+{
+    // Error if any field in the expression is a different size
+    #ifdef FULLDEBUG
+    expression::assertSameAllContainerProperty<expression::Size>(e);
+    #endif
+
+    // Resize the field to that of the first field in the expression
+    List<Type>::resize(expression::getFirst<expression::Size>(e));
+
+    std::copy(expression::begin(e), expression::end(e), this->begin());
+}
+
+
+#define COMPUTED_ASSIGNMENT(TYPE, PTYPE, op)                                   \
                                                                                \
 template<class Type>                                                           \
 void Foam::Field<Type>::operator op(const UList<TYPE>& f)                      \
 {                                                                              \
-    TFOR_ALL_F_OP_F(Type, *this, op, TYPE, f)                                  \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op f[i];                                           \
+    }                                                                          \
+}                                                                              \
+                                                                               \
+template<class Type>                                                           \
+void Foam::Field<Type>::operator op(const Field<TYPE>& f)                      \
+{                                                                              \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op f[i];                                           \
+    }                                                                          \
 }                                                                              \
                                                                                \
 template<class Type>                                                           \
@@ -647,15 +796,42 @@ void Foam::Field<Type>::operator op(const tmp<Field<TYPE>>& tf)                \
 }                                                                              \
                                                                                \
 template<class Type>                                                           \
-void Foam::Field<Type>::operator op(const TYPE& t)                             \
+template<class Expression, class>                                              \
+void Foam::Field<Type>::operator op(const Expression& e)                       \
 {                                                                              \
-    TFOR_ALL_F_OP_S(Type, *this, op, TYPE, t)                                  \
+    /* Error if the expression is a different size */                          \
+    expression::assertSameAllContainerProperty<expression::Size>               \
+    (                                                                          \
+        *this,                                                                 \
+        e                                                                      \
+    );                                                                         \
+                                                                               \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op expression::access(e, i);                       \
+    }                                                                          \
+}                                                                              \
+                                                                               \
+template<class Type>                                                           \
+void Foam::Field<Type>::operator op(const PTYPE& t)                            \
+{                                                                              \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op t;                                              \
+    }                                                                          \
 }
 
-COMPUTED_ASSIGNMENT(Type, +=)
-COMPUTED_ASSIGNMENT(Type, -=)
-COMPUTED_ASSIGNMENT(scalar, *=)
-COMPUTED_ASSIGNMENT(scalar, /=)
+#define pType_ typename Foam::Field<Type>::pType
+COMPUTED_ASSIGNMENT(Type, pType_, +=)
+COMPUTED_ASSIGNMENT(Type,  pType_, -=)
+#undef pType_
+
+#define cmptType_ typename Foam::Field<Type>::cmptType
+#define pCmptType_ typename Foam::Field<Type>::pCmptType
+COMPUTED_ASSIGNMENT(cmptType_, pCmptType_, *=)
+COMPUTED_ASSIGNMENT(cmptType_, pCmptType_, /=)
+#undef pCmptType_
+#undef cmptType_
 
 #undef COMPUTED_ASSIGNMENT
 
@@ -703,18 +879,8 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const Field<Type>& f)
 }
 
 
-template<class Type>
-Foam::Ostream& Foam::operator<<(Ostream& os, const tmp<Field<Type>>& tf)
-{
-    os  << tf();
-    tf.clear();
-    return os;
-}
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "FieldFunctions.C"
-#include "FieldReductionFunctions.C"
+#include "SubField.H"
 
 // ************************************************************************* //

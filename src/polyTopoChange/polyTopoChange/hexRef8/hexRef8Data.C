@@ -45,7 +45,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
         bool haveFile = returnReduce
         (
             rio.headerOk(),
-            orOp<bool>()
+            orOp()
         );
         if (haveFile)
         {
@@ -63,7 +63,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
         bool haveFile = returnReduce
         (
             rio.headerOk(),
-            orOp<bool>()
+            orOp()
         );
         if (haveFile)
         {
@@ -81,7 +81,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
         bool haveFile = returnReduce
         (
             rio.headerOk(),
-            orOp<bool>()
+            orOp()
         );
         if (haveFile)
         {
@@ -90,7 +90,10 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
                 Info<< "Reading hexRef8 data : " << rio.name() << endl;
             }
 
-            level0EdgePtr_.reset(new localUniformDimensionedScalarField(rio));
+            level0EdgePtr_.reset
+            (
+                new localUniformDimensionedScalarField(rio, dimensions::length)
+            );
         }
     }
     {
@@ -99,7 +102,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
         bool haveFile = returnReduce
         (
             rio.headerOk(),
-            orOp<bool>()
+            orOp()
         );
         if (haveFile)
         {
@@ -272,7 +275,7 @@ void Foam::hexRef8Data::sync(const IOobject& io)
 {
     const polyMesh& mesh = dynamic_cast<const polyMesh&>(io.db());
 
-    bool hasCellLevel = returnReduce(cellLevelPtr_.valid(), orOp<bool>());
+    bool hasCellLevel = returnReduce(cellLevelPtr_.valid(), orOp());
     if (hasCellLevel && !cellLevelPtr_.valid())
     {
         IOobject rio(io);
@@ -281,7 +284,7 @@ void Foam::hexRef8Data::sync(const IOobject& io)
         cellLevelPtr_.reset(new labelIOList(rio, labelList(mesh.nCells(), 0)));
     }
 
-    bool hasPointLevel = returnReduce(pointLevelPtr_.valid(), orOp<bool>());
+    bool hasPointLevel = returnReduce(pointLevelPtr_.valid(), orOp());
     if (hasPointLevel && !pointLevelPtr_.valid())
     {
         IOobject rio(io);
@@ -293,7 +296,7 @@ void Foam::hexRef8Data::sync(const IOobject& io)
         );
     }
 
-    bool hasLevel0Edge = returnReduce(level0EdgePtr_.valid(), orOp<bool>());
+    bool hasLevel0Edge = returnReduce(level0EdgePtr_.valid(), orOp());
     if (hasLevel0Edge)
     {
         // Get master length
@@ -309,13 +312,13 @@ void Foam::hexRef8Data::sync(const IOobject& io)
                 new localUniformDimensionedScalarField
                 (
                     rio,
-                    dimensionedScalar(dimLength, masterLen)
+                    dimensionedScalar(dimensions::length, masterLen)
                 )
             );
         }
     }
 
-    bool hasHistory = returnReduce(refHistoryPtr_.valid(), orOp<bool>());
+    bool hasHistory = returnReduce(refHistoryPtr_.valid(), orOp());
     if (hasHistory && !refHistoryPtr_.valid())
     {
         IOobject rio(io);
@@ -369,24 +372,24 @@ void Foam::hexRef8Data::distribute(const polyDistributionMap& map)
 }
 
 
-bool Foam::hexRef8Data::write() const
+bool Foam::hexRef8Data::write(const bool updateInstance) const
 {
     bool ok = true;
     if (cellLevelPtr_.valid())
     {
-        ok = ok && cellLevelPtr_().write();
+        ok = ok && cellLevelPtr_().write(updateInstance);
     }
     if (pointLevelPtr_.valid())
     {
-        ok = ok && pointLevelPtr_().write();
+        ok = ok && pointLevelPtr_().write(updateInstance);
     }
     if (level0EdgePtr_.valid())
     {
-        ok = ok && level0EdgePtr_().write();
+        ok = ok && level0EdgePtr_().write(updateInstance);
     }
     if (refHistoryPtr_.valid())
     {
-        ok = ok && refHistoryPtr_().write();
+        ok = ok && refHistoryPtr_().write(updateInstance);
     }
     return ok;
 }

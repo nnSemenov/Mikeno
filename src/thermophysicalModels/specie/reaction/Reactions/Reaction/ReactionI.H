@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,16 +28,50 @@ License
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class ThermoType>
-inline Foam::scalar Foam::Reaction<ThermoType>::Tlow() const
+inline void Foam::Reaction<ThermoType>::C
+(
+    const state& s,
+    scalar& Cf,
+    scalar& Cr
+) const
 {
-    return Tlow_;
+    Cf = pow(s.c[lhs()[0].index], lhs()[0].exponent);
+    for(label i=1; i<lhs().size(); i++)
+    {
+        Cf *= pow(s.c[lhs()[i].index], lhs()[i].exponent);
+    }
+
+    Cr = pow(s.c[rhs()[0].index], rhs()[0].exponent);
+    for(label i=1; i<rhs().size(); i++)
+    {
+        Cr *= pow(s.c[rhs()[i].index], rhs()[i].exponent);
+    }
 }
 
 
 template<class ThermoType>
-inline Foam::scalar Foam::Reaction<ThermoType>::Thigh() const
+inline Foam::scalar Foam::Reaction<ThermoType>::omega
+(
+    const state& s,
+    scalar& omegaf,
+    scalar& omegar
+) const
 {
-    return Thigh_;
+    C(s, omegaf, omegar);
+
+    const scalar kf = this->kf(s);
+    omegaf = kf*omegaf;
+    omegar = kr(kf, s)*omegar;
+
+    return omegaf - omegar;
+}
+
+
+template<class ThermoType>
+inline Foam::scalar Foam::Reaction<ThermoType>::omega(const state& s) const
+{
+    scalar omegaf, omegar;
+    return omega(s, omegaf, omegar);
 }
 
 

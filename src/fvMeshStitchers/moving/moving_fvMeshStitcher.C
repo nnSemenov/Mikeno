@@ -26,6 +26,7 @@ License
 #include "moving_fvMeshStitcher.H"
 #include "FvFaceCellWave.H"
 #include "fvMeshSubset.H"
+#include "fviSurfaceIntegrate.H"
 #include "fvmLaplacian.H"
 #include "meshPhiCorrectInfo.H"
 #include "meshPhiPreCorrectInfo.H"
@@ -135,7 +136,7 @@ void Foam::fvMeshStitchers::moving::conformCorrectMeshPhi
 )
 {
     // Add the non-conformal parts of the mesh flux into the original faces
-    surfaceScalarField::Boundary& phiBf = phi.boundaryFieldRef();
+    surfaceScalarField::BoundaryField& phiBf = phi.boundaryFieldRef();
     forAll(phiBf, nccPatchi)
     {
         if (isA<nonConformalFvPatch>(phiBf[nccPatchi].patch()))
@@ -188,8 +189,8 @@ void Foam::fvMeshStitchers::moving::createNonConformalCorrectMeshPhiGeometry
         SfSf.boundaryFieldRef()[errorPatchi] =
             repeat
             (
-                (rootVSmall*origPp.faceNormals())(),
-                (-rootVSmall*origPp.faceNormals())()
+                eval(rootVSmall*origPp.faceNormals())(),
+                eval(-rootVSmall*origPp.faceNormals())()
             );
         CfSf.boundaryFieldRef()[errorPatchi] =
             repeat(origPp.faceCentres());
@@ -256,7 +257,7 @@ Foam::labelHashSet Foam::fvMeshStitchers::moving::ownerCoupledCellSet()
         mesh(),
         ncb.ownerOrigBoundaryEdgeMeshEdge(),
         ownerOrigBoundaryEdgeNSet,
-        plusEqOp<label>(),
+        addEqOp(),
         label(0)
     );
 
@@ -292,10 +293,10 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
     surfaceScalarField& phi
 )
 {
-    const surfaceScalarField::Boundary& magSfBf =
+    const surfaceScalarField::BoundaryField& magSfBf =
         mesh().magSf().boundaryField();
 
-    surfaceScalarField::Boundary& phiBf = phi.boundaryFieldRef();
+    surfaceScalarField::Boundary& phiBf = phi.boundaryRef();
 
     // Step 1: Construct some boundary information
 
@@ -366,7 +367,7 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
         {
             subMeshRegionRefProcs[subMeshRegions[subCelli]] = proci;
         }
-        reduce(subMeshRegionRefProcs, ListOp<minOp<label>>());
+        reduce(subMeshRegionRefProcs, ListOp<minOp>());
 
         forAll(subMeshRegions, subCelli)
         {
@@ -400,7 +401,7 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
 
         if (!isA<nonConformalCoupledFvPatch>(fvp)) continue;
 
-        const nonConformalCoupledFvPatch& nccFvp =
+        const auto& nccFvp =
             refCast<const nonConformalCoupledFvPatch>(fvp);
 
         if (!nccFvp.owner()) continue;
@@ -422,8 +423,8 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
                 magSfBf[nccPatchi][nccPatchFacei];
         }
     }
-    reduce(regionPhiError, ListOp<sumOp<scalar>>());
-    reduce(regionMagSf, ListOp<sumOp<scalar>>());
+    reduce(regionPhiError, ListOp<sumOp>());
+    reduce(regionMagSf, ListOp<sumOp>());
 
     // Synchronise the mesh fluxes, but offset so that the total flux for each
     // region is the same as for the non-synchronised mesh fluxes
@@ -460,8 +461,8 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
     // synchronised faces
 
     // Map volumes to the sub mesh
-    const volScalarField::Internal subV(subsetter.interpolate(mesh().V()));
-    const volScalarField::Internal subV0(subsetter.interpolate(mesh().V0()));
+    const volInternalScalarField subV(subsetter.interpolate(mesh().V()));
+    const volInternalScalarField subV0(subsetter.interpolate(mesh().V0()));
 
     // Map mesh flux to the sub mesh, accumulating when a face is split into
     // multiple non-conformal parts
@@ -471,7 +472,7 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
         (
             "phi",
             subMesh,
-            dimensionedScalar(dimVolume/dimTime, 0)
+            dimensionedScalar(dimensions::volume/dimensions::time, 0)
         )
     );
     forAll(subPhi, subFacei)
@@ -515,9 +516,9 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
     }
 
     // Calculate the volume conservation error for the sub mesh
-    const volScalarField::Internal subVce
+    const volInternalScalarField subVce
     (
-        fvc::surfaceIntegrate(subPhi*subMesh.time().deltaT())
+        fvi::surfaceIntegrate(subPhi*subMesh.time().deltaT())
       - (subV - subV0)/subV
     );
 
@@ -548,7 +549,7 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
             IOobject::NO_WRITE
         ),
         subMesh,
-        dimensionedScalar(dimArea, 0),
+        dimensionedScalar(dimensions::area, 0),
         MeshPhiPatchTypes,
         subMesh.poly().boundary().types()
     );
@@ -648,10 +649,10 @@ void Foam::fvMeshStitchers::moving::unconformInternalFaceCorrectMeshPhi
     List<meshPhiCorrectInfo> subCellCi(subMesh.nCells());
 
     // Calculate the current error in the rate of change of volume
-    const volScalarField::Internal dVdtError
+    const volInternalScalarField dVdtError
     (
         (subV - subV0)/subMesh.time().deltaT()
-      - fvc::surfaceIntegrate(subPhi + subDeltaPhi)*subV
+      - fvi::surfaceIntegrate(subPhi + subDeltaPhi)*subV
     );
 
     // Construct track data for the correction wave
@@ -865,7 +866,7 @@ void Foam::fvMeshStitchers::moving::unconformErrorFaceCorrectMeshPhi
         tmp<surfaceScalarField::Boundary> tphib =
             fvMeshStitcherTools::synchronisedBoundaryField
             (
-                phi.oldTime(i).boundaryField()
+                phi.oldTime(i).boundary()
             );
 
         phiErrorbs.set
@@ -874,10 +875,11 @@ void Foam::fvMeshStitchers::moving::unconformErrorFaceCorrectMeshPhi
             new surfaceScalarField::Boundary
             (
                 surfaceScalarField::Internal::null(),
-                phi.oldTime(i).boundaryField()
+                phi.oldTime(i).boundary()
             )
         );
-        phiErrorbs[i] = phi.oldTime(i).boundaryField() - tphib();
+        phiErrorbs[i] =
+            phi.oldTime(i).boundaryField() - tphib().boundaryField();
 
         phi.oldTimeRef(i).boundaryFieldRef() = tphib;
     }
@@ -929,10 +931,10 @@ void Foam::fvMeshStitchers::moving::unconformErrorFaceCorrectMeshPhi
         (
             "nccMeshMagUf",
             mesh(),
-            dimensionedScalar(dimVelocity, Zero)
+            dimensionedScalar(dimensions::velocity, Zero)
         );
     surfaceScalarField::Boundary& tnccMeshMagUfb =
-        tnccMeshMagUf.ref().boundaryFieldRef();
+        tnccMeshMagUf.ref().boundaryRef();
     forAll(mesh().boundary(), nccPatchi)
     {
         const fvPatch& fvp = mesh().boundary()[nccPatchi];
@@ -965,8 +967,8 @@ void Foam::fvMeshStitchers::moving::unconformErrorFaceCorrectMeshPhi
     tnccMeshMagUfb =
         max
         (
-            tnccMeshMagUfb,
-            tnccMeshMagUfb.boundaryNeighbourField()()
+            tnccMeshMagUfb.boundaryField(),
+            tnccMeshMagUfb.boundaryNeighbourField()().boundaryField()
         );
     surfaceScalarField::Boundary meshMagUfb
     (
@@ -1030,7 +1032,7 @@ void Foam::fvMeshStitchers::moving::unconformCorrectMeshPhi
     // Resize the patched in the flux field
     for (label i = 0; i <= phi.nOldTimes(false); ++ i)
     {
-        surfaceScalarField::Boundary& phi0Bf =
+        surfaceScalarField::BoundaryField& phi0Bf =
             phi.oldTimeRef(i).boundaryFieldRefNoStoreOldTimes();
 
         forAll(polyFacesBf, ncPatchi)
@@ -1053,8 +1055,8 @@ void Foam::fvMeshStitchers::moving::unconformCorrectMeshPhi
         phi.oldTimeRef(i).boundaryFieldRef() =
             fvMeshStitcherTools::unconformedBoundaryField
             (
-                phi.oldTime(i).boundaryField(),
-                phi.oldTime(i).boundaryField()
+                phi.oldTime(i).boundary(),
+                phi.oldTime(i).boundary()
             );
     }
 

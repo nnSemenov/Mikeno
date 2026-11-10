@@ -31,7 +31,7 @@ License
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void Foam::externalTemperatureFvPatchScalarField::plusEqOp
+void Foam::externalTemperatureFvPatchScalarField::addEqOp
 (
     tmp<scalarField>& tf,
     const scalar d
@@ -48,7 +48,7 @@ void Foam::externalTemperatureFvPatchScalarField::plusEqOp
 }
 
 
-void Foam::externalTemperatureFvPatchScalarField::plusEqOp
+void Foam::externalTemperatureFvPatchScalarField::addEqOp
 (
     tmp<scalarField>& tf,
     const tmp<scalarField>& tdf
@@ -87,7 +87,7 @@ void Foam::externalTemperatureFvPatchScalarField::getKappa
 
     T = tmp<scalarField>(*this);
 
-    plusEqOp(sumq, ttm.qCorr(patch().index()));
+    addEqOp(sumq, ttm.qCorr(patch().index()));
 }
 
 
@@ -106,7 +106,7 @@ externalTemperatureFvPatchScalarField
     Q_
     (
         haveQ_
-      ? Function1<scalar>::New("Q", time().userUnits(), dimPower, dict)
+      ? Function1<scalar>::New("Q", time().userUnits(), dimensions::power, dict)
       : autoPtr<Function1<scalar>>()
     ),
     haveq_(dict.found("q")),
@@ -117,7 +117,7 @@ externalTemperatureFvPatchScalarField
         (
             "q",
             time().userUnits(),
-            dimPower/dimArea,
+            dimensions::heatFluxDensity,
             dict
         )
       : autoPtr<Function1<scalar>>()
@@ -130,7 +130,7 @@ externalTemperatureFvPatchScalarField
             iF.name(),
             "h",
             p,
-            dimPower/dimArea/dimTemperature,
+            dimensions::heatFluxDensity/dimensions::temperature,
             dict
         )
       : nullptr
@@ -149,7 +149,7 @@ externalTemperatureFvPatchScalarField
         (
             "Ta",
             time().userUnits(),
-            dimTemperature,
+            dimensions::temperature,
             dict
         ).ptr()
       : nullptr
@@ -161,7 +161,13 @@ externalTemperatureFvPatchScalarField
     (
         qrName_ != word::null
       ? dict.found("qrPrevious")
-      ? scalarField("qrPrevious", dimPower/dimArea, dict, p.size())
+      ? scalarField
+        (
+            "qrPrevious",
+            dimensions::heatFluxDensity,
+            dict,
+            p.size()
+        )
       : scalarField(p.size(), 0)
       : scalarField()
     )
@@ -186,7 +192,7 @@ externalTemperatureFvPatchScalarField
             scalarField
             (
                 "refGradient",
-                iF.dimensions()/dimLength,
+                iF.dimensions()/dimensions::length,
                 dict,
                 p.size()
             );
@@ -223,7 +229,8 @@ externalTemperatureFvPatchScalarField
       ? new FunctionalDimensionedField<scalar, fvPatch>
         (
             ptf.h_(),
-            p
+            p,
+            mapper
         )
       : nullptr
     ),
@@ -303,17 +310,17 @@ void Foam::externalTemperatureFvPatchScalarField::map
 {
     mixedFvPatchScalarField::map(ptf, mapper);
 
+    const externalTemperatureFvPatchScalarField& etptf =
+        refCast<const externalTemperatureFvPatchScalarField>(ptf);
+
     if (h_.valid())
     {
-        h_->map(!mapper.direct());
+        h_->map(etptf.h_(), mapper);
     }
-
-    const externalTemperatureFvPatchScalarField& tiptf =
-        refCast<const externalTemperatureFvPatchScalarField>(ptf);
 
     if (qrName_ != word::null)
     {
-        mapper(qrPrevious_, tiptf.qrPrevious_);
+        mapper(qrPrevious_, etptf.qrPrevious_);
     }
 }
 
@@ -361,11 +368,11 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
     // Add any user specified heat fluxes
     if (haveQ_)
     {
-        plusEqOp(sumq, Q_->value(t)/gSum(patch().magSf()));
+        addEqOp(sumq, Q_->value(t)/gSum(patch().magSf()));
     }
     if (haveq_)
     {
-        plusEqOp(sumq, q_->value(t));
+        addEqOp(sumq, q_->value(t));
     }
 
     // Add the (relaxed) radiative heat flux
@@ -378,7 +385,7 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
 
         qrPrevious_ = qr;
 
-        plusEqOp(sumq, qr);
+        addEqOp(sumq, qr);
     }
 
     // Evaluate the ambient temperature
@@ -389,11 +396,11 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
     if (h_.valid())
     {
         h_->update();
-        plusEqOp(hEff, h_());
+        addEqOp(hEff, h_());
     }
     if (haveEmissivity_)
     {
-        plusEqOp
+        addEqOp
         (
             hEff,
             emissivity_
@@ -406,8 +413,8 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
     // If we have a heat transfer coefficient then add it to the kappa sums
     if (hEff.valid())
     {
-        plusEqOp(sumKappaByDelta, hEff());
-        plusEqOp(sumKappaTcByDelta, hEff*Ta);
+        addEqOp(sumKappaByDelta, hEff());
+        addEqOp(sumKappaTcByDelta, hEff*Ta);
     }
 
     // Set the mixed parameters
@@ -433,7 +440,7 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
     tmp<scalarField> trefValue;
     if (sumKappaByDelta.valid())
     {
-        plusEqOp
+        addEqOp
         (
             trefValue,
             max(sumKappaTcByDelta, small*kappaByDelta*patchInternalField())
@@ -442,7 +449,7 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
     }
     if (sumq.valid())
     {
-        plusEqOp(trefValue, sumq()/kappaPlusSumKappaByDelta());
+        addEqOp(trefValue, sumq()/kappaPlusSumKappaByDelta());
     }
     if (trefValue.valid())
     {
@@ -482,9 +489,9 @@ void Foam::externalTemperatureFvPatchScalarField::updateCoeffs()
             << this->internalField().name() << " :"
             << " heat transfer rate:" << Q
             << " walltemperature "
-            << " min:" << gMin(*this)
-            << " max:" << gMax(*this)
-            << " avg:" << gAverage(*this)
+            << " min:" << gMin(field())
+            << " max:" << gMax(field())
+            << " avg:" << gAverage(field())
             << endl;
     }
 }
@@ -499,12 +506,18 @@ void Foam::externalTemperatureFvPatchScalarField::write
 
     if (haveQ_)
     {
-        writeEntry(os, time().userUnits(), dimPower, Q_());
+        writeEntry(os, time().userUnits(), dimensions::power, Q_());
     }
 
     if (haveq_)
     {
-        writeEntry(os, time().userUnits(), dimPower/dimArea, q_());
+        writeEntry
+        (
+            os,
+            time().userUnits(),
+            dimensions::heatFluxDensity,
+            q_()
+        );
     }
 
     if (h_.valid())
@@ -519,7 +532,7 @@ void Foam::externalTemperatureFvPatchScalarField::write
 
     if (h_.valid() || haveEmissivity_)
     {
-        writeEntry(os, time().userUnits(), dimTemperature, Ta_());
+        writeEntry(os, time().userUnits(), dimensions::temperature, Ta_());
     }
 
     writeEntryIfDifferent(os, "relaxation", scalar(1), relax_);

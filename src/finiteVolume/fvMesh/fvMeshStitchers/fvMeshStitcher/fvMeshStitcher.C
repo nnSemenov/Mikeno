@@ -24,8 +24,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvMeshStitcher.H"
+#include "boolListOps.H"
 #include "globalIndex.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "MultiRegionList.H"
 #include "meshObjects.H"
 #include "movingWallVelocityFvPatchVectorField.H"
@@ -62,21 +63,6 @@ edge meshEdge
         p.meshPoints()[p.edges()[edgei][0]],
         p.meshPoints()[p.edges()[edgei][1]]
     );
-}
-
-
-bool any(const boolList& l)
-{
-    bool result = false;
-    forAll(l, i)
-    {
-        if (l[i])
-        {
-            result = true;
-            break;
-        }
-    }
-    return returnReduce(result, andOp<bool>());
 }
 
 }
@@ -229,7 +215,7 @@ bool Foam::fvMeshStitcher::loadPolyFacesBf
 
             polyFacesBf.reset
             (
-                surfaceLabelField(polyFacesBfIO, mesh_).boundaryField()
+                surfaceLabelField(polyFacesBfIO, mesh_).boundary()
             );
 
             loaded = true;
@@ -268,7 +254,7 @@ bool Foam::fvMeshStitcher::loadPolyFacesBf
             new surfaceLabelField::Boundary
             (
                 surfaceLabelField::null(),
-                surfaceLabelField(io, ncmwFvp.nbrMesh()).boundaryField()
+                surfaceLabelField(io, ncmwFvp.nbrMesh()).boundary()
             )
         );
     }
@@ -319,7 +305,7 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
         (
             "origSf",
             mesh_,
-            dimensionedVector("NaN", dimArea, vector::uniform(NaN))
+            dimensionedVector("NaN", dimensions::area, vector::uniform(NaN))
         )
     );
     surfaceVectorField origCf
@@ -328,7 +314,7 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
         (
             "origCf",
             mesh_,
-            dimensionedVector("NaN", dimLength, vector::uniform(NaN))
+            dimensionedVector("NaN", dimensions::length, vector::uniform(NaN))
         )
     );
 
@@ -341,7 +327,6 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
         {
             const nonConformalCoupledFvPatch& nccFvp =
                 refCast<const nonConformalCoupledFvPatch>(fvp);
-
             origFaces.boundaryFieldRef()[patchi] =
                 polyFacesBf[patchi] - nccFvp.origPatch().start();
         }
@@ -357,11 +342,9 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
         }
     }
     origFaces.boundaryFieldRef() =
-        origFaces.boundaryField().boundaryNeighbourField();
-    origSf.boundaryFieldRef() =
-        origSf.boundaryField().boundaryNeighbourField();
-    origCf.boundaryFieldRef() =
-        origCf.boundaryField().boundaryNeighbourField();
+        origFaces.boundary().boundaryNeighbourField();
+    origSf.boundaryFieldRef() = origSf.boundary().boundaryNeighbourField();
+    origCf.boundaryFieldRef() = origCf.boundary().boundaryNeighbourField();
 
     // Communicate orig properties across mapped walls
     forAll(mesh_.boundary(), patchi)
@@ -385,7 +368,7 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
             nonConformalMappedFvPatchBase::map
             (
                 nbrPolyFacesPf,
-                nbrPolyFacesPf - nbrPatch.origPatch().start(),
+                labelField(nbrPolyFacesPf - nbrPatch.origPatch().start()),
                 polyFacesBf[patchi]
             );
         origSf.boundaryFieldRef()[patchi] =
@@ -439,19 +422,19 @@ void Foam::fvMeshStitcher::getOrigNbrBfs
         new surfaceLabelField::Boundary
         (
             surfaceLabelField::null(),
-            origFaces.boundaryField()
+            origFaces.boundary()
         );
     tOrigSfNbrBf =
         new surfaceVectorField::Boundary
         (
             surfaceVectorField::null(),
-            origSf.boundaryField()
+            origSf.boundary()
         );
     tOrigCfNbrBf =
         new surfaceVectorField::Boundary
         (
             surfaceVectorField::null(),
-            origCf.boundaryField()
+            origCf.boundary()
         );
 }
 
@@ -613,8 +596,8 @@ void Foam::fvMeshStitcher::matchIndices
     }
 
     // Report if changes have been made
-    reduce(nCouplesRemoved, sumOp<label>());
-    reduce(nCouplesAdded, sumOp<label>());
+    reduce(nCouplesRemoved, sumOp());
+    reduce(nCouplesAdded, sumOp());
     if ((nCouplesRemoved || nCouplesAdded) && owner)
     {
         Info<< indent << nCouplesRemoved << '/' << nCouplesAdded
@@ -1060,7 +1043,7 @@ Foam::fvMeshStitcher::calculateOwnerOrigBoundaryEdgeParts
         mesh_,
         ownerOrigBoundaryPointMeshPoint,
         ownerOrigBoundaryPointIndices,
-        minEqOp<label>(),
+        minEqOp(),
         labelMax
     );
 
@@ -1087,7 +1070,7 @@ Foam::fvMeshStitcher::calculateOwnerOrigBoundaryEdgeParts
         mesh_,
         ownerOrigBoundaryEdgeMeshEdge,
         ownerOrigBoundaryEdgeNParts,
-        plusEqOp<label>(),
+        addEqOp(),
         label(0)
     );
     syncTools::syncEdgeList
@@ -1095,7 +1078,7 @@ Foam::fvMeshStitcher::calculateOwnerOrigBoundaryEdgeParts
         mesh_,
         ownerOrigBoundaryEdgeMeshEdge,
         ownerOrigBoundaryEdgeParts,
-        plusEqOp<part>(),
+        addEqOp(),
         part(),
         []
         (
@@ -1209,7 +1192,7 @@ void Foam::fvMeshStitcher::applyOwnerOrigBoundaryEdgeParts
         mesh_,
         ownerOrigBoundaryEdgeMeshEdge,
         ownerOrigBoundaryEdgeNOrigFaces,
-        plusEqOp<label>(),
+        addEqOp(),
         label(0)
     );
 
@@ -1358,7 +1341,7 @@ void Foam::fvMeshStitcher::applyOwnerOrigBoundaryEdgeParts
     if (debug)
     {
         const surfaceLabelField::Boundary& changedBf =
-            tChanged->boundaryField();
+            tChanged->boundary();
 
         const surfaceLabelField::Boundary changedNbrBf
         (
@@ -1470,8 +1453,8 @@ void Foam::fvMeshStitcher::intersect
         ncb.ownerOrigBoundaryMeshEdges();
 
     // Alias the boundary geometry fields
-    surfaceVectorField::Boundary& SfBf = SfSf.boundaryFieldRef();
-    surfaceVectorField::Boundary& CfBf = CfSf.boundaryFieldRef();
+    surfaceVectorField::Boundary& SfBf = SfSf.boundaryRef();
+    surfaceVectorField::Boundary& CfBf = CfSf.boundaryRef();
 
     // Create storage for and initialise the edge parts of source patches
     List<List<part>> patchEdgeParts(mesh_.boundary().size());
@@ -1569,17 +1552,19 @@ void Foam::fvMeshStitcher::intersect
         const polyPatch& origPp =
             refCast<const nonConformalFvPatch>(fvp).origPatch().poly();
 
+        const labelField polyFacesPf(polyFacesBf[patchi] - origPp.start());
+
         SfBf[patchi] ==
             vectorField
             (
                 small*origPp.faceAreas(),
-                polyFacesBf[patchi] - origPp.start()
+                polyFacesPf
             );
         CfBf[patchi] ==
             vectorField
             (
                 origPp.faceCentres(),
-                polyFacesBf[patchi] - origPp.start()
+                polyFacesPf
             );
     }
 
@@ -1648,13 +1633,13 @@ void Foam::fvMeshStitcher::intersect
 }
 
 
-bool Foam::fvMeshStitcher::disconnectThis
+void Foam::fvMeshStitcher::disconnectThis
 (
     const bool changing,
     const bool geometric
 )
 {
-    if (!stitches() || mesh_.conformal()) return false;
+    if (!stitches() || mesh_.conformal()) return;
 
     // Determine which patches are coupled
     const boolList patchCoupleds =
@@ -1697,19 +1682,17 @@ bool Foam::fvMeshStitcher::disconnectThis
     meshObjects::topoChange<lduMesh>(mesh_, map);
 
     const_cast<Time&>(mesh_.time()).functionObjects().topoChange(map);
-
-    return true;
 }
 
 
-bool Foam::fvMeshStitcher::connectThis
+void Foam::fvMeshStitcher::connectThis
 (
     const bool changing,
     const bool geometric,
     const bool load
 )
 {
-    if (!stitches() || !mesh_.conformal()) return false;
+    if (!stitches() || !mesh_.conformal()) return;
 
     // Create a copy of the conformal poly face addressing
     IOobject polyFacesBfIO(word::null, mesh_.pointsInstance(), mesh_);
@@ -1728,8 +1711,10 @@ bool Foam::fvMeshStitcher::connectThis
         (geometric || !matchTopology)
       ? this->patchCoupleds()
       : boolList(mesh_.boundary().size(), false);
+    const bool anyPatchCoupleds = gAny(patchCoupleds);
 
     // Access all the intersections in advance. Makes the log nicer.
+    bool anyIntersecting = false;
     forAll(mesh_.boundary(), patchi)
     {
         if (!patchCoupleds[patchi]) continue;
@@ -1743,7 +1728,13 @@ bool Foam::fvMeshStitcher::connectThis
 
             if (nccFvp.owner())
             {
-                nccFvp.nonConformalCyclicPoly().intersection();
+                anyIntersecting =
+                    nccFvp.nonConformalCyclicPoly().intersection
+                    (
+                        changing
+                      ? patchToPatch::report::extent
+                      : patchToPatch::report::all
+                    ).intersecting() || anyIntersecting;
             }
         }
         else if (isA<nonConformalProcessorCyclicFvPatch>(fvp))
@@ -1756,7 +1747,13 @@ bool Foam::fvMeshStitcher::connectThis
             const nonConformalMappedWallFvPatch& ownerNcmwFvp =
                 ncmwFvp.owner() ? ncmwFvp : ncmwFvp.nbrPatch();
 
-            ownerNcmwFvp.nonConformalMappedWallPoly().intersection();
+            anyIntersecting =
+                ownerNcmwFvp.nonConformalMappedWallPoly().intersection
+                (
+                    changing
+                  ? patchToPatch::report::extent
+                  : patchToPatch::report::all
+                ).intersecting() || anyIntersecting;
         }
         else
         {
@@ -1766,14 +1763,21 @@ bool Foam::fvMeshStitcher::connectThis
         }
     }
 
-    if (any(patchCoupleds))
+    if (anyPatchCoupleds)
     {
-        Info<< indent << typeName << ": Connecting";
+        Info<< indent << typeName << ":";
         if (mesh_.name() != polyMesh::defaultRegion)
         {
-            Info<< " region " << mesh_.name();
+            Info<< ' ' << mesh_.name();
         }
+
         Info<< incrIndent << endl;
+
+        if (!anyIntersecting)
+        {
+            Info<< indent << Warning.title().c_str()
+                << "No intersection" << endl;
+        }
     }
 
     // Create copies of geometry fields to be modified
@@ -1827,9 +1831,9 @@ bool Foam::fvMeshStitcher::connectThis
     // Prevent hangs caused by processor cyclic patches using mesh geometry
     mesh_.deltaCoeffs();
 
-    if (any(patchCoupleds))
+    if (anyPatchCoupleds)
     {
-        const volScalarField::Internal o(openness());
+        const scalarField o(openness());
         const scalar gMaxO = gMax(o);
         Info<< indent << "Cell min/average/max openness = "
             << gMin(o) << '/' << gAverage(o) << '/' << gMaxO << endl;
@@ -1844,7 +1848,7 @@ bool Foam::fvMeshStitcher::connectThis
         {
             for (label i = 0; i <= mesh_.phi().nOldTimes(false); ++ i)
             {
-                const volScalarField::Internal vce(volumeConservationError(i));
+                const scalarField vce(volumeConservationError(i));
                 const scalar gMinVce = gMin(vce);
                 const scalar gMaxVce = gMax(vce);
                 Info<< indent << "Cell min/average/max ";
@@ -1862,16 +1866,16 @@ bool Foam::fvMeshStitcher::connectThis
             }
         }
 
-        if (mesh_.moving())
+        if (debug && mesh_.moving())
         {
             // Create a boundary field of the imbalance between the mesh fluxes
             // on either side of interfaces
             surfaceScalarField::Boundary mfe
             (
                 surfaceScalarField::Internal::null(),
-                mesh_.phi().boundaryField()
+                mesh_.phi().boundary()
             );
-            mfe += mesh_.phi().boundaryField().boundaryNeighbourField();
+            mfe += mesh_.phi().boundary().boundaryNeighbourField();
 
             // Determine the number of non-processor patches
             label nNonProcPatches = 0;
@@ -1913,17 +1917,17 @@ bool Foam::fvMeshStitcher::connectThis
                 if (nccPatchi != -1)
                 {
                     minMfe[nccPatchi] =
-                        min(minMfe[nccPatchi], min(mfe[patchi]));
-                    sumMfe[nccPatchi] += sum(mfe[patchi]);
+                        min(minMfe[nccPatchi], min(mfe[patchi].field()));
+                    sumMfe[nccPatchi] += sum(mfe[patchi].field());
                     nSumMfe[nccPatchi] += mfe[patchi].size();
                     maxMfe[nccPatchi] =
-                        max(maxMfe[nccPatchi], max(mfe[patchi]));
+                        max(maxMfe[nccPatchi], max(mfe[patchi].field()));
                 }
             }
-            reduce(minMfe, ListOp<minOp<scalar>>());
-            reduce(sumMfe, ListOp<sumOp<scalar>>());
-            reduce(nSumMfe, ListOp<sumOp<scalar>>());
-            reduce(maxMfe, ListOp<maxOp<scalar>>());
+            reduce(minMfe, ListOp<minOp>());
+            reduce(sumMfe, ListOp<sumOp>());
+            reduce(nSumMfe, ListOp<sumOp>());
+            reduce(maxMfe, ListOp<maxOp>());
 
             // Report
             forAll(minMfe, patchi)
@@ -1946,18 +1950,23 @@ bool Foam::fvMeshStitcher::connectThis
             }
         }
 
-        const volScalarField::Internal pvf(projectedVolumeFraction());
+        const scalarField pvf(projectedVolumeFraction());
         const scalar gMaxPvf = gMax(pvf);
-        Info<< indent << "Cell min/average/max projected volume fraction = "
-            << gMin(pvf) << '/' << gAverage(pvf) << '/' << gMaxPvf << endl;
-        if (gMaxPvf > minWarnProjectedVolumeFraction_)
+        Info<< indent;
+        if (changing && gMaxPvf > minWarnProjectedVolumeFraction_)
         {
-            WarningInFunction
-                << "Maximum projected volume fraction " << gMaxPvf << " may "
-                << "cause instability." << nl << indent << "Volumetric "
-                << "distortion can be minimised by making the side of the "
-                << "interface" << nl << indent << "with smaller or more "
-                << "finely layered cells the neighbour." << nl << indent
+            Info<< Warning.title().c_str();
+        }
+        Info<< "Cell min/average/max projected volume fraction = "
+            << gMin(pvf) << '/' << gAverage(pvf) << '/' << gMaxPvf << endl;
+        if (!changing && gMaxPvf > minWarnProjectedVolumeFraction_)
+        {
+            Info<< indent << Warning.title().c_str()
+                << "Maximum projected volume fraction " << gMaxPvf
+                << " may cause" << nl << indent << "instability. Volumetric "
+                << "distortion can be minimised by making the side of" << nl
+                << indent << "the interface with smaller or more finely "
+                << "layered cells the neighbour." << nl << indent
                 << "This is done by specifying this side second to "
                 << "createNonConformalCouples;" << nl << indent << "either on "
                 << "the command line, or in the patches (and regions) entries "
@@ -1966,7 +1975,7 @@ bool Foam::fvMeshStitcher::connectThis
         }
     }
 
-    if (any(patchCoupleds))
+    if (anyPatchCoupleds)
     {
         Info<< decrIndent;
     }
@@ -1978,8 +1987,6 @@ bool Foam::fvMeshStitcher::connectThis
     meshObjects::topoChange<lduMesh>(mesh_, map);
 
     const_cast<Time&>(mesh_.time()).functionObjects().topoChange(map);
-
-    return true;
 }
 
 
@@ -2004,7 +2011,7 @@ void Foam::fvMeshStitcher::preConformVolFields()
 template<>
 void Foam::fvMeshStitcher::postUnconformSurfaceFields<Foam::vector>()
 {
-    if (mesh_.topoChanged())
+    if (mesh_.poly().topoChanged())
     {
         UPtrList<surfaceVectorField> Ufs(mesh_.curFields<surfaceVectorField>());
 
@@ -2024,7 +2031,7 @@ void Foam::fvMeshStitcher::postUnconformSurfaceFields<Foam::vector>()
     {
         conformedFvsPatchField<vector>::unconform
         (
-            fields[i].boundaryFieldRefNoStoreOldTimes()
+            fields[i].boundaryRefNoStoreOldTimes()
         );
     }
 }
@@ -2063,7 +2070,7 @@ void Foam::fvMeshStitcher::postUnconformVolFields()
             const label errorPatchi = errorPatchIndices[i];
             const label origPatchi = origPatchIndices[i];
 
-            typename volVectorField::Patch& origUp =
+            typename volVectorField::PatchField& origUp =
                 U.boundaryFieldRefNoStoreOldTimes()[origPatchi];
 
             if
@@ -2185,10 +2192,15 @@ bool Foam::fvMeshStitcher::geometric() const
         const polyPatch& origPp =
             refCast<const nonConformalFvPatch>(fvp).origPatch().poly();
 
+        const labelField polyFacesPf
+        (
+            mesh_.polyFacesBf()[patchi] - origPp.start()
+        );
+
         const scalarField origMagSfp
         (
             origPp.magFaceAreas(),
-            mesh_.polyFacesBf()[patchi] - origPp.start()
+            polyFacesPf
         );
 
         if (max(magSfp/origMagSfp) > rootSmall)
@@ -2197,9 +2209,9 @@ bool Foam::fvMeshStitcher::geometric() const
         }
     }
 
-    reduce(result, orOp<bool>());
+    reduce(result, orOp());
 
-    return returnReduce(result, orOp<bool>());
+    return returnReduce(result, orOp());
 }
 
 
@@ -2210,12 +2222,12 @@ Foam::fvMeshStitcher::openness() const
         DimensionedField<scalar, fvMesh>::New
         (
             "openness",
-            mag(fvc::surfaceIntegrate(mesh_.Sf()))*mesh_.V()
+            mag(fvi::surfaceIntegrate(mesh_.Sf()))*mesh_.V()
            /max
             (
-                mag(fvc::surfaceSum(cmptMag(mesh_.Sf())))(),
-                (small*sqr(cbrt(mesh_.V())))()
-            )()
+                mag(fvi::surfaceSum(cmptMag(mesh_.Sf()))()),
+                (small*sqr(cbrt(mesh_.V())))
+            )
         );
 }
 
@@ -2235,14 +2247,14 @@ Foam::fvMeshStitcher::volumeConservationError(const label n) const
     const dimensionedScalar deltaT =
         n == 0 ? mesh_.time().deltaT() : mesh_.time().deltaT0();
 
-    const volScalarField::Internal& V = n == 0 ? mesh_.V() : mesh_.V0();
-    const volScalarField::Internal& V0 = n == 0 ? mesh_.V0() : mesh_.V00();
+    const volInternalScalarField& V = n == 0 ? mesh_.V() : mesh_.V0();
+    const volInternalScalarField& V0 = n == 0 ? mesh_.V0() : mesh_.V00();
 
     return
         DimensionedField<scalar, fvMesh>::New
         (
             "volumeConservationError" + word(n == 0 ? "" : "_0"),
-            fvc::surfaceIntegrate(phi*deltaT)() - (V - V0)/mesh_.V()
+            fvi::surfaceIntegrate(phi*deltaT)() - (V - V0)/mesh_.V()
         );
 }
 
@@ -2256,7 +2268,7 @@ Foam::fvMeshStitcher::projectedVolumeFraction() const
             "projectedVolumeFraction",
             mag
             (
-                fvc::surfaceIntegrate(mesh_.Sf() & mesh_.Cf())
+                fvi::surfaceIntegrate(mesh_.Sf() & mesh_.Cf())
                /mesh_.nSolutionD()
               - 1
             )
@@ -2304,35 +2316,17 @@ bool Foam::fvMeshStitcher::stitches() const
 }
 
 
-bool Foam::fvMeshStitcher::disconnect
+void Foam::fvMeshStitcher::disconnect
 (
     const bool changing,
     const bool geometric
 )
 {
-    if (!changing)
-    {
-        return disconnectThis(changing, geometric);
-    }
-
-    // Get all the connected region meshes
-    MultiRegionUList<fvMesh> regionMeshes(this->regionMeshes());
-
-    // Disconnect them all
-    bool result = false;
-    forAll(regionMeshes, i)
-    {
-        if (regionMeshes[i]().stitcher().disconnectThis(changing, geometric))
-        {
-            result = true;
-        }
-    }
-
-    return result;
+    disconnectThis(changing, geometric);
 }
 
 
-bool Foam::fvMeshStitcher::connect
+void Foam::fvMeshStitcher::connect
 (
     const bool changing,
     const bool geometric,
@@ -2341,7 +2335,9 @@ bool Foam::fvMeshStitcher::connect
 {
     if (!changing)
     {
-        return connectThis(changing, geometric, load);
+        connectThis(changing, geometric, load);
+
+        return;
     }
 
     // Connection requires all regions to be available and at a consistent
@@ -2349,28 +2345,16 @@ bool Foam::fvMeshStitcher::connect
     // ready, then this function just flips the ready flag for this region. If
     // they are all ready, then this function stitches all of them.
 
-    ready_ = true;
-
     // Get all the connected region meshes
     MultiRegionUList<fvMesh> regionMeshes(this->regionMeshes());
+
+    // Set this mesh as being ready
+    ready_ = true;
 
     // If any mesh is not ready, then don't do anything
     forAll(regionMeshes, i)
     {
-        if (!regionMeshes[i]().stitcher().ready_)
-        {
-            return false;
-        }
-    }
-
-    // All meshes are ready, so connect all of them up
-    bool result = false;
-    forAll(regionMeshes, i)
-    {
-        if (regionMeshes[i]().stitcher().connectThis(changing, geometric, load))
-        {
-            result = true;
-        }
+        if (!regionMeshes[i]().stitcher().ready_) return;
     }
 
     // Set all meshes as not ready, in preparation for the next iteration
@@ -2379,7 +2363,25 @@ bool Foam::fvMeshStitcher::connect
         regionMeshes[i]().stitcher().ready_ = false;
     }
 
-    return result;
+    // If everything is still non-conformal, that means none of the region
+    // meshes has changed, so there is nothing to do
+    bool allNonConformal = true;
+    forAll(regionMeshes, i)
+    {
+        allNonConformal = allNonConformal && !regionMeshes[i]().conformal();
+    }
+    if (allNonConformal) return;
+
+    // Un-stitch any meshes which are still non-conformal, and then stitch
+    // everything back together again
+    forAll(regionMeshes, i)
+    {
+        regionMeshes[i]().stitcher().disconnectThis(changing, geometric);
+    }
+    forAll(regionMeshes, i)
+    {
+        regionMeshes[i]().stitcher().connectThis(changing, geometric, load);
+    }
 }
 
 

@@ -26,6 +26,8 @@ License
 #include "DimensionedFieldFunction.H"
 #include "DimensionedFvPatchFields.H"
 #include "fvMesh.H"
+#include "fvPatchField.H"
+#include "fvsPatchField.H"
 #include "addToRunTimeSelectionTable.H"
 
 #include "TimeFunction_DimensionedFieldFunction.H"
@@ -33,44 +35,22 @@ License
 #include "DistanceFunction_DimensionedFieldFunction.H"
 #include "Coded_DimensionedFieldFunction.H"
 #include "Surfaces_DimensionedFieldFunction.H"
+#include "FieldFunction_DimensionedFieldFunction.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #define makeDimensionedFvPatchFieldFunctions(Type, nullArg)                    \
                                                                                \
-    typedef DimensionedField<Type, fvPatch, Field>                             \
-        DimensionedField##Type##fvPatch##Field;                                \
-    defineDimensionedFieldFunction                                             \
-    (                                                                          \
-        DimensionedField##Type##fvPatch##Field                                 \
-    );                                                                         \
+    typedef DimensionedField<Type, fvPatch, Field> Type##FvPatch;              \
+    defineDimensionedFieldFunction( Type##FvPatch);                            \
     namespace DimensionedFieldFunctions                                        \
     {                                                                          \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            TimeFunction,                                                      \
-            DimensionedField##Type##fvPatch##Field                             \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Zonal,                                                             \
-            DimensionedField##Type##fvPatch##Field                             \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            DistanceFunction,                                                  \
-            DimensionedField##Type##fvPatch##Field                             \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Coded,                                                             \
-            DimensionedField##Type##fvPatch##Field                             \
-        );                                                                     \
-        addDimensionedFieldFunction                                            \
-        (                                                                      \
-            Surfaces,                                                          \
-            DimensionedField##Type##fvPatch##Field                             \
-        );                                                                     \
+        addDimensionedFieldFunction(TimeFunction, Type##FvPatch);              \
+        addDimensionedFieldFunction(Zonal, Type##FvPatch);                     \
+        addDimensionedFieldFunction(DistanceFunction, Type##FvPatch);          \
+        addDimensionedFieldFunction(Coded, Type##FvPatch);                     \
+        addDimensionedFieldFunction(Surfaces, Type##FvPatch);                  \
+        addDimensionedFieldFunction(FieldFunction, Type##FvPatch);             \
     }
 
 namespace Foam

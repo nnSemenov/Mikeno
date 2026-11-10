@@ -371,9 +371,19 @@ public:
 };
 
 
+namespace expression
+{
+    template<class Type>
+    struct Expressionable<LagrangianEqn<Type>>
+    :
+        public notExpressionable
+    {};
+}
+
+
 //- Negation
 template<class Type>
-tmp<Foam::LagrangianEqn<Type>> operator-(const LagrangianEqn<Type>& eqn);
+tmp<LagrangianEqn<Type>> operator-(const LagrangianEqn<Type>& eqn);
 
 //- Negation
 template<class Type>
@@ -593,7 +603,7 @@ LAGRANGIAN_EQN_SCALAR_FIELD_OPERATOR(/, LagrangianSubSubField)
 
 template<class Type>
 template<template<class> class PrimitiveField>
-struct Foam::LagrangianEqn<Type>::PsiRef
+struct LagrangianEqn<Type>::PsiRef
 {
     //- Primitive field types match. Return a valid reference.
     inline static const LagrangianSubField<Type, PrimitiveField>& ref

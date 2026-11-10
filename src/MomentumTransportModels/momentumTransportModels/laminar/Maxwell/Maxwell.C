@@ -24,6 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Maxwell.H"
+#include "fviDiv.H"
+#include "fviGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 #include "uniformDimensionedFields.H"
@@ -130,7 +132,7 @@ tmp<fvSymmTensorMatrix> Maxwell<BasicMomentumTransportModel>::sigmaSource
     volSymmTensorField& sigma
 ) const
 {
-    return -fvm::Sp(this->alpha_*this->rho_/lambdas_[modei], sigma);
+    return -fvm::Sp(this->alpha_()*this->rho_()/lambdas_[modei], sigma);
 }
 
 
@@ -163,9 +165,9 @@ Maxwell<BasicMomentumTransportModel>::Maxwell
 
     nModes_(modeCoefficients_.size() ? modeCoefficients_.size() : 1),
 
-    nuM_(readModeCoefficients("nuM", dimKinematicViscosity)),
+    nuM_(readModeCoefficients("nuM", dimensions::kinematicViscosity)),
 
-    lambdas_(readModeCoefficients("lambda", dimTime)),
+    lambdas_(readModeCoefficients("lambda", dimensions::time)),
 
     nuMSum_(sumNuM(nuM_)),
 
@@ -179,7 +181,8 @@ Maxwell<BasicMomentumTransportModel>::Maxwell
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::kinematicStress
     )
 {
     if (nModes_ > 1)
@@ -215,7 +218,8 @@ Maxwell<BasicMomentumTransportModel>::Maxwell
                             IOobject::MUST_READ,
                             IOobject::AUTO_WRITE
                         ),
-                        this->mesh_
+                        this->mesh_,
+                        dimensions::kinematicStress
                     )
                 );
             }
@@ -255,8 +259,8 @@ bool Maxwell<BasicMomentumTransportModel>::read()
             this->typeDict().lookup("modes") >> modeCoefficients_;
         }
 
-        nuM_ = readModeCoefficients("nuM", dimKinematicViscosity);
-        lambdas_ = readModeCoefficients("lambda", dimTime);
+        nuM_ = readModeCoefficients("nuM", dimensions::kinematicViscosity);
+        lambdas_ = readModeCoefficients("lambda", dimensions::time);
         nuMSum_ = sumNuM(nuM_);
 
         return true;
@@ -328,9 +332,9 @@ Maxwell<BasicMomentumTransportModel>::DivDevTau
 {
     return
     (
-        fvc::div(this->alpha_*rho*this->nuMSum_*fvc::grad(U))
-      + fvc::div(this->alpha_*rho*sigma_)
-      - fvc::div(this->alpha_*rho*this->nu()*dev2(T(fvc::grad(U))))
+        fvi::div(this->alpha_*rho*this->nuMSum_*fvc::grad(U))
+      + fvi::div(this->alpha_*rho*sigma_)
+      - fvi::div(this->alpha_*rho*this->nu()*dev2(T(fvc::grad(U))))
       - fvm::laplacian(this->alpha_*rho*nu0(), U)
     );
 }
@@ -374,8 +378,8 @@ void Maxwell<BasicMomentumTransportModel>::correct()
 
     laminarModel<BasicMomentumTransportModel>::correct();
 
-    tmp<volTensorField> tgradU(fvc::grad(U));
-    const volTensorField& gradU = tgradU();
+    tmp<volInternalTensorField> tgradU(fvi::grad(U));
+    const volInternalTensorField& gradU = tgradU();
 
     forAll(lambdas_, modei)
     {
@@ -397,9 +401,9 @@ void Maxwell<BasicMomentumTransportModel>::correct()
         );
 
         // Note sigma is positive on lhs of momentum eqn
-        const volSymmTensorField P
+        const volInternalSymmTensorField P
         (
-            twoSymm(sigma & gradU)
+            twoSymm(sigma() & gradU)
           - nuM_[modei]*rLambda*twoSymm(gradU)
         );
 
@@ -411,10 +415,10 @@ void Maxwell<BasicMomentumTransportModel>::correct()
             (
                 alphaRhoPhi,
                 sigma,
-                "div(" + alphaRhoPhi.name() + ',' + sigma_.name() + ')'
+                word("div(", alphaRhoPhi.name(), ',', sigma_.name(), ')')
             )
          ==
-            alpha*rho*P
+            alpha()*rho()*P
           + sigmaSource(modei, sigma)
           + fvModels.source(alpha, rho, sigma)
         );
@@ -434,7 +438,7 @@ void Maxwell<BasicMomentumTransportModel>::correct()
             sigmaSum += sigmas_[modei];
         }
 
-        sigma_ == sigmaSum;
+        sigma_ = sigmaSum;
     }
 }
 

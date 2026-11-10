@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,12 +41,15 @@ Foam::EulerSI::EulerSI(const ODESystem& ode, const dictionary& dict)
 :
     ODESolver(ode, dict),
     adaptiveSolver(ode, dict),
+    pivot_(dict.lookupOrDefault<Switch>("pivot", false)),
+    rowTol_(dict.lookupOrDefault<scalar>("rowTol", min(absTol_))),
     err_(n_),
     dydx_(n_),
     dfdx_(n_),
     dfdy_(n_, n_),
     a_(n_, n_),
-    pivotIndices_(n_)
+    pivotIndices_(n_),
+    pivotScale_(n_)
 {}
 
 
@@ -64,6 +67,7 @@ bool Foam::EulerSI::resize()
         resizeMatrix(dfdy_);
         resizeMatrix(a_);
         resizeField(pivotIndices_);
+        resizeField(pivotScale_);
 
         return true;
     }
@@ -96,7 +100,14 @@ Foam::scalar Foam::EulerSI::solve
         a_(i, i) += 1.0/dx;
     }
 
-    LUDecompose(a_, pivotIndices_);
+    if (pivot_)
+    {
+        LUDecompose(a_, pivotIndices_, pivotScale_);
+    }
+    else
+    {
+        LUDecompose(a_, rowTol_);
+    }
 
     // Calculate error estimate from the change in state:
     forAll(err_, i)
@@ -104,7 +115,14 @@ Foam::scalar Foam::EulerSI::solve
         err_[i] = dydx0[i] + dx*dfdx_[i];
     }
 
-    LUBacksubstitute(a_, pivotIndices_, err_);
+    if (pivot_)
+    {
+        LUBacksubstitute(a_, pivotIndices_, err_);
+    }
+    else
+    {
+        LUBacksubstitute(a_, err_);
+    }
 
     forAll(y, i)
     {

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ inline Foam::surfaceArrheniusReactionRate::surfaceArrheniusReactionRate
     const dictionary& dict
 )
 :
-    ArrheniusReactionRate(species, dims*dimLength, dict),
+    ArrheniusReactionRate(species, dims*dimensions::length, dict),
     AvName_(dict.lookupBackwardsCompatible({"Av", "a"})),
     ob_(ob),
     tAv_(nullptr)
@@ -48,7 +48,7 @@ inline void Foam::surfaceArrheniusReactionRate::preEvaluate() const
 {
     ArrheniusReactionRate::preEvaluate();
 
-    tAv_ = ob_.lookupObject<volScalarField::Internal>(AvName_);
+    tAv_ = ob_.lookupObject<volInternalScalarField>(AvName_);
 }
 
 
@@ -56,31 +56,25 @@ inline void Foam::surfaceArrheniusReactionRate::postEvaluate() const
 {
     ArrheniusReactionRate::postEvaluate();
 
-    tAv_ = tmp<volScalarField::Internal>(nullptr);
+    tAv_ = tmp<volInternalScalarField>(nullptr);
 }
 
 
-inline Foam::scalar Foam::surfaceArrheniusReactionRate::operator()
+inline Foam::scalar Foam::surfaceArrheniusReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li
+    const reaction::state& s
 ) const
 {
-    return ArrheniusReactionRate::operator()(p, T, c, li)*tAv_()[li];
+    return ArrheniusReactionRate::k(s)*tAv_()[s.li];
 }
 
 
 inline Foam::scalar Foam::surfaceArrheniusReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li
+    const reaction::state& s
 ) const
 {
-    return ArrheniusReactionRate::ddT(p, T, c, li)*tAv_()[li];
+    return ArrheniusReactionRate::ddT(s)*tAv_()[s.li];
 }
 
 

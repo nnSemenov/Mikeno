@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -739,7 +739,8 @@ Foam::label Foam::patchToPatch::finalise
     const vectorField& srcPointNormals,
     const vectorField& srcPointNormals0,
     const primitiveOldTimePatch& tgtPatch,
-    const transformer& tgtToSrc
+    const transformer& tgtToSrc,
+    const unsigned char report
 )
 {
     label nCouples = 0;
@@ -753,7 +754,7 @@ Foam::label Foam::patchToPatch::finalise
         nCouples += tgtLocalSrcFaces_[tgtFacei].size();
     }
 
-    reduce(nCouples, sumOp<label>());
+    reduce(nCouples, sumOp());
 
     return nCouples;
 }
@@ -865,15 +866,16 @@ void Foam::patchToPatch::update
     const primitiveOldTimePatch& tgtPatch,
     const transformer& tgtToSrc,
     const Pair<const string&>& srcTgtPatchNames,
-    const string& tgtToSrcName
+    const string& tgtToSrcName,
+    const unsigned char report
 )
 {
     cpuTime time;
 
     // Determine numbers of faces on both sides, report, and quit if either
     // side is empty
-    const label srcTotalSize = returnReduce(srcPatch.size(), sumOp<label>());
-    const label tgtTotalSize = returnReduce(tgtPatch.size(), sumOp<label>());
+    const label srcTotalSize = returnReduce(srcPatch.size(), sumOp());
+    const label tgtTotalSize = returnReduce(tgtPatch.size(), sumOp());
     if (srcTotalSize == 0 || tgtTotalSize == 0)
     {
         return;
@@ -921,25 +923,15 @@ void Foam::patchToPatch::update
     }
     const primitiveOldTimePatch& tTgtPatch = tTgtPatchPtr();
 
-    Info<< indent << typeName << ": Calculating couplings between";
-    if (isNull(srcTgtPatchNames))
+    Info<< indent << incrIndent << typeName << ":";
+    if (notNull(srcTgtPatchNames))
     {
-        Info<< ' ' << srcTotalSize << " source faces and "
-            << tgtTotalSize << " target faces" << incrIndent;
-    }
-    else
-    {
-        Info<< " ..." << incrIndent << endl << indent
-            << "source patch " << srcTgtPatchNames.first().c_str()
-            << " with " << srcTotalSize << " faces "
-            << "and ..." << endl << indent
-            << "target patch " << srcTgtPatchNames.second().c_str()
-            << " with " << tgtTotalSize << " faces";
+        Info<< " " << srcTgtPatchNames.first().c_str()
+            << " and " << srcTgtPatchNames.second().c_str();
     }
     if (tgtToSrcName.size())
     {
-        Info<< " ..." << endl << indent
-            << "with transformation " << tgtToSrcName.c_str();
+        Info<< " with " << tgtToSrcName.c_str();
     }
     Info<< endl;
 
@@ -1067,17 +1059,22 @@ void Foam::patchToPatch::update
             srcPointNormals,
             srcPointNormals,
             tgtPatch,
-            tgtToSrc
+            tgtToSrc,
+            report
         );
 
-    if (nCouples != 0)
+    if (report & patchToPatch::report::number)
     {
-        Info<< indent << nCouples << " couplings calculated in "
-            << time.cpuTimeIncrement() << 's' << endl;
-    }
-    else
-    {
-        Info<< indent << "No couplings found" << endl;
+        if (nCouples != 0)
+        {
+            Info<< indent << nCouples << " couplings calculated between "
+                << srcTotalSize << " and " << tgtTotalSize << " faces in "
+                << time.cpuTimeIncrement() << 's' << endl;
+        }
+        else
+        {
+            Info<< indent << "No couplings found" << endl;
+        }
     }
 
     Info<< decrIndent;
@@ -1091,7 +1088,8 @@ void Foam::patchToPatch::update
     const primitivePatch& tgtPatch,
     const transformer& tgtToSrc,
     const Pair<const string&>& srcTgtPatchNames,
-    const string& tgtToSrcName
+    const string& tgtToSrcName,
+    const unsigned char report
 )
 {
     update
@@ -1102,7 +1100,8 @@ void Foam::patchToPatch::update
         primitiveOldTimePatch(tgtPatch),
         tgtToSrc,
         srcTgtPatchNames,
-        tgtToSrcName
+        tgtToSrcName,
+        report
     );
 }
 

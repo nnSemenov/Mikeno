@@ -85,6 +85,7 @@ SourceFiles
 
 #include "fvModel.H"
 #include "volFields.H"
+#include "surfaceFields.H"
 #include "FunctionalGeometricFieldFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -195,7 +196,7 @@ public:
             virtual bool read(const dictionary& dict);
 
             //- Write fvModel data
-            virtual bool write(const bool write = true) const;
+            virtual bool write(const bool updateInstance = true) const;
 
 
     // Member Operators

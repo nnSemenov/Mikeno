@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,17 +34,8 @@ License
 namespace Foam
 {
 
-// Signal number to catch
-int sigStopAtWriteNow::signal_
-(
-    debug::optimisationSwitch("stopAtWriteNowSignal", -1)
-);
 
 } // End namespace Foam
-
-
-Foam::Time const* Foam::sigStopAtWriteNow::runTimePtr_ = nullptr;
-struct sigaction Foam::sigStopAtWriteNow::oldAction_;
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -119,7 +110,8 @@ void Foam::sigStopAtWriteNow::set(const bool verbose)
             FatalErrorInFunction
                 << "stopAtWriteNowSignal : " << signal_
                 << " cannot be the same as the writeNowSignal."
-                << " Please change this in the etc/controlDict."
+                << " Please change this in the "
+                   "etc/configDict/OptimisationSwitches."
                 << exit(FatalError);
         }
 

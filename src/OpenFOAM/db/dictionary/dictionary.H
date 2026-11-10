@@ -56,10 +56,10 @@ SourceFiles
 #include "DLList.H"
 #include "ITstream.H"
 #include "Pair.H"
-#include "fieldTypes.H"
 #include "Tuple3.H"
 #include <tuple>
-
+#include <memory>
+#include <list>
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -178,18 +178,21 @@ class dictionary
         //- Patterns as precompiled regular expressions
         DLList<autoPtr<regExp>> patternRegexps_;
 
+        //- Holds all cloned entries, destructs with dictionary. Prevent memory
+        // leaking
+        mutable std::list<std::unique_ptr<entry>> cloneCache_{};
 
-    // Private Member Functions
+        // Private Member Functions
 
         //- Construct the path name from the name of the parent dictionary
         //  and the given name.
         //  A '/' separator is used unless the parent dictionary is top-level
         //  and hence has the name of the file in which case a '!' is used
-        fileName pathName
+        static fileName pathName
         (
             const dictionary& parentDict,
             const fileName& name
-        ) const;
+        );
 
         //- Find and return an entry data stream pointer if present
         //  otherwise return nullptr.
@@ -432,8 +435,8 @@ public:
             const entry& lookupEntry
             (
                 const word&,
-                bool recursive,
-                bool patternMatch
+                bool recursive=false,
+                bool patternMatch=true
             ) const;
 
             //- Find and return an entry data stream if present, trying a list
@@ -443,8 +446,8 @@ public:
             const entry& lookupEntryBackwardsCompatible
             (
                 const wordList&,
-                bool recursive,
-                bool patternMatch
+                bool recursive=false,
+                bool patternMatch=true
             ) const;
 
             //- Find and return an entry data stream
@@ -1021,6 +1024,18 @@ bool readConfigFile
 
 //- Write a dictionary entry
 void writeEntry(Ostream& os, const dictionary& dict);
+
+//- Write a named dictionary entry
+void writeEntry(Ostream& os, const word& entryName, const dictionary& dict);
+
+//- Write a named dictionary given a set of entries
+template<class ... Entries>
+void writeEntry
+(
+    Ostream& os,
+    const word& entryName,
+    const std::tuple<const Entries& ...>&
+);
 
 //- Helper function to write the keyword and entry
 template<class EntryType>

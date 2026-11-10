@@ -83,13 +83,13 @@ template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::basicSymmetryFvPatchField<Type>::snGrad() const
 {
-    tmp<vectorField> nHat = this->patch().nf();
+    tmp<vectorField> nHat = patch().nf();
 
-    const Field<Type> iF(this->patchInternalField());
+    const Field<Type> iF(patchInternalField());
 
     return
         (transform(I - 2.0*sqr(nHat), iF) - iF)
-       *(this->patch().deltaCoeffs()/2.0);
+       *(patch().deltaCoeffs()/2.0);
 }
 
 
@@ -101,9 +101,9 @@ void Foam::basicSymmetryFvPatchField<Type>::evaluate(const Pstream::commsTypes)
         this->updateCoeffs();
     }
 
-    tmp<vectorField> nHat = this->patch().nf();
+    tmp<vectorField> nHat = patch().nf();
 
-    const Field<Type> iF(this->patchInternalField());
+    const Field<Type> iF(patchInternalField());
 
     Field<Type>::operator=
     (
@@ -118,7 +118,7 @@ template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::basicSymmetryFvPatchField<Type>::snGradTransformDiag() const
 {
-    const vectorField nHat(this->patch().nf());
+    const vectorField nHat(patch().nf());
 
     vectorField diag(nHat.size());
 
@@ -126,7 +126,11 @@ Foam::basicSymmetryFvPatchField<Type>::snGradTransformDiag() const
     diag.replace(vector::Y, mag(nHat.component(vector::Y)));
     diag.replace(vector::Z, mag(nHat.component(vector::Z)));
 
-    return transformFieldMask<Type>(pow<vector, pTraits<Type>::rank>(diag));
+    return transformMask
+    (
+        pTraits<Type>::zero,
+        pow<pTraits<Type>::rank>(diag)
+    );
 }
 
 

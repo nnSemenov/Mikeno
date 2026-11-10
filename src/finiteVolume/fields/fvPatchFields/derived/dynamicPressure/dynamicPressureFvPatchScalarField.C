@@ -50,7 +50,7 @@ void Foam::dynamicPressureFvPatchScalarField::updateCoeffs
         return;
     }
 
-    if (internalField().dimensions() == dimPressure)
+    if (internalField().dimensions() == dimensions::pressure)
     {
         if (psiName_ == "none")
         {
@@ -83,7 +83,7 @@ void Foam::dynamicPressureFvPatchScalarField::updateCoeffs
             }
         }
     }
-    else if (internalField().dimensions() == dimPressure/dimDensity)
+    else if (internalField().dimensions() == dimensions::kinematicPressure)
     {
         // Incompressible flow
 
@@ -94,13 +94,13 @@ void Foam::dynamicPressureFvPatchScalarField::updateCoeffs
         FatalErrorInFunction
             << " Incorrect pressure dimensions " << internalField().dimensions()
             << nl
-            << "    Should be " << dimPressure
+            << "    Should be " << dimensions::pressure
             << " for compressible/variable density flow" << nl
-            << "    or " << dimPressure/dimDensity
+            << "    or " << dimensions::kinematicPressure
             << " for incompressible flow," << nl
-            << "    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -88,7 +88,9 @@ void Foam::fv::OUForce::addSup
     fvMatrix<vector>& eqn
 ) const
 {
-    eqn += volVectorField::Internal
+    const vectorField& K(K_);
+
+    eqn += volInternalVectorField
     (
         IOobject
         (
@@ -97,13 +99,17 @@ void Foam::fv::OUForce::addSup
             mesh()
         ),
         mesh(),
-        dimAcceleration,
+        dimensions::acceleration,
         ReImSum
         (
             fft::reverseTransform
             (
-                (K_/(mag(K_) + 1.0e-6))
-              ^ forceGen_.newField(mesh().time().deltaTValue()), K_.nn()
+                eval
+                (
+                    (K/(mag(K) + 1.0e-6))
+                  ^ forceGen_.newField(mesh().time().deltaTValue())
+                ),
+                K_.nn()
             )
         )
     );
@@ -142,9 +148,10 @@ bool Foam::fv::OUForce::read(const dictionary& dict)
 }
 
 
-bool Foam::fv::OUForce::write(const bool write) const
+bool Foam::fv::OUForce::write(const bool updateInstance) const
 {
     const volVectorField& U = mesh().lookupObject<volVectorField>(UName_);
+
     writeEk(U, K_);
 
     return true;

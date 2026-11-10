@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,6 +26,8 @@ License
 #include "ThermalPhaseModel.H"
 #include "phaseSystem.H"
 #include "fvcMeshPhi.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "fvcDdt.H"
 #include "fvmDiv.H"
 #include "fvmSup.H"
@@ -33,10 +35,10 @@ License
 // * * * * * * * * * * * * Private Member Functions * * * * * * * * * * * * //
 
 template<class BasePhaseModel>
-Foam::tmp<Foam::volScalarField>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::ThermalPhaseModel<BasePhaseModel>::filterPressureWork
 (
-    const tmp<volScalarField>& pressureWork
+    const tmp<volInternalScalarField>& pressureWork
 ) const
 {
     const volScalarField& alpha = *this;
@@ -49,8 +51,8 @@ Foam::ThermalPhaseModel<BasePhaseModel>::filterPressureWork
     {
         return
         (
-            max(alpha - pressureWorkAlphaLimit, scalar(0))
-           /max(alpha - pressureWorkAlphaLimit, pressureWorkAlphaLimit)
+            max(alpha() - pressureWorkAlphaLimit, scalar(0))
+           /max(alpha() - pressureWorkAlphaLimit, pressureWorkAlphaLimit)
         )*pressureWork;
     }
     else
@@ -120,11 +122,10 @@ Foam::ThermalPhaseModel<BasePhaseModel>::heEqn()
     const tmp<surfaceScalarField> talphaRhoPhi(this->alphaRhoPhi());
     const surfaceScalarField& alphaRhoPhi(talphaRhoPhi());
 
-    const tmp<volScalarField> tcontErr(this->continuityError());
-    const volScalarField& contErr(tcontErr());
+    const tmp<volInternalScalarField> tcontErr(this->continuityError());
+    const volInternalScalarField& contErr(tcontErr());
 
-    tmp<volScalarField> tK(this->K());
-    const volScalarField& K(tK());
+    const volScalarField& K(this->K());
 
     volScalarField& he = this->thermo_->he();
 
@@ -134,13 +135,13 @@ Foam::ThermalPhaseModel<BasePhaseModel>::heEqn()
       + fvm::div(alphaRhoPhi, he)
       - fvm::Sp(contErr, he)
 
-      + fvc::ddt(alpha, rho, K) + fvc::div(alphaRhoPhi, K)
-      - contErr*K
+      + fvi::ddt(alpha, rho, K) + fvi::div(alphaRhoPhi, K)
+      - contErr*K()
 
       + this->divq(he)
      ==
-        alpha*rho*(U&g_)
-      + alpha*this->Qdot()
+        alpha()*rho()*(U()&g_)
+      + alpha()*this->Qdot()
     );
 
     // Add the appropriate pressure-work term
@@ -148,17 +149,17 @@ Foam::ThermalPhaseModel<BasePhaseModel>::heEqn()
     {
         tEEqn.ref() += filterPressureWork
         (
-            fvc::div
+            fvi::div
             (
                 fvc::absolute(alphaRhoPhi, alpha, rho, U),
                 this->fluidThermo().p()/rho
             )
-          + (fvc::ddt(alpha) - contErr/rho)*this->fluidThermo().p()
+          + (fvi::ddt(alpha) - contErr/rho())*this->fluidThermo().p()()
         );
     }
     else if (this->thermo_->dpdt())
     {
-        tEEqn.ref() -= filterPressureWork(alpha*this->fluid().dpdt());
+        tEEqn.ref() -= filterPressureWork(alpha()*this->fluid().dpdt());
     }
 
     return tEEqn;

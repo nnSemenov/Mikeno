@@ -47,7 +47,7 @@ Foam::diameterModels::fixedInterfacialArea::fixedInterfacialArea
 )
 :
     diameterModel(diameterProperties, phase),
-    AvbyAlpha_("AvbyAlpha", inv(dimLength), diameterProperties, -1),
+    AvbyAlpha_("AvbyAlpha", inv(dimensions::length), diameterProperties, -1),
     AvbyAlphaFieldPtr_()
 {
     read(diameterProperties);
@@ -86,10 +86,10 @@ Foam::diameterModels::fixedInterfacialArea::Av() const
     if (AvbyAlphaFieldPtr_.valid())
     {
         const volScalarField& AvbyAlpha = AvbyAlphaFieldPtr_;
-        return phase()*AvbyAlpha;
+        return phase().alpha()*AvbyAlpha;
     }
 
-    return phase()*AvbyAlpha_;
+    return phase().alpha()*AvbyAlpha_;
 }
 
 
@@ -121,10 +121,11 @@ bool Foam::diameterModels::fixedInterfacialArea::read
                     IOobject::MUST_READ,
                     IOobject::AUTO_WRITE
                 ),
-                phase().mesh()
+                phase().mesh(),
+                dimensions::area/dimensions::volume
             );
 
-        AvbyAlphaFieldPtr_->max
+        AvbyAlphaFieldPtr_->primitiveFieldRef().boundLower
         (
             diameterProperties.lookupOrDefault<scalar>
             (

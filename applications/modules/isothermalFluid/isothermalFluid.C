@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,9 +27,10 @@ License
 #include "localEulerDdtScheme.H"
 #include "hydrostaticInitialisation.H"
 #include "fvcMeshPhi.H"
-#include "fvcVolumeIntegrate.H"
+#include "fvcDomainIntegrate.H"
 #include "fvcReconstruct.H"
-#include "fvcDiv.H"
+#include "linear.H"
+#include "fviDiv.H"
 #include "fvcSnGrad.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -61,22 +62,22 @@ void Foam::solvers::isothermalFluid::continuityErrors()
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::solvers::isothermalFluid::pressureWork
 (
-    const tmp<volScalarField::Internal>& work
+    const tmp<volInternalScalarField>& work
 ) const
 {
     if (mesh.moving())
     {
         return
             work
-          + fvc::div
+          + fvi::div
             (
                 fvc::interpolate(rho())*fvc::meshPhi(rho(), U()),
                 p()/rho(),
-                "div(phi,(p|rho))"
-            )();
+                "div(phi,p|rho)"
+            );
     }
     else
     {
@@ -122,7 +123,7 @@ Foam::solvers::isothermalFluid::isothermalFluid
             mesh
         ),
         mesh,
-        dimensionedScalar(p().dimensions()/dimTime, 0)
+        dimensionedScalar(p().dimensions()/dimensions::time, 0)
     ),
 
     buoyancy(buoyancy::New(mesh)),
@@ -147,7 +148,8 @@ Foam::solvers::isothermalFluid::isothermalFluid
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     phi_
@@ -178,8 +180,7 @@ Foam::solvers::isothermalFluid::isothermalFluid
 
     initialMass(fvc::domainIntegrate(rho_)),
 
-    MRF(mesh)
-
+    MRF(MRFZones::New(mesh))
 //    thermo(thermo_),
 //    p(p_),
 //    p_rgh(p_rgh_),
@@ -242,7 +243,7 @@ Foam::solvers::isothermalFluid::isothermalFluid
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimless/dimTime, 1),
+                dimensionedScalar(dimless/dimensions::time, 1),
                 extrapolatedCalculatedFvPatchScalarField::typeName
             )
         );
@@ -301,10 +302,10 @@ void Foam::solvers::isothermalFluid::preSolve()
     // same divergence
     if (correctPhi || mesh.topoChanging())
     {
-        divrhoU = new volScalarField
+        divrhoU = new volInternalScalarField
         (
             "divrhoU",
-            fvc::div(fvc::absolute(phi(), rho(), U()))
+            fvi::div(fvc::absolute(phi(), rho(), U()))
         );
     }
 

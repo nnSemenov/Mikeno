@@ -25,7 +25,6 @@ License
 
 #include "multivariateScheme.H"
 #include "LimitedScheme.H"
-#include "Limited01.H"
 #include "limitedLinear.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -36,24 +35,6 @@ namespace Foam
     (
         limitedLinear,
         limitedLinearLimiter
-    )
-
-    makeLLimitedMultivariateSurfaceInterpolationScheme
-    (
-        limitedLimitedLinear,
-        LimitedLimiter,
-        limitedLinearLimiter,
-        NVDTVD,
-        magSqr
-    )
-
-    makeLLimitedMultivariateSurfaceInterpolationScheme
-    (
-        limitedLinear01,
-        Limited01Limiter,
-        limitedLinearLimiter,
-        NVDTVD,
-        magSqr
     )
 }
 

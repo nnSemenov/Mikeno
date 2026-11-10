@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "MULES.H"
 #include "upwind.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "localEulerDdtScheme.H"
 #include "wedgeFvPatch.H"
 #include "linear.H"
@@ -51,7 +51,7 @@ void Foam::MULES::explicitSolve
     const scalarField& psi0 = psi.oldTime();
 
     psiIf = 0.0;
-    fvc::surfaceIntegrate(psiIf, psiPhi);
+    fvi::surfaceIntegrate(psiIf, psiPhi);
 
     if (mesh.moving())
     {
@@ -103,7 +103,7 @@ void Foam::MULES::explicitSolve
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
         explicitSolve(rDeltaT, rho, psi, psiPhi, Sp, Su);
     }
     else
@@ -168,7 +168,7 @@ void Foam::MULES::explicitSolve
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
         limit
         (
             controls,
@@ -233,8 +233,8 @@ void Foam::MULES::limit
 {
     surfaceScalarField phiBD(upwind<scalar>(psi.mesh(), phi).flux(psi));
 
-    surfaceScalarField::Boundary& phiBDBf = phiBD.boundaryFieldRef();
-    const surfaceScalarField::Boundary& psiPhiBf = psiPhi.boundaryField();
+    surfaceScalarField::BoundaryField& phiBDBf = phiBD.boundaryFieldRef();
+    const surfaceScalarField::BoundaryField& psiPhiBf = psiPhi.boundaryField();
 
     forAll(phiBDBf, patchi)
     {
@@ -294,26 +294,34 @@ void Foam::MULES::limit
     const labelUList& neighb = mesh.neighbour();
 
     const scalarField& phiBDIf = phiBD;
-    const surfaceScalarField::Boundary& phiBDBf = phiBD.boundaryField();
+    const surfaceScalarField::BoundaryField& phiBDBf = phiBD.boundaryField();
 
     surfaceScalarField& phiCorr = psiPhi;
     phiCorr -= phiBD;
 
-    tmp<volScalarField::Internal> tVsc = mesh.Vsc();
+    tmp<volInternalScalarField> tVsc = mesh.Vsc();
     const scalarField& V = tVsc();
 
     // Correction equation source
     scalarField SuCorr
     (
         mesh.moving()
-      ? (mesh.Vsc0()().primitiveField()*rDeltaT*rho.oldTime().primitiveField())
-       *psi.oldTime().primitiveField()
-      + V*Su.primitiveField()
-      : V
-       *(
-            (rho.oldTime().primitiveField()*rDeltaT)
-           *psi.oldTime().primitiveField()
-          + Su.primitiveField()
+      ? eval
+        (
+            (
+                mesh.Vsc0()().primitiveField()
+               *rDeltaT*rho.oldTime().primitiveField()
+            )*psi.oldTime().primitiveField()
+          + V*Su.primitiveField()
+        )
+      : eval
+        (
+            V
+           *(
+               (rho.oldTime().primitiveField()*rDeltaT)
+              *psi.oldTime().primitiveField()
+             + Su.primitiveField()
+            )
         )
     );
 
@@ -403,7 +411,7 @@ void Foam::MULES::limit
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
         limit
         (
             controls,
@@ -467,7 +475,7 @@ void Foam::MULES::limit
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
         limit
         (
             controls,

@@ -89,8 +89,7 @@ class basicThermo
         (
             const dictionary& thermoTypeDict,
             Table* tablePtr,
-            const int nCmpt,
-            const char* cmptNames[],
+            const char* (&cmptNames)[7],
             const word& thermoTypeName
         );
 
@@ -241,7 +240,7 @@ public:
         ) const;
 
         //- Update properties
-        virtual void correct() = 0;
+        virtual void correct(const bool correctBCs = true) = 0;
 
         //- Name of the mixture
         virtual word mixtureName() const = 0;
@@ -314,10 +313,10 @@ public:
 
             //- Enthalpy/Internal energy
             //  for given pressure and temperature [J/kg]
-            virtual tmp<volScalarField::Internal> he
+            virtual tmp<volInternalScalarField> he
             (
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Enthalpy/Internal energy for cell-set [J/kg]
@@ -335,11 +334,11 @@ public:
             ) const = 0;
 
             //- Enthalpy/Internal energy for source [J/kg]
-            virtual tmp<volScalarField::Internal> he
+            virtual tmp<volInternalScalarField> he
             (
-                const volScalarField::Internal& T,
+                const volInternalScalarField& T,
                 const fvSource& model,
-                const volScalarField::Internal& source
+                const volInternalScalarField& source
             ) const = 0;
 
             //- Enthalpy/Internal energy for source [J/kg]
@@ -364,10 +363,10 @@ public:
 
             //- Sensible enthalpy
             //  for given pressure and temperature [J/kg]
-            virtual tmp<volScalarField::Internal> hs
+            virtual tmp<volInternalScalarField> hs
             (
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Sensible enthalpy for cell-set [J/kg]
@@ -397,10 +396,10 @@ public:
 
             //- Absolute enthalpy
             //  for given pressure and temperature [J/kg]
-            virtual tmp<volScalarField::Internal> ha
+            virtual tmp<volInternalScalarField> ha
             (
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Absolute enthalpy for cell-set [J/kg]

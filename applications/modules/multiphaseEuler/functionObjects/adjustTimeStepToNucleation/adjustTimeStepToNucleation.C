@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,6 +25,8 @@ License
 
 #include "adjustTimeStepToNucleation.H"
 #include "fvModels.H"
+#include "Time.H"
+#include "volFields.H"
 #include "nucleation.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -109,12 +111,12 @@ Foam::functionObjects::adjustTimeStepToNucleation::maxDeltaT() const
     {
         bool found = false;
 
-        tmp<volScalarField::Internal> tTau =
-            volScalarField::Internal::New
+        tmp<volInternalScalarField> tTau =
+            volInternalScalarField::New
             (
                 typedName("tau"),
                 mesh(),
-                dimensionedScalar(dimTime, vGreat)
+                dimensionedScalar(dimensions::time, vGreat)
             );
 
         forAll(fvModels, fvModeli)
@@ -137,14 +139,14 @@ Foam::functionObjects::adjustTimeStepToNucleation::maxDeltaT() const
                 << exit(FatalError);
         }
 
-        return gMin(tTau());
+        return gMin(tTau()).value();
     }
     else
     {
         const fv::nucleation& nucleationModel =
             refCast<const fv::nucleation>(fvModels[modelName_]);
 
-        return gMin(nucleationModel.tau()());
+        return gMin(nucleationModel.tau()()).value();
     }
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,24 +24,37 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "multicomponentFluid.H"
-#include "fvcDdt.H"
+#include "fviDdt.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
 {
+    reaction->correct();
+
+    multivariateSurfaceInterpolationScheme<scalar>::fieldTable fields;
+
+    forAll(Y(), i)
+    {
+        if (thermo_().activeSpecies()[i])
+        {
+            fields.add(Y()[i]);
+        }
+    }
+    fields.add(thermo_().he());
+
+    tmp<surfaceScalarField> phiY(thermophysicalTransport->phi(phi()));
+
     tmp<fv::convectionScheme<scalar>> mvConvection
     (
         fv::convectionScheme<scalar>::New
         (
             mesh,
             fields,
-            phi_,
+            phiY(),
             mesh.schemes().div("div(phi,Yi_h)")
         )
     );
-
-    reaction->correct();
 
     forAll(Y(), i)
     {
@@ -52,7 +65,7 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
             fvScalarMatrix YiEqn
             (
                 fvm::ddt(rho_, Yi)
-              + mvConvection->fvmDiv(phi_, Yi)
+              + mvConvection->fvmDiv(phiY(), Yi)
               + thermophysicalTransport->divj(Yi)
              ==
                 reaction->R(Yi)
@@ -80,23 +93,25 @@ void Foam::solvers::multicomponentFluid::thermophysicalPredictor()
 
     fvScalarMatrix EEqn
     (
-        fvm::ddt(rho_, he) + mvConvection->fvmDiv(phi_, he)
-      + fvc::ddt(rho_, K) + fvc::div(phi_, K)
+        fvm::ddt(rho(), he)
+      + mvConvection->fvmDiv(phiY(), he)
+      + fvi::ddt(rho(), K) + fvi::div(phi(), K)
       + pressureWork
         (
             he.name() == "e"
-          ? mvConvection->fvcDiv(phi_, p()/rho_)()
-          : -dpdt
+          ? mvConvection->fviDiv(phiY(), p()/rho())
+          : eval(-dpdt)
         )
       + thermophysicalTransport->divq(he)
      ==
         reaction->Qdot()
-      + (
-            buoyancy.valid()
-          ? fvModels().source(rho_, he) + rho_*(U_ & buoyancy->g)
-          : fvModels().source(rho_, he)
-        )
+      + fvModels().source(rho(), he)
     );
+
+    if (buoyancy.valid())
+    {
+        EEqn -= rho().internalField() * (U().internalField() & buoyancy->g);
+    }
 
     EEqn.relax();
 

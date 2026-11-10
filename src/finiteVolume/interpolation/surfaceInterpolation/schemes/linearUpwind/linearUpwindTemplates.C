@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "linearUpwind.H"
+#include "fvcGrad.H"
 
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
@@ -79,7 +80,7 @@ Foam::linearUpwind<Type>::correction
     (
         SurfaceField<Type>::New
         (
-            "linearUpwind::correction(" + vf.name() + ')',
+            word("linearUpwind::correction(", vf.name(), ')'),
             mesh,
             dimensioned<Type>(vf.name(), vf.dimensions(), Zero)
         )
@@ -107,7 +108,7 @@ Foam::linearUpwind<Type>::correction
     for (direction cmpt = 0; cmpt < pTraits<Type>::nComponents; cmpt++)
     {
         tmp<volVectorField> tgradVf =
-            gradScheme_().grad(vf.component(cmpt), gradSchemeName_);
+            gradScheme_().fvcGrad(vf.component(cmpt), gradSchemeName_);
 
         const volVectorField& gradVf = tgradVf();
 
@@ -120,8 +121,8 @@ Foam::linearUpwind<Type>::correction
                 (Cf[facei] - C[celli]) & gradVf[celli];
         }
 
-        typename SurfaceField<Type>::
-            Boundary& bSfCorr = sfCorr.boundaryFieldRef();
+        typename SurfaceField<Type>::BoundaryField& bSfCorr =
+            sfCorr.boundaryFieldRef();
 
         forAll(bSfCorr, patchi)
         {
@@ -146,7 +147,7 @@ Foam::linearUpwind<Type>::correction
 
                 forAll(pOwner, facei)
                 {
-                    label own = pOwner[facei];
+                    const label own = pOwner[facei];
 
                     if (pFaceFlux[facei] > 0)
                     {

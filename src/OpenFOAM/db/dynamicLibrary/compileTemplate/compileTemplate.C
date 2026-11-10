@@ -30,11 +30,11 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-const Foam::wordList Foam::compileTemplate::codeKeys(wordList::null());
+const Foam::wordList Foam::compileTemplate::codeKeys{};
 
-const Foam::wordList Foam::compileTemplate::codeDictVars(wordList::null());
+const Foam::wordList Foam::compileTemplate::codeDictVars{};
 
-Foam::wordList Foam::compileTemplate::compileFiles_(wordList::null());
+Foam::wordList Foam::compileTemplate::compileFiles_{};
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -56,9 +56,10 @@ Foam::fileName Foam::compileTemplate::name
 Foam::dictionary Foam::compileTemplate::optionsDict
 (
     const word& templateName
-) const
+)
 {
     IFstream optionsFile(dynamicCode::resolveTemplate(templateName));
+
     if (!optionsFile.good())
     {
         FatalErrorInFunction
@@ -125,7 +126,7 @@ Foam::compileTemplate::compileTemplate
         codeDictVars,
         word::null,
         compileFiles_,
-        wordList::null(),
+        wordList{},
         false
     ),
     substitutions_(substitutions),
@@ -139,7 +140,7 @@ Foam::compileTemplate::compileTemplate
     }
 
     // Make verbose if debugging
-    varSubstitutions().set("verbose", Foam::name(bool(debug)));
+    varSubstitutions().set("verbose", Foam::name(static_cast<bool>(debug)));
 
     this->updateLibrary(dict_);
 }

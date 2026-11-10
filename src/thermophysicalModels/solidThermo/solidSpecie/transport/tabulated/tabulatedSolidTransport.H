@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -92,7 +92,10 @@ class tabulatedSolidTransport
 :
     public Thermo
 {
-    typedef Function1s::NonUniformTable<scalar> nonUniformTable;
+    // Private Typedefs
+
+        //- Table type
+        typedef Function1s::NonUniformTable<scalar> nonUniformTable;
 
 
     // Private Data
@@ -131,7 +134,7 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return "tabulatedSolid<" + Thermo::typeName() + '>';
+            return word("tabulatedSolid<", Thermo::typeName(), '>');
         }
 
         //- Is the thermal conductivity isotropic

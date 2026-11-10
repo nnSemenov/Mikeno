@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "solidBody_pointMeshMover.H"
+#include "transformField.H"
 #include "syncTools.H"
 #include "polyTopoChangeMap.H"
 #include "addToRunTimeSelectionTable.H"
@@ -72,7 +73,7 @@ void Foam::pointMeshMovers::solidBody::updateZonePointIndices()
         }
     }
 
-    syncTools::syncPointList(poly(), pointInZone, orEqOp<bool>(), false);
+    syncTools::syncPointList(poly(), pointInZone, orEqOp(), false);
 
     zonePoints_.resize(count(pointInZone, true));
 
@@ -98,8 +99,7 @@ Foam::pointMeshMovers::solidBody::solidBody
     displacementPoints0(mesh, dict, typeName),
     SBMFPtr_(solidBodyMotionFunction::New(dict, mesh.time())),
     zone_(mesh, dict),
-    zonePoints_(),
-    transform_(SBMFPtr_().transformation())
+    zonePoints_()
 {
     if (zone_.all())
     {
@@ -120,21 +120,24 @@ Foam::pointMeshMovers::solidBody::~solidBody()
 
 Foam::tmp<Foam::pointField> Foam::pointMeshMovers::solidBody::newPoints()
 {
-    transform_ = SBMFPtr_().transformation();
+    const spatialTransform st(SBMFPtr_().spatialTransformation());
 
     if (zone_.all())
     {
-        return transformPoints(transform_, points0_);
+        return pointTransform(st, points0_.primitiveField());
     }
     else
     {
         tmp<pointField> ttransformedPts(new pointField(poly().points()));
         pointField& transformedPts = ttransformedPts.ref();
 
-        UIndirectList<point>(transformedPts, zonePoints_) = transformPoints
+        UIndirectList<point>(transformedPts, zonePoints_) = eval
         (
-            transform_,
-            pointField(points0_, zonePoints_)
+            pointTransform
+            (
+                st,
+                pointField(points0_, zonePoints_)
+            )
         );
 
         return ttransformedPts;
@@ -144,6 +147,8 @@ Foam::tmp<Foam::pointField> Foam::pointMeshMovers::solidBody::newPoints()
 
 void Foam::pointMeshMovers::solidBody::topoChange(const polyTopoChangeMap& map)
 {
+    const spatialTransform st(SBMFPtr_().spatialTransformation());
+
     zone_.topoChange(map);
     updateZonePointIndices();
 
@@ -177,8 +182,7 @@ void Foam::pointMeshMovers::solidBody::topoChange(const polyTopoChangeMap& map)
         }
         else
         {
-            newPoints0[pointi] =
-                transform_.invTransformPoint(points[pointi]);
+            newPoints0[pointi] = st.invTransformPoint(points[pointi]);
         }
     }
 
@@ -205,6 +209,8 @@ void Foam::pointMeshMovers::solidBody::distribute
 
 void Foam::pointMeshMovers::solidBody::mapMesh(const polyMeshMap& map)
 {
+    const spatialTransform st(SBMFPtr_().spatialTransformation());
+
     displacementPoints0::mapMesh(map);
 
     zone_.mapMesh(map);
@@ -220,7 +226,7 @@ void Foam::pointMeshMovers::solidBody::mapMesh(const polyMeshMap& map)
         const label pointi =
             zone_.all() ? zonePointi : zonePoints_[zonePointi];
 
-        points0[pointi] = transform_.invTransformPoint(points0[pointi]);
+        points0[pointi] = st.invTransformPoint(points0[pointi]);
     }
 
     twoDCorrectPoints(points0);

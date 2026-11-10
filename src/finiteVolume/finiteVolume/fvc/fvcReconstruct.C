@@ -24,10 +24,10 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvcReconstruct.H"
-#include "fvMesh.H"
+#include "reconstructionTensors.H"
 #include "volFields.H"
 #include "surfaceFields.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "extrapolatedCalculatedFvPatchFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -44,24 +44,19 @@ namespace fvc
 
 template<class Type>
 tmp<VolField<typename outerProduct<vector, Type>::type>>
-reconstruct
-(
-    const SurfaceField<Type>& ssf
-)
+reconstruct(const SurfaceField<Type>& ssf)
 {
     typedef typename outerProduct<vector, Type>::type GradType;
 
     const fvMesh& mesh = ssf.mesh()();
 
-    surfaceVectorField SfHat(mesh.Sf()/mesh.magSf());
-
     tmp<VolField<GradType>> treconField
     (
         VolField<GradType>::New
         (
-            "volIntegrate("+ssf.name()+')',
+            word("volIntegrate(", ssf.name(), ')'),
             mesh,
-            dimensioned<GradType>("0", ssf.dimensions()/dimArea, Zero),
+            dimensioned<GradType>("0", ssf.dimensions()/dimensions::area, Zero),
             extrapolatedCalculatedFvPatchField<GradType>::typeName
         )
     );
@@ -71,9 +66,12 @@ reconstruct
         return treconField;
     }
 
-    treconField.ref().internalFieldRef() =
-        inv(surfaceSum(SfHat*mesh.Sf()))&surfaceSum(SfHat*ssf);
+    // Get reference to reconstruct tensors
+    const fvi::reconstructionTensors& rt =
+        fvi::reconstructionTensors::New(mesh);
 
+    treconField.ref().internalFieldRef() =
+        rt.tensors() & fvi::surfaceSum((mesh.Sf()/mesh.magSf())*ssf);
     treconField.ref().correctBoundaryConditions();
 
     return treconField;
@@ -88,10 +86,7 @@ reconstruct
 )
 {
     typedef typename outerProduct<vector, Type>::type GradType;
-    tmp<VolField<GradType>> tvf
-    (
-        fvc::reconstruct(tssf())
-    );
+    tmp<VolField<GradType>> tvf(fvc::reconstruct(tssf()));
     tssf.clear();
     return tvf;
 }

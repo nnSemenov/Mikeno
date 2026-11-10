@@ -69,7 +69,7 @@ void Foam::ThermoCloud<CloudType>::setModels()
     {
         radAreaP_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -80,13 +80,13 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar(dimArea, 0)
+                dimensionedScalar(dimensions::area, 0)
             )
         );
 
         radT4_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -97,13 +97,13 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar(pow4(dimTemperature), 0)
+                dimensionedScalar(pow4(dimensions::temperature), 0)
             )
         );
 
         radAreaPT4_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -114,7 +114,11 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar(sqr(dimLength)*pow4(dimTemperature), 0)
+                dimensionedScalar
+                (
+                    dimensions::area*pow4(dimensions::temperature),
+                    0
+                )
             )
         );
     }
@@ -164,7 +168,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
     radAreaPT4_(nullptr),
     hsTrans_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -175,12 +179,12 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar(dimEnergy, 0)
+            dimensionedScalar(dimensions::energy, 0)
         )
     ),
     hsCoeff_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -191,7 +195,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar(dimEnergy/dimTemperature, 0)
+            dimensionedScalar(dimensions::energy/dimensions::temperature, 0)
         )
     )
 {
@@ -233,7 +237,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
     radAreaPT4_(nullptr),
     hsTrans_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -249,7 +253,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
     ),
     hsCoeff_
     (
-        new volScalarField::Internal
+        new volInternalScalarField
         (
             IOobject
             (
@@ -268,7 +272,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
     {
         radAreaP_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -285,7 +289,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
 
         radT4_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -302,7 +306,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
 
         radAreaPT4_.reset
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -459,7 +463,7 @@ void Foam::ThermoCloud<CloudType>::preEvolve()
 {
     CloudType::preEvolve();
 
-    this->pAmbient() = carrierThermo_.p().average().value();
+    this->pAmbient() = average(carrierThermo_.p()()).value();
 }
 
 

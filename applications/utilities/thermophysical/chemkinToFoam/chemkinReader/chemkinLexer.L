@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -119,6 +119,7 @@ Foam::word foamName(const Foam::string& s)
 one_space             [ \t\f\r]
 space                 {one_space}*
 some_space            {one_space}+
+newline               [ \n]
 
 alpha                 [_A-Za-z]
 digit                 [0-9]
@@ -170,6 +171,7 @@ reactionKeywordSlash  {reactionKeyword}"/"{space}
 thirdBodyEfficiency   {space}{floatNum}{space}"/"{space}
 startReactionCoeffs   {space}"/"{space}
 endReactionCoeffs     {space}"/"{space}
+endPLogReactionCoeffs {space}"/"{newline}
 reactionCoeff         {space}{floatNum}{space}
 
 calPerMol             {space}"CAL/MOLE"{space}
@@ -216,6 +218,7 @@ otherReactionUnit     {space}("MOLE"|"MOLECULE"|"EVOL"|"EVOLTS"){space}
 %x readPDependentSpecie
 %x readThirdBodyEfficiency
 %x readReactionCoeffs
+%x readPLogReactionCoeffs
 %x readTdepSpecie
 %x readReactionOrderSpecie
 %x readReactionOrder
@@ -315,8 +318,8 @@ List<specieElement> currentSpecieComposition(5);
 scalar currentLowT = 0;
 scalar currentHighT = 0;
 scalar currentCommonT = 0;
-chemkinReader::thermoPhysics::coeffArray highCpCoeffs(scalarList(7));
-chemkinReader::thermoPhysics::coeffArray lowCpCoeffs(scalarList(7));
+chemkinReader::thermoPhysics::coeffArray highCpCoeffs(Zero);
+chemkinReader::thermoPhysics::coeffArray lowCpCoeffs(Zero);
 
 specieCoeffs currentSpecieCoeff;
 
@@ -325,7 +328,8 @@ DynamicList<specieCoeffs> rhs;
 
 scalarList ArrheniusCoeffs(3);
 DynamicList<scalar> reactionCoeffs;
-scalarList thirdBodyEfficiencies;
+scalar defaultThirdBodyEfficiency = 1;
+List<Tuple2<word, scalar>> thirdBodyEfficiencies;
 label currentThirdBodyIndex = -1;
 
 word reactionCoeffsName = word::null;
@@ -408,16 +412,12 @@ bool finishReaction = false;
         {
             specieNames_.shrink();
             speciesTable_ = specieNames_;
-            thirdBodyEfficiencies.setSize(specieNames_.size());
-            thirdBodyEfficiencies = 1.0;
             BEGIN(readThermoSpecieName);
         }
         else if (specieName == "END")
         {
             specieNames_.shrink();
             speciesTable_ = specieNames_;
-            thirdBodyEfficiencies.setSize(specieNames_.size());
-            thirdBodyEfficiencies = 1.0;
             BEGIN(INITIAL);
         }
         else
@@ -671,18 +671,7 @@ bool finishReaction = false;
     }
 
 <readThermoSpecieName>{end} {
-        Reaction<chemkinReader::thermoPhysics>::TlowDefault = max
-        (
-            Reaction<chemkinReader::thermoPhysics>::TlowDefault,
-            currentLowT
-        );
-
-        Reaction<chemkinReader::thermoPhysics>::ThighDefault = min
-        (
-            Reaction<chemkinReader::thermoPhysics>::ThighDefault,
-            currentHighT
-        );
-
+        setTlimits(currentLowT, currentHighT);
         BEGIN(INITIAL);
     }
 
@@ -809,6 +798,7 @@ bool finishReaction = false;
                     (
                         lhs,
                         rhs,
+                        defaultThirdBodyEfficiency,
                         thirdBodyEfficiencies,
                         rType,
                         rrType,
@@ -821,7 +811,8 @@ bool finishReaction = false;
                     rType = unknownReactionType;
                     rrType = Arrhenius;
                     fofType = unknownFallOffFunctionType;
-                    thirdBodyEfficiencies = 1.0;
+                    defaultThirdBodyEfficiency = 1;
+                    thirdBodyEfficiencies.clear();
                     pDependentSpecieName = word::null;
                     lrhsPtr = &lhs;
                     break;
@@ -850,10 +841,20 @@ bool finishReaction = false;
             {
                 if (finishReaction)
                 {
+                    if (reactionCoeffsName == "pLog")
+                    {
+                        reactionCoeffsTable.insert
+                        (
+                            reactionCoeffsName, reactionCoeffs.shrink()
+                        );
+                        reactionCoeffs.clear();
+                    }
+
                     addReaction
                     (
                         lhs,
                         rhs,
+                        defaultThirdBodyEfficiency,
                         thirdBodyEfficiencies,
                         rType,
                         rrType,
@@ -866,7 +867,8 @@ bool finishReaction = false;
                     rType = unknownReactionType;
                     rrType = Arrhenius;
                     fofType = unknownFallOffFunctionType;
-                    thirdBodyEfficiencies = 1.0;
+                    defaultThirdBodyEfficiency = 1;
+                    thirdBodyEfficiencies.clear();
                     pDependentSpecieName = word::null;
                     lrhsPtr = &lhs;
                 }
@@ -1139,6 +1141,18 @@ bool finishReaction = false;
                     break;
                 }
 
+                case pLogReactionType:
+                {
+                    if (rrType == Arrhenius)
+                    {
+                        rrType = pLog;
+                    }
+
+                    reactionCoeffsName = reactionRateTypeNames[rrType];
+                    BEGIN(readPLogReactionCoeffs);
+                    break;
+                }
+
                 case radiationActivatedReactionType:
                 {
                     FatalErrorInFunction
@@ -1239,6 +1253,7 @@ bool finishReaction = false;
                 (
                     lhs,
                     rhs,
+                    defaultThirdBodyEfficiency,
                     thirdBodyEfficiencies,
                     rType,
                     rrType,
@@ -1251,7 +1266,8 @@ bool finishReaction = false;
                 rType = unknownReactionType;
                 rrType = Arrhenius;
                 fofType = unknownFallOffFunctionType;
-                thirdBodyEfficiencies = 1.0;
+                defaultThirdBodyEfficiency = 1;
+                thirdBodyEfficiencies.clear();
                 pDependentSpecieName = word::null;
                 lrhsPtr = &lhs;
             }
@@ -1349,7 +1365,10 @@ bool finishReaction = false;
 
 
 <readThirdBodyEfficiency>{thirdBodyEfficiency} {
-        thirdBodyEfficiencies[currentThirdBodyIndex] = stringToScalar(YYText());
+        thirdBodyEfficiencies.append
+        (
+            {specieNames_[currentThirdBodyIndex], stringToScalar(YYText())}
+        );
         BEGIN(readReactionKeyword);
     }
 
@@ -1395,7 +1414,11 @@ bool finishReaction = false;
             rhsThirdBodyCounter++;
         }
 
-        if (pDependentSpecieName != "M")
+        if (pDependentSpecieName == "M")
+        {
+            defaultThirdBodyEfficiency = 1;
+        }
+        else
         {
             HashTable<label>::iterator specieIndexIter
             (
@@ -1404,8 +1427,9 @@ bool finishReaction = false;
 
             if (specieIndexIter != specieIndices_.end())
             {
-                thirdBodyEfficiencies = 0.0;
-                thirdBodyEfficiencies[specieIndexIter()] = 1.0;
+                defaultThirdBodyEfficiency = 0;
+                thirdBodyEfficiencies.clear();
+                thirdBodyEfficiencies.append({pDependentSpecieName, 1.0});
             }
             else
             {
@@ -1428,6 +1452,14 @@ bool finishReaction = false;
 <readReactionCoeffs>{endReactionCoeffs} {
         reactionCoeffsTable.insert(reactionCoeffsName, reactionCoeffs.shrink());
         reactionCoeffs.clear();
+        BEGIN(readReactionKeyword);
+    }
+
+<readPLogReactionCoeffs>{reactionCoeff} {
+        reactionCoeffs.append(stringToScalar(YYText()));
+    }
+
+<readPLogReactionCoeffs>{endPLogReactionCoeffs} {
         BEGIN(readReactionKeyword);
     }
 
@@ -1560,6 +1592,7 @@ bool finishReaction = false;
             (
                 lhs,
                 rhs,
+                defaultThirdBodyEfficiency,
                 thirdBodyEfficiencies,
                 rType,
                 rrType,

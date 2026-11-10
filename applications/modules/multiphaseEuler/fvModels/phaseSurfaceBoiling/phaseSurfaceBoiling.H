@@ -93,6 +93,7 @@ SourceFiles
 #include "phaseChange.H"
 #include "nucleation.H"
 #include "phaseSystem.H"
+#include "DimensionedFunction1.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -104,8 +105,6 @@ namespace solvers
 {
     class multiphaseEuler;
 }
-
-class saturationTemperatureModel;
 
 namespace wallBoilingModels
 {
@@ -144,8 +143,8 @@ class phaseSurfaceBoiling
         //- Reference to the solid phase on which the boiling occurs
         const phaseModel& solid_;
 
-        //- The saturation curve
-        autoPtr<saturationTemperatureModel> saturationModelPtr_;
+        //- Saturation temperature as a function of pressure
+        autoPtr<DimensionedFunction1<scalar>> Tsat_;
 
         //- Run-time selected heat flux partitioning model
         autoPtr<Foam::wallBoilingModels::partitioningModel>
@@ -167,25 +166,25 @@ class phaseSurfaceBoiling
         mutable label pressureEquationIndex_;
 
         //- Surface liquid fraction
-        mutable volScalarField::Internal wetFraction_;
+        mutable volInternalScalarField wetFraction_;
 
         //- Departure diameter
-        mutable volScalarField::Internal dDeparture_;
+        mutable volInternalScalarField dDeparture_;
 
         //- Departure frequency
-        mutable volScalarField::Internal fDeparture_;
+        mutable volInternalScalarField fDeparture_;
 
         //- Nucleation site density
-        mutable volScalarField::Internal nucleationSiteDensity_;
+        mutable volInternalScalarField nucleationSiteDensity_;
 
         //- Quenching heat transfer rate
-        mutable volScalarField::Internal qQuenching_;
+        mutable volInternalScalarField qQuenching_;
 
         //- Evaporative heat transfer rate
-        mutable volScalarField::Internal qEvaporative_;
+        mutable volInternalScalarField qEvaporative_;
 
         //- Mass transfer rate
-        mutable volScalarField::Internal mDot_;
+        mutable volInternalScalarField mDot_;
 
 
     // Private Member Functions

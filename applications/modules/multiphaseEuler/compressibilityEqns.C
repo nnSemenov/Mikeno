@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,9 +24,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "multiphaseEuler.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
-#include "fvcSup.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
+#include "fviSup.H"
 #include "fvmDdt.H"
 #include "fvmDiv.H"
 #include "fvmSup.H"
@@ -36,7 +36,7 @@ License
 Foam::PtrList<Foam::fvScalarMatrix>
 Foam::solvers::multiphaseEuler::compressibilityEqns
 (
-    const PtrList<volScalarField::Internal>& dmdts
+    const PtrList<volInternalScalarField>& dmdts
 ) const
 {
     volScalarField& p_rgh = p_rgh_;
@@ -49,7 +49,11 @@ Foam::solvers::multiphaseEuler::compressibilityEqns
         const volScalarField& alpha = phase;
         volScalarField& rho = phase.rho();
 
-        pEqnComps.set(phasei, new fvScalarMatrix(p_rgh, dimVolume/dimTime));
+        pEqnComps.set
+        (
+            phasei,
+            new fvScalarMatrix(p_rgh, dimensions::volume/dimensions::time)
+        );
         fvScalarMatrix& pEqnComp = pEqnComps[phasei];
 
         // Density variation
@@ -57,15 +61,15 @@ Foam::solvers::multiphaseEuler::compressibilityEqns
         {
             pEqnComp +=
                 (
-                    fvc::ddt(alpha, rho) + fvc::div(phase.alphaRhoPhi())
-                  - fvc::Sp(fvc::ddt(alpha) + fvc::div(phase.alphaPhi()), rho)
-                )/rho;
+                    fvi::ddt(alpha, rho) + fvi::div(phase.alphaRhoPhi())
+                  - fvi::Sp(fvi::ddt(alpha) + fvi::div(phase.alphaPhi()), rho)
+                )/rho();
         }
 
         // Mesh dilatation correction
         if (mesh.moving())
         {
-            pEqnComp += fvc::div(mesh.phi())*alpha;
+            pEqnComp += fvi::div(mesh.phi())*alpha();
         }
 
         // Compressibility
@@ -82,11 +86,11 @@ Foam::solvers::multiphaseEuler::compressibilityEqns
                 pEqnComp +=
                     correction
                     (
-                        (alpha/rho)*
+                        (alpha()/rho())*
                         (
                             phase.fluidThermo().psi()*fvm::ddt(p_rgh)
                           + fvm::div(phid, p_rgh)
-                          - fvm::Sp(fvc::div(phid), p_rgh)
+                          - fvm::Sp(fvi::div(phid), p_rgh)
                         )
                     );
 
@@ -95,7 +99,7 @@ Foam::solvers::multiphaseEuler::compressibilityEqns
             else
             {
                 pEqnComp +=
-                    (alpha*phase.fluidThermo().psi()/rho)
+                    (alpha()*phase.fluidThermo().psi()()/rho())
                    *correction(fvm::ddt(p_rgh));
             }
         }
@@ -103,13 +107,13 @@ Foam::solvers::multiphaseEuler::compressibilityEqns
         // Option sources
         if (fvModels().addsSupToField(rho.name()))
         {
-            pEqnComp -= fvModels().sourceProxy(alpha, rho, p_rgh)/rho;
+            pEqnComp -= fvModels().sourceProxy(alpha, rho, p_rgh)/rho();
         }
 
         // Mass transfer
         if (dmdts.set(phasei))
         {
-            pEqnComp -= dmdts[phasei]/rho;
+            pEqnComp -= dmdts[phasei]/rho();
         }
     }
 

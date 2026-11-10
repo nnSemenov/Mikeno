@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ Foam::word Foam::Lagrangian::ddtSchemes::CrankNicolson<Type>::S0Name
     const LagrangianSubSubField<Type>& psi
 ) const
 {
-    return typedName("S0(" + psi.mesh().complete(psi.name()) + ")");
+    return typedName(word("S0(", psi.mesh().complete(psi.name()), ')'));
 }
 
 
@@ -48,7 +48,7 @@ Foam::word Foam::Lagrangian::ddtSchemes::CrankNicolson<Type>::deltaTSp0Name
     const LagrangianSubSubField<Type>& psi
 ) const
 {
-    return typedName("deltaTSp0(" + psi.mesh().complete(psi.name()) + ")");
+    return typedName(word("deltaTSp0(", psi.mesh().complete(psi.name()), ')'));
 }
 
 
@@ -83,13 +83,17 @@ bool Foam::Lagrangian::ddtSchemes::CrankNicolson<Type>::LagrangianmInitDdt
                     false
                 ),
                 mesh,
-                dimensioned<Type>(mDims*psi.dimensions()/dimTime, Zero),
+                dimensioned<Type>
+                (
+                    mDims*psi.dimensions()/dimensions::time,
+                    Zero
+                ),
                 wordList
                 (
                     mesh.boundary().size(),
                     calculatedLagrangianPatchField<Type>::typeName
                 ),
-                wordList::null(),
+                wordList{},
                 LagrangianModels::New(mesh).modelTypeFieldSourceTypes
                 <
                     LagrangianInjection,
@@ -127,7 +131,7 @@ bool Foam::Lagrangian::ddtSchemes::CrankNicolson<Type>::LagrangianmInitDdt
                     mesh.boundary().size(),
                     calculatedLagrangianPatchField<scalar>::typeName
                 ),
-                wordList::null(),
+                wordList{},
                 LagrangianModels::New(mesh).modelTypeFieldSourceTypes
                 <
                     LagrangianInjection,

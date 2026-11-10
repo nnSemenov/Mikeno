@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -71,11 +71,8 @@ void Foam::LimitedScheme<Type, Limiter, LimitFunc>::calcLimiter
         );
     }
 
-    const typename VolField<Type>::Boundary&
-        bPhi = phi.boundaryField();
-
-    surfaceScalarField::Boundary& bLim =
-        limiterField.boundaryFieldRef();
+    const typename VolField<Type>::BoundaryField& bPhi = phi.boundaryField();
+    surfaceScalarField::BoundaryField& bLim = limiterField.boundaryFieldRef();
 
     forAll(bLim, patchi)
     {
@@ -140,7 +137,7 @@ Foam::LimitedScheme<Type, Limiter, LimitFunc>::limiter
 {
     const fvMesh& mesh = this->mesh();
 
-    const word limiterFieldName(type() + "Limiter(" + phi.name() + ')');
+    const word limiterFieldName(type(), "Limiter(", phi.name(), ')');
 
     if (this->mesh().solution().cache("limiter"))
     {
@@ -159,7 +156,8 @@ Foam::LimitedScheme<Type, Limiter, LimitFunc>::limiter
                         IOobject::NO_WRITE
                     ),
                     mesh,
-                    dimless
+                    dimless,
+                    fvsPatchField<scalar>::calculatedType()
                 )
             );
 
@@ -189,6 +187,13 @@ Foam::LimitedScheme<Type, Limiter, LimitFunc>::limiter
         );
 
         calcLimiter(phi, tlimiterField.ref());
+
+        if (debug)
+        {
+            Info<< type() << " " << limiterFieldName
+                << ": average limiter " << average(tlimiterField())
+                << " max " << max(tlimiterField()) << endl;
+        }
 
         return tlimiterField;
     }

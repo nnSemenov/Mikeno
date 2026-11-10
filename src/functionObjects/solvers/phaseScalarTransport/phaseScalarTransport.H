@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -141,22 +141,25 @@ class phaseScalarTransport
         scalarTransport::diffusivityType diffusivity_;
 
         //- Constant diffusivity coefficient (optional)
-        scalar D_;
+        dimensionedScalar D_;
+
+        //- Diffusivity field name (optional)
+        word Dname_;
 
         //- Laminar diffusivity coefficient (optional)
-        scalar alphal_;
+        dimensionedScalar alphal_;
 
         //- Turbulent diffusivity coefficient (optional)
-        scalar alphat_;
-
-        //- Number of corrector iterations (optional)
-        int nCorr_;
+        dimensionedScalar alphat_;
 
         //- Residual volume-fraction
         scalar residualAlpha_;
 
         //- Name of field whose schemes are used (optional)
         word schemesField_;
+
+        //- Name of field whose solver is used (optional)
+        word solverField_;
 
         //- Flag to indicate whether to write the field multiplied by the phase
         //  fraction

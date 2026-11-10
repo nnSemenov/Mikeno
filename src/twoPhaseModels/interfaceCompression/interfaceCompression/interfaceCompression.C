@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -70,7 +70,7 @@ Foam::interfaceCompressionNew::interpolate
         cAlpha_*sign(phi_)*vff*(1 - vff)*nHatf/mesh().magSf()
     );
 
-    surfaceScalarField::Boundary& vfcBf = vfc.boundaryFieldRef();
+    surfaceScalarField::BoundaryField& vfcBf = vfc.boundaryFieldRef();
 
     // Do not compress interface at non-coupled boundary faces
     // (inlets, outlets etc.)
@@ -85,7 +85,7 @@ Foam::interfaceCompressionNew::interpolate
     }
 
     tmp<surfaceScalarField> tvff(tScheme_().interpolate(vf) + vfc);
-    tvff.ref().maxMin(0, 1);
+    tvff.ref().bound(0, 1);
 
     return tvff;
 }

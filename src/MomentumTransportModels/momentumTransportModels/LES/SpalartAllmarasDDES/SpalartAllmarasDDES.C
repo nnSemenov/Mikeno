@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,18 +35,18 @@ namespace LESModels
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
 template<class BasicMomentumTransportModel>
-tmp<volScalarField::Internal>
+tmp<volInternalScalarField>
 SpalartAllmarasDDES<BasicMomentumTransportModel>::rd
 (
-    const volScalarField::Internal& magGradU
+    const volInternalScalarField& magGradU
 ) const
 {
-    return volScalarField::Internal::New
+    return volInternalScalarField::New
     (
         typedName("rd"),
         min
         (
-            this->nuEff()()
+            this->nuEff()()()
            /(
                 max
                 (
@@ -62,13 +62,13 @@ SpalartAllmarasDDES<BasicMomentumTransportModel>::rd
 
 
 template<class BasicMomentumTransportModel>
-tmp<volScalarField::Internal>
+tmp<volInternalScalarField>
 SpalartAllmarasDDES<BasicMomentumTransportModel>::fd
 (
-    const volScalarField::Internal& magGradU
+    const volInternalScalarField& magGradU
 ) const
 {
-    return volScalarField::Internal::New
+    return volInternalScalarField::New
     (
         typedName("fd"),
         1 - tanh(pow3(8*rd(magGradU)))
@@ -79,27 +79,27 @@ SpalartAllmarasDDES<BasicMomentumTransportModel>::fd
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class BasicMomentumTransportModel>
-tmp<volScalarField::Internal>
+tmp<volInternalScalarField>
 SpalartAllmarasDDES<BasicMomentumTransportModel>::dTilda
 (
-    const volScalarField::Internal& chi,
-    const volScalarField::Internal& fv1,
-    const volTensorField::Internal& gradU
+    const volInternalScalarField& chi,
+    const volInternalScalarField& fv1,
+    const volInternalTensorField& gradU
 ) const
 {
-    return volScalarField::Internal::New
+    return volInternalScalarField::New
     (
         typedName("dTilda"),
         max
         (
-            this->y()
+            this->y()()
           - fd(mag(gradU))
            *max
             (
                 this->y()() - this->CDES_*this->delta()(),
-                dimensionedScalar(dimLength, 0)
+                dimensionedScalar(dimensions::length, 0)
             ),
-            dimensionedScalar(dimLength, small)
+            dimensionedScalar(dimensions::length, small)
         )
     );
 }

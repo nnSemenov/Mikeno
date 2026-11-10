@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,7 +62,7 @@ Foam::MulticomponentThermo<BaseThermo>::volScalarFieldPropertyi
         psi[celli] = (thermo.*psiMethod)(args[celli] ...);
     }
 
-    volScalarField::Boundary& psiBf = psi.boundaryFieldRef();
+    volScalarField::BoundaryField& psiBf = psi.boundaryFieldRef();
 
     forAll(psiBf, patchi)
     {
@@ -82,7 +82,7 @@ Foam::MulticomponentThermo<BaseThermo>::volScalarFieldPropertyi
 
 template<class BaseThermo>
 template<class Method, class ... Args>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::MulticomponentThermo<BaseThermo>::volInternalScalarFieldPropertyi
 (
     const word& psiName,
@@ -95,9 +95,9 @@ Foam::MulticomponentThermo<BaseThermo>::volInternalScalarFieldPropertyi
     const typename BaseThermo::mixtureType::thermoType& thermo =
         this->specieThermo(speciei);
 
-    tmp<volScalarField::Internal> tPsi
+    tmp<volInternalScalarField> tPsi
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             IOobject::groupName(psiName, this->T_.group()),
             this->T_.mesh(),
@@ -105,7 +105,7 @@ Foam::MulticomponentThermo<BaseThermo>::volInternalScalarFieldPropertyi
         )
     );
 
-    volScalarField::Internal& psi = tPsi.ref();
+    volInternalScalarField& psi = tPsi.ref();
 
     forAll(psi, celli)
     {
@@ -185,7 +185,7 @@ Foam::dimensionedScalar Foam::MulticomponentThermo<BaseThermo>::Wi
         dimensionedScalar
         (
             "W",
-            dimMass/dimMoles,
+            dimensions::mass/dimensions::moles,
             this->specieThermo(speciei).W()
         );
 }
@@ -215,7 +215,7 @@ Foam::MulticomponentThermo<BaseThermo>::rhoi
     return volScalarFieldPropertyi
     (
         "rho",
-        dimDensity,
+        dimensions::density,
         &BaseThermo::mixtureType::thermoType::rho,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),
@@ -248,7 +248,7 @@ Foam::MulticomponentThermo<BaseThermo>::Cpi
     return volScalarFieldPropertyi
     (
         "Cp",
-        dimEnergy/dimMass/dimTemperature,
+        dimensions::specificHeatCapacity,
         &BaseThermo::mixtureType::thermoType::Cp,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),
@@ -288,18 +288,18 @@ Foam::tmp<Foam::scalarField> Foam::MulticomponentThermo<BaseThermo>::hei
 
 
 template<class BaseThermo>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::MulticomponentThermo<BaseThermo>::hei
 (
     const label speciei,
-    const volScalarField::Internal& p,
-    const volScalarField::Internal& T
+    const volInternalScalarField& p,
+    const volInternalScalarField& T
 ) const
 {
     return volInternalScalarFieldPropertyi
     (
         "he",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::he,
         speciei,
         absolutePressurePatch(p, BaseThermo::pOffset()),
@@ -320,7 +320,7 @@ Foam::MulticomponentThermo<BaseThermo>::hei
     return volScalarFieldPropertyi
     (
         "he",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::he,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),
@@ -360,18 +360,18 @@ Foam::tmp<Foam::scalarField> Foam::MulticomponentThermo<BaseThermo>::hsi
 
 
 template<class BaseThermo>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::MulticomponentThermo<BaseThermo>::hsi
 (
     const label speciei,
-    const volScalarField::Internal& p,
-    const volScalarField::Internal& T
+    const volInternalScalarField& p,
+    const volInternalScalarField& T
 ) const
 {
     return volInternalScalarFieldPropertyi
     (
         "hs",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::hs,
         speciei,
         absolutePressurePatch(p, BaseThermo::pOffset()),
@@ -392,7 +392,7 @@ Foam::MulticomponentThermo<BaseThermo>::hsi
     return volScalarFieldPropertyi
     (
         "hs",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::hs,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),
@@ -432,18 +432,18 @@ Foam::tmp<Foam::scalarField> Foam::MulticomponentThermo<BaseThermo>::hai
 
 
 template<class BaseThermo>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::MulticomponentThermo<BaseThermo>::hai
 (
     const label speciei,
-    const volScalarField::Internal& p,
-    const volScalarField::Internal& T
+    const volInternalScalarField& p,
+    const volInternalScalarField& T
 ) const
 {
     return volInternalScalarFieldPropertyi
     (
         "ha",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::ha,
         speciei,
         absolutePressurePatch(p, BaseThermo::pOffset()),
@@ -464,7 +464,7 @@ Foam::MulticomponentThermo<BaseThermo>::hai
     return volScalarFieldPropertyi
     (
         "ha",
-        dimEnergy/dimMass,
+        dimensions::specificEnergy,
         &BaseThermo::mixtureType::thermoType::ha,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),
@@ -483,7 +483,7 @@ Foam::dimensionedScalar Foam::MulticomponentThermo<BaseThermo>::hfi
         dimensionedScalar
         (
             "hf",
-            dimEnergy/dimMass,
+            dimensions::specificEnergy,
             this->specieThermo(speciei).hf()
         );
 }
@@ -523,7 +523,7 @@ Foam::MulticomponentThermo<BaseThermo>::kappai
     return volScalarFieldPropertyi
     (
         "kappa",
-        dimThermalConductivity,
+        dimensions::thermalConductivity,
         &BaseThermo::mixtureType::thermoType::kappa,
         speciei,
         absolutePressureVol(p, BaseThermo::pOffset()),

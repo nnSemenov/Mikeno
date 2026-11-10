@@ -72,7 +72,7 @@ Foam::diameterModels::populationBalance::populationBalance
             IOobject::AUTO_WRITE
         ),
         phase.mesh(),
-        dimensionedScalar("d", dimLength, NaN)
+        dimensionedScalar("d", dimensions::length, NaN)
     )
 {}
 
@@ -145,7 +145,7 @@ Foam::diameterModels::populationBalance::Av() const
         (
             "sumFiAbyV",
             phase().mesh(),
-            dimensionedScalar(inv(dimLength), Zero)
+            dimensionedScalar(inv(dimensions::length), Zero)
         )
     );
     volScalarField& sumFiAbyV = tsumFiAbyV.ref();
@@ -157,21 +157,21 @@ Foam::diameterModels::populationBalance::Av() const
         sumFiAbyV += popBal.f(i)*popBal.a(i)/popBal.v(i);
     }
 
-    return phase()*tsumFiAbyV;
+    return phase().alpha()*tsumFiAbyV;
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::diameterModels::populationBalance::fSum() const
 {
-    tmp<volScalarField::Internal> tsumFi =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tsumFi =
+        volInternalScalarField::New
         (
             "sumFi",
             phase().mesh(),
             dimensionedScalar(dimless, 0)
         );
-    volScalarField::Internal& sumFi = tsumFi.ref();
+    volInternalScalarField& sumFi = tsumFi.ref();
 
     const populationBalanceModel& popBal = this->popBal();
 
@@ -208,7 +208,7 @@ void Foam::diameterModels::populationBalance::correct()
         (
             "sumFiAbyV",
             phase().mesh(),
-            dimensionedScalar(inv(dimLength), Zero)
+            dimensionedScalar(inv(dimensions::length), Zero)
         )
     );
     volScalarField& sumFi = tsumFi.ref();
@@ -223,7 +223,8 @@ void Foam::diameterModels::populationBalance::correct()
     d_ = 6*sumFi/tsumFiAbyV;
 
     Info<< indent << phase().name() << " min/Sauter-mean/max diameter = "
-        << min(d_).value() << '/' << d_.weightedAverage(d_.mesh().V()).value()
+        << min(d_).value() << '/'
+        << weightedAverage(d_(), d_.mesh().V()).value()
         << '/' << max(d_).value() << endl;
 }
 

@@ -68,7 +68,13 @@ distributionGroupFractionFvScalarFieldSource
     groupPropertyFvScalarField(iF),
     distribution_
     (
-        distribution::New(dimLength, dict.subDict("distribution"), 3, -1)
+        distribution::New
+        (
+            dimensions::length,
+            dict.subDict("distribution"),
+            3,
+            -1
+        )
     ),
     etaPtr_(nullptr)
 {}
@@ -107,7 +113,10 @@ Foam::distributionGroupFractionFvScalarFieldSource::sourceValue
     return
         DimensionedField<scalar, fvMesh>::New
         (
-            model.name() + ":" + this->internalField().name() + "SourceValue",
+            word
+            (
+                model.name(), ':', this->internalField().name(), "SourceValue"
+            ),
             this->internalField().mesh(),
             dimensionedScalar(dimless, eta(model))
         );
@@ -136,7 +145,10 @@ Foam::distributionGroupFractionFvScalarFieldSource::internalCoeff
     return
         DimensionedField<scalar, fvMesh>::New
         (
-            model.name() + ":" + this->internalField().name() + "InternalCoeff",
+            word
+            (
+                model.name(), ':', this->internalField().name(), "InternalCoeff"
+            ),
             this->internalField().mesh(),
             dimensionedScalar(dimless, scalar(0))
         );
@@ -161,7 +173,15 @@ void Foam::distributionGroupFractionFvScalarFieldSource::write
 ) const
 {
     fvScalarFieldSource::write(os);
-    writeEntry(os, "distribution", dimLength, distribution_(), true, false);
+    writeEntry
+    (
+        os,
+        "distribution",
+        dimensions::length,
+        distribution_(),
+        true,
+        false
+    );
 }
 
 

@@ -109,7 +109,7 @@ void Foam::reactionModels::laminar::correct()
             const scalarField& rDeltaT =
                 fv::localEulerDdt::localRDeltaT(this->mesh());
 
-            chemistryPtr_->solve(min(1/rDeltaT, maxIntegrationTime_)());
+            chemistryPtr_->solve(eval(min(1/rDeltaT, maxIntegrationTime_))());
         }
         else if (fv::steadyStateDdtScheme<scalar>::enabled(this->mesh())) {
             WarningInFunction
@@ -135,7 +135,7 @@ void Foam::reactionModels::laminar::correct()
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::reactionModels::laminar::R(const label speciei) const
 {
     return chemistryPtr_->RR()[speciei];
@@ -145,7 +145,10 @@ Foam::reactionModels::laminar::R(const label speciei) const
 Foam::tmp<Foam::fvScalarMatrix>
 Foam::reactionModels::laminar::R(volScalarField& Y) const
 {
-    tmp<fvScalarMatrix> tSu(new fvScalarMatrix(Y, dimMass/dimTime));
+    tmp<fvScalarMatrix> tSu
+    (
+        new fvScalarMatrix(Y, dimensions::mass/dimensions::time)
+    );
     fvScalarMatrix& Su = tSu.ref();
 
     const label specieI = this->thermo().species()[Y.member()];
@@ -155,7 +158,8 @@ Foam::reactionModels::laminar::R(volScalarField& Y) const
 }
 
 
-Foam::tmp<Foam::volScalarField> Foam::reactionModels::laminar::Qdot() const
+Foam::tmp<Foam::volInternalScalarField>
+Foam::reactionModels::laminar::Qdot() const
 {
     return chemistryPtr_->Qdot();
 }

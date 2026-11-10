@@ -117,7 +117,7 @@ Foam::functionObjects::sectionalForcesBase::timesRho
     }
     else
     {
-        psi.ref() *= dimensionedScalar(dimDensity, rhoRef_);
+        psi.ref() *= dimensionedScalar(dimensions::density, rhoRef_);
     }
 
     return psi;
@@ -158,11 +158,11 @@ Foam::functionObjects::sectionalForcesBase::p() const
 {
     const volScalarField& p = obr_.lookupObject<volScalarField>(pName_);
 
-    if (p.dimensions() == dimPressure)
+    if (p.dimensions() == dimensions::pressure)
     {
         return p;
     }
-    else if (p.dimensions() == dimPressure/dimDensity)
+    else if (p.dimensions() == dimensions::kinematicPressure)
     {
         if (rhoName_ != "rhoInf")
         {
@@ -171,7 +171,7 @@ Foam::functionObjects::sectionalForcesBase::p() const
                 << exit(FatalError);
         }
 
-        return dimensionedScalar(dimDensity, rhoRef_)*p;
+        return dimensionedScalar(dimensions::density, rhoRef_)*p;
     }
     else
     {
@@ -229,7 +229,7 @@ Foam::functionObjects::sectionalForcesBase::devTau() const
             << "No valid model for viscous stress calculation"
             << exit(FatalError);
 
-        return surfaceVectorField::null();
+        return tmp<surfaceVectorField>{nullptr};
     }
 }
 
@@ -361,8 +361,11 @@ void Foam::functionObjects::sectionalForcesBase::addFluid
         (
             timesAlpha
             (
-                pp.faceNormals()*(p.boundaryField()[ppi] - pRef_)
-              + devTau.boundaryField()[ppi],
+                eval
+                (
+                    pp.faceNormals()*(p.boundaryField()[ppi].field() - pRef_)
+                  + devTau.boundaryField()[ppi]
+                ),
                 ppi
             )
         );
@@ -370,7 +373,7 @@ void Foam::functionObjects::sectionalForcesBase::addFluid
         SubList<vector>(patchFaceForces, pp.size(), patchFacei) =
             f;
         SubList<vector>(patchFaceMoments, pp.size(), patchFacei) =
-            (pp.faceCentres() - origin()) ^ f;
+            eval((pp.faceCentres() - origin()) ^ f);
 
         patchFacei += pp.size();
     }
@@ -525,7 +528,7 @@ bool Foam::functionObjects::sectionalForcesBase::read(const dictionary& dict)
 
 Foam::wordList Foam::functionObjects::sectionalForcesBase::fields() const
 {
-    return wordList::null();
+    return wordList{};
 }
 
 

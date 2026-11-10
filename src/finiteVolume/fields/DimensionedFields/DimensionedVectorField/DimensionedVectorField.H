@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ InClass
     Foam::DimensionedVectorField
 
 Description
-    Specialisation of DimensionedField<T, GeoMesh> for vector.
+    Vector specific part of the implementation of DimensionedField.
 
 SourceFiles
     DimensionedVectorField.C
@@ -36,40 +36,18 @@ SourceFiles
 #define DimensionedVectorField_H
 
 #include "DimensionedField.H"
-#include "vector.H"
-
-#define TEMPLATE template<class GeoMesh, template<class> class PrimitiveField>
-#define TEMPLATE2                                                              \
-    template                                                                   \
-    <                                                                          \
-        class GeoMesh,                                                         \
-        template<class> class PrimitiveField1,                                 \
-        template<class> class PrimitiveField2                                  \
-    >
-#include "DimensionedFieldFunctionsM.H"
+#include "vectorExpressions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
+template<class Type, class GeoMesh, template<class> class PrimitiveField>
+inline auto Foam::DimensionedField<Type, GeoMesh, PrimitiveField>::component
+(
+    const direction& d
+) const
 {
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-UNARY_FUNCTION(vector, vector, normalised, normalised)
-UNARY_FUNCTION(vector, vector, perpendicular, perpendicular)
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
-
-#ifdef NoRepository
-    #include "DimensionedVectorField.C"
-#endif
+    return Foam::component(*this, d);
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

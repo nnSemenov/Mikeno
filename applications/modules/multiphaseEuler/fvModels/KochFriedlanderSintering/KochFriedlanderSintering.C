@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,7 +44,10 @@ namespace fv
 
 Foam::dimensionSet Foam::fv::KochFriedlanderSintering::CsDims() const
 {
-    return pow(dimLength, -n_)*pow(dimTemperature, -m_)*dimTime;
+    return
+        pow(dimensions::length, -n_)
+       *pow(dimensions::temperature, -m_)
+       *dimensions::time;
 }
 
 
@@ -86,8 +89,8 @@ Foam::fv::KochFriedlanderSintering::KochFriedlanderSintering
     n_(coeffs(dict).lookup<scalar>("n")),
     m_(coeffs(dict).lookup<scalar>("m")),
     Cs_("Cs", CsDims(), coeffs(dict)),
-    Ta_("Ta", dimTemperature, coeffs(dict)),
-    dpMin_("dpMin", dimLength, coeffs(dict), scalar(0))
+    Ta_("Ta", dimensions::temperature, coeffs(dict)),
+    dpMin_("dpMin", dimensions::length, coeffs(dict), scalar(0))
 {
     readCoeffs(coeffs(dict));
 
@@ -116,17 +119,17 @@ bool Foam::fv::KochFriedlanderSintering::addsSupToField
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::KochFriedlanderSintering::tau
 (
-    const volScalarField::Internal& kappa
+    const volInternalScalarField& kappa
 ) const
 {
     const label i = kappaNameToGroupIndices_[kappa.name()];
 
-    const volScalarField::Internal& T = popBal_.phases()[i].thermo().T();
+    const volInternalScalarField& T = popBal_.phases()[i].thermo().T();
 
-    const volScalarField::Internal dp(6/max(6/popBal_.dSph(i), kappa));
+    const volInternalScalarField dp(6/max(6/popBal_.dSph(i), kappa));
 
     return Cs_*pow(dp, n_)*pow(T, m_)*exp(Ta_/T*(1 - dpMin_/dp));
 }
@@ -142,7 +145,7 @@ void Foam::fv::KochFriedlanderSintering::addSup
 {
     const label i = kappaNameToGroupIndices_[kappa.name()];
 
-    const volScalarField::Internal R(alphaFi()*rho()/tau(kappa));
+    const volInternalScalarField R(alphaFi()*rho()/tau(kappa));
 
     eqn += R*6/popBal_.dSph(i) - fvm::Sp(R, kappa);
 }

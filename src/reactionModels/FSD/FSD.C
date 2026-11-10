@@ -26,8 +26,8 @@ License
 #include "FSD.H"
 #include "addToRunTimeSelectionTable.H"
 #include "LESModel.H"
-#include "fvcGrad.H"
-#include "fvcDiv.H"
+#include "fviGrad.H"
+#include "fviDiv.H"
 #include "addToRunTimeSelectionTable.H"
 
 
@@ -117,17 +117,18 @@ void Foam::reactionModels::FSD::calculateSourceNorm()
         (s*YFuel - (YO2 - YO2OxiStream_))/(s*YFuelFuelStream_ + YO2OxiStream_);
 
 
-    volVectorField nft(fvc::grad(ft_));
+    volInternalVectorField nft(fvi::grad(ft_));
 
-    volScalarField mgft(mag(nft));
+    volInternalScalarField mgft(mag(nft));
 
-    const surfaceVectorField SfHat(this->mesh().Sf()/this->mesh().magSf());
-
-    const volScalarField cAux(scalar(1) - ft_);
+    const volInternalScalarField cAux(scalar(1) - ft_());
 
     const dimensionedScalar dMgft = 1e-3*
-        (ft_*cAux*mgft)().weightedAverage(this->mesh().V())
-       /((ft_*cAux)().weightedAverage(this->mesh().V()) + small)
+        sum(ft_()*cAux*mgft*this->mesh().V())
+       /(
+            sum(ft_()*cAux*this->mesh().V())
+          + dimensionedScalar(dimVolume, rootVSmall)
+        )
       + dimensionedScalar(mgft.dimensions(), small);
 
     mgft += dMgft;
@@ -136,9 +137,9 @@ void Foam::reactionModels::FSD::calculateSourceNorm()
 
     const volVectorField& U = YO2.db().lookupObject<volVectorField>("U");
 
-    const volScalarField sigma
+    const volInternalScalarField sigma
     (
-        (nft & nft)*fvc::div(U) - (nft & fvc::grad(U) & nft)
+        (nft & nft)*fvi::div(U) - (nft & fvi::grad(U) & nft)
     );
 
     reactionRateFlameArea_->correct(sigma);
@@ -182,15 +183,15 @@ void Foam::reactionModels::FSD::calculateSourceNorm()
             momentumTransportModel::typeName
         );
 
-    const volScalarField& delta = lesModel.delta();
-    const volScalarField ftVar(Cv_*sqr(delta)*sqr(mgft));
+    const volInternalScalarField& delta = lesModel.delta();
+    const volInternalScalarField ftVar(Cv_*sqr(delta)*sqr(mgft));
 
     // Thickened flame (average flame thickness for counterflow configuration
     // is 1.5 mm)
 
     const volScalarField deltaF
     (
-        lesModel.delta()/dimensionedScalar(dimLength, 1.5e-3)
+        lesModel.delta()/dimensionedScalar(dimensions::length, 1.5e-3)
     );
 
     // Linear correlation between delta and flame thickness
@@ -310,14 +311,13 @@ void Foam::reactionModels::FSD::calculateSourceNorm()
 
     const volScalarField fres(this->fres(fuelI));
 
-    this->wFuel_ == mgft*pc*omegaFuelBar;
+    this->wFuel_ = mgft*pc()*omegaFuelBar();
 }
 
 
 void Foam::reactionModels::FSD::correct()
 {
-    this->wFuel_ ==
-        dimensionedScalar(dimMass/pow3(dimLength)/dimTime, 0);
+    this->wFuel_ = dimensionedScalar(dimensions::density/dimensions::time, 0);
 
     calculateSourceNorm();
 }

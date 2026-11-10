@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -66,8 +66,8 @@ Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fvmLaplacian         \
             );                                                                 \
                                                                                \
             fvm.source() -=                                                    \
-                mesh.V()*                                                      \
-                fvc::div                                                       \
+                mesh.V().primitiveField()*                                     \
+                fvi::div                                                       \
                 (                                                              \
                     *fvm.faceFluxCorrectionPtr()                               \
                 )().primitiveField();                                          \
@@ -75,8 +75,8 @@ Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fvmLaplacian         \
         else                                                                   \
         {                                                                      \
             fvm.source() -=                                                    \
-                mesh.V()*                                                      \
-                fvc::div                                                       \
+                mesh.V().primitiveField()*                                     \
+                fvi::div                                                       \
                 (                                                              \
                     gammaMagSf*this->tsnGradScheme_().correction(vf)           \
                 )().primitiveField();                                          \
@@ -88,7 +88,30 @@ Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fvmLaplacian         \
                                                                                \
                                                                                \
 template<>                                                                     \
-Foam::tmp<Foam::VolField<Foam::Type>> \
+Foam::tmp<Foam::VolInternalField<Foam::Type>>                                  \
+Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fviLaplacian         \
+(                                                                              \
+    const SurfaceField<scalar>& gamma,                                         \
+    const VolField<Type>& vf                                                   \
+)                                                                              \
+{                                                                              \
+    const fvMesh& mesh = this->mesh();                                         \
+                                                                               \
+    tmp<VolInternalField<Type>> tLaplacian                                     \
+    (                                                                          \
+        fvi::div(gamma*this->tsnGradScheme_().snGrad(vf)*mesh.magSf())         \
+    );                                                                         \
+                                                                               \
+    tLaplacian.ref().rename                                                    \
+    (                                                                          \
+        word("laplacian(", gamma.name(), ',', vf.name(), ')')                  \
+    );                                                                         \
+                                                                               \
+    return tLaplacian;                                                         \
+}                                                                              \
+                                                                               \
+template<>                                                                     \
+Foam::tmp<Foam::VolField<Foam::Type>>                                          \
 Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fvcLaplacian         \
 (                                                                              \
     const SurfaceField<scalar>& gamma,                                         \
@@ -104,7 +127,7 @@ Foam::fv::gaussLaplacianScheme<Foam::Type, Foam::scalar>::fvcLaplacian         \
                                                                                \
     tLaplacian.ref().rename                                                    \
     (                                                                          \
-        "laplacian(" + gamma.name() + ',' + vf.name() + ')'                    \
+        word("laplacian(", gamma.name(), ',', vf.name(), ')')                  \
     );                                                                         \
                                                                                \
     return tLaplacian;                                                         \

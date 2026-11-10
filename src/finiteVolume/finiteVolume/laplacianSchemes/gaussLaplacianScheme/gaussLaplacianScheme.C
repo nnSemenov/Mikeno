@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,6 +25,7 @@ License
 
 #include "gaussLaplacianScheme.H"
 #include "surfaceInterpolate.H"
+#include "fviDiv.H"
 #include "fvcDiv.H"
 #include "fvcGrad.H"
 #include "fvMatrices.H"
@@ -102,7 +103,7 @@ gaussLaplacianScheme<Type, GType>::gammaSnGradCorr
     (
         SurfaceField<Type>::New
         (
-            "gammaSnGradCorr("+vf.name()+')',
+            word("gammaSnGradCorr(", vf.name(), ')'),
             mesh,
             SfGammaCorr.dimensions()
            *vf.dimensions()*mesh.deltaCoeffs().dimensions()
@@ -125,6 +126,62 @@ gaussLaplacianScheme<Type, GType>::gammaSnGradCorr
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type, class GType>
+tmp<VolInternalField<Type>>
+gaussLaplacianScheme<Type, GType>::fviLaplacian
+(
+    const VolField<Type>& vf
+)
+{
+    const fvMesh& mesh = this->mesh();
+
+    tmp<VolInternalField<Type>> tLaplacian
+    (
+        fvi::div(this->tsnGradScheme_().snGrad(vf)*mesh.magSf())
+    );
+
+    tLaplacian.ref().rename(word("laplacian(", vf.name(), ')'));
+
+    return tLaplacian;
+}
+
+
+template<class Type, class GType>
+tmp<VolInternalField<Type>>
+gaussLaplacianScheme<Type, GType>::fviLaplacian
+(
+    const SurfaceField<GType>& gamma,
+    const VolField<Type>& vf
+)
+{
+    const fvMesh& mesh = this->mesh();
+
+    const surfaceVectorField Sn(mesh.Sf()/mesh.magSf());
+    const surfaceVectorField SfGamma(mesh.Sf() & gamma);
+    const SurfaceField<scalar> SfGammaSn
+    (
+        SfGamma & Sn
+    );
+    const surfaceVectorField SfGammaCorr(SfGamma - SfGammaSn*Sn);
+
+    tmp<VolInternalField<Type>> tLaplacian
+    (
+        fvi::div
+        (
+            SfGammaSn*this->tsnGradScheme_().snGrad(vf)
+          + gammaSnGradCorr(SfGammaCorr, vf)
+        )
+    );
+
+    tLaplacian.ref().rename
+    (
+        word("laplacian(", gamma.name(), ',', vf.name(), ')')
+    );
+
+    return tLaplacian;
+}
+
+
+template<class Type, class GType>
 tmp<VolField<Type>>
 gaussLaplacianScheme<Type, GType>::fvcLaplacian
 (
@@ -138,7 +195,43 @@ gaussLaplacianScheme<Type, GType>::fvcLaplacian
         fvc::div(this->tsnGradScheme_().snGrad(vf)*mesh.magSf())
     );
 
-    tLaplacian.ref().rename("laplacian(" + vf.name() + ')');
+    tLaplacian.ref().rename(word("laplacian(", vf.name(), ')'));
+
+    return tLaplacian;
+}
+
+
+template<class Type, class GType>
+tmp<VolField<Type>>
+gaussLaplacianScheme<Type, GType>::fvcLaplacian
+(
+    const SurfaceField<GType>& gamma,
+    const VolField<Type>& vf
+)
+{
+    const fvMesh& mesh = this->mesh();
+
+    const surfaceVectorField Sn(mesh.Sf()/mesh.magSf());
+    const surfaceVectorField SfGamma(mesh.Sf() & gamma);
+    const SurfaceField<scalar> SfGammaSn
+    (
+        SfGamma & Sn
+    );
+    const surfaceVectorField SfGammaCorr(SfGamma - SfGammaSn*Sn);
+
+    tmp<VolField<Type>> tLaplacian
+    (
+        fvc::div
+        (
+            SfGammaSn*this->tsnGradScheme_().snGrad(vf)
+          + gammaSnGradCorr(SfGammaCorr, vf)
+        )
+    );
+
+    tLaplacian.ref().rename
+    (
+        word("laplacian(", gamma.name(), ',', vf.name(), ')')
+    );
 
     return tLaplacian;
 }
@@ -180,7 +273,9 @@ gaussLaplacianScheme<Type, GType>::fvmLaplacian
             SfGammaSn*this->tsnGradScheme_().correction(vf);
     }
 
-    fvm.source() -= mesh.V()*fvc::div(tfaceFluxCorrection())().primitiveField();
+    fvm.source() -=
+        mesh.V().primitiveField()
+       *fvi::div(tfaceFluxCorrection())().primitiveField();
 
     if (mesh.schemes().fluxRequired(vf.name()))
     {
@@ -188,42 +283,6 @@ gaussLaplacianScheme<Type, GType>::fvmLaplacian
     }
 
     return tfvm;
-}
-
-
-template<class Type, class GType>
-tmp<VolField<Type>>
-gaussLaplacianScheme<Type, GType>::fvcLaplacian
-(
-    const SurfaceField<GType>& gamma,
-    const VolField<Type>& vf
-)
-{
-    const fvMesh& mesh = this->mesh();
-
-    const surfaceVectorField Sn(mesh.Sf()/mesh.magSf());
-    const surfaceVectorField SfGamma(mesh.Sf() & gamma);
-    const SurfaceField<scalar> SfGammaSn
-    (
-        SfGamma & Sn
-    );
-    const surfaceVectorField SfGammaCorr(SfGamma - SfGammaSn*Sn);
-
-    tmp<VolField<Type>> tLaplacian
-    (
-        fvc::div
-        (
-            SfGammaSn*this->tsnGradScheme_().snGrad(vf)
-          + gammaSnGradCorr(SfGammaCorr, vf)
-        )
-    );
-
-    tLaplacian.ref().rename
-    (
-        "laplacian(" + gamma.name() + ',' + vf.name() + ')'
-    );
-
-    return tLaplacian;
 }
 
 

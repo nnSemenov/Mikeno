@@ -137,7 +137,7 @@ Foam::LagrangianModel::~LagrangianModel()
 
 Foam::wordList Foam::LagrangianModel::addSupFields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
@@ -231,9 +231,9 @@ bool Foam::LagrangianModel::read(const dictionary& dict)
 }
 
 
-bool Foam::LagrangianModel::write(const bool write) const
+bool Foam::LagrangianModel::write(const bool updateInstance) const
 {
-    return write;
+    return true;
 }
 
 

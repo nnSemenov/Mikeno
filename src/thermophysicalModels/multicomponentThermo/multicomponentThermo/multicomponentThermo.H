@@ -87,13 +87,13 @@ public:
             virtual label defaultSpecie() const = 0;
 
 
-        // Active/Inactive handling
+        // Specie active/inactive
 
             //- Access the specie active flags
-            virtual const boolList& speciesActive() const = 0;
+            virtual boolList& activeSpecies() const = 0;
 
             //- Synchronise the specie active flags
-            virtual void syncSpeciesActive() const = 0;
+            virtual void syncActiveSpecies() const = 0;
 
             //- Set specie active
             inline void setSpecieActive(const label speciei) const;
@@ -194,11 +194,11 @@ public:
             ) const = 0;
 
             //- Enthalpy/Internal energy [J/kg]
-            virtual tmp<volScalarField::Internal> hei
+            virtual tmp<volInternalScalarField> hei
             (
                 const label speciei,
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Enthalpy/Internal energy [J/kg]
@@ -226,11 +226,11 @@ public:
             ) const = 0;
 
             //- Sensible enthalpy [J/kg]
-            virtual tmp<volScalarField::Internal> hsi
+            virtual tmp<volInternalScalarField> hsi
             (
                 const label speciei,
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Sensible enthalpy [J/kg]
@@ -258,11 +258,11 @@ public:
             ) const = 0;
 
             //- Absolute enthalpy [J/kg]
-            virtual tmp<volScalarField::Internal> hai
+            virtual tmp<volInternalScalarField> hai
             (
                 const label speciei,
-                const volScalarField::Internal& p,
-                const volScalarField::Internal& T
+                const volInternalScalarField& p,
+                const volInternalScalarField& T
             ) const = 0;
 
             //- Absolute enthalpy [J/kg]
@@ -308,9 +308,7 @@ class multicomponentThermo::implementation
 :
     virtual public multicomponentThermo
 {
-protected:
-
-    // Protected data
+    // Private data
 
         //- The name of the default specie. The mass fraction of which is
         //  derived from the other species rather than solved. Also used as the
@@ -318,7 +316,14 @@ protected:
         word defaultSpecieName_;
 
         //- The index of the default specie
+        //  -1 if no default specie selected
+        //  -2 if the specie mass-fractions are not normal i.e. do not sum to 1
         label defaultSpeciei_;
+
+        //- Mass-fraction sum error limit for scaling normalisation
+        //  Defaults to 1e-3
+        //  the sum of the mass-fractions is tested to be within 1 +/- 1e-3
+        scalar normalisationLimit_;
 
         //- Species mass fractions
         PtrList<volScalarField> Y_;
@@ -326,13 +331,10 @@ protected:
         mutable tmp<volScalarField> Ydefault_;
 
 
-    // Protected Member Functions
+    // Private Member Functions
 
         //- Scale the mass fractions to sum to 1
-        void correctMassFractions
-        (
-            const speciesTable& species
-        );
+        void scaleMassFractions();
 
 
 public:
@@ -346,7 +348,7 @@ public:
             const speciesTable&,
             const fvMesh&,
             const word&,
-            const bool requiresDefaultSpecie = true
+            const bool normal = true
         );
 
 
@@ -357,10 +359,12 @@ public:
     // Member Functions
 
         //- The index of the default specie
+        //  -1 if no default specie selected
+        //  -2 if the specie mass-fractions are not normal i.e. do not sum to 1
         virtual label defaultSpecie() const;
 
         //- Synchronise the specie active flags
-        virtual void syncSpeciesActive() const;
+        virtual void syncActiveSpecies() const;
 
         //- Access the mass-fraction fields
         virtual PtrList<volScalarField>& Y();
@@ -394,18 +398,18 @@ public:
         inline DimensionedFieldListAndSlicer<scalar, fvMesh> Yslicer
         (
             const fvSource& model,
-            const volScalarField::Internal& source
+            const volInternalScalarField& source
         ) const;
 
         //- Get the composition of a source cell
         inline scalarFieldListSlice sourceCellComposition
         (
             const DimensionedFieldListAndSlicer<scalar, fvMesh>& Yslicer,
-            const label i
+            const label celli
         ) const;
 
         //- Get the slicer for the given source
-        inline PtrList<scalarField> Yslicer
+        inline FieldListAndSlicer<scalar> Yslicer
         (
             const fvSource& model,
             const scalarField& source,
@@ -415,7 +419,7 @@ public:
         //- Get the composition of a source cell
         inline scalarFieldListSlice sourceCellComposition
         (
-            const PtrList<scalarField>& Yslicer,
+            const FieldListAndSlicer<scalar>& Yslicer,
             const label i
         ) const;
 };

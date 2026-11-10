@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -157,6 +157,16 @@ inline Foam::tmp<T>::tmp(const tmp<T>& t, bool allowTransfer)
 
 
 template<class T>
+template<class Expression, class>
+inline Foam::tmp<T>::tmp(const Expression& e)
+:
+    type_(REUSABLE_TMP),
+    ptr_(new T(e))
+    // ptr_(eval(e).ptr())
+{}
+
+
+template<class T>
 inline Foam::tmp<T>::~tmp()
 {
     clear();
@@ -189,7 +199,7 @@ inline bool Foam::tmp<T>::valid() const
 template<class T>
 inline Foam::word Foam::tmp<T>::typeName() const
 {
-    return "tmp<" + word(typeid(T).name()) + '>';
+    return word("tmp<", word(typeid(T).name()), '>');
 }
 
 
@@ -434,6 +444,15 @@ inline void Foam::tmp<T>::operator=(const tmp<T>&& t)
     {
         t.ptr_ = 0;
     }
+}
+
+
+template<class T>
+Foam::Ostream& Foam::operator<<(Ostream& os, const tmp<T>& t)
+{
+    os << t();
+    t.clear();
+    return os;
 }
 
 

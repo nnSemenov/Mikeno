@@ -24,14 +24,13 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "MaxwellStefan.H"
-#include "fvcDiv.H"
-#include "fvcLaplacian.H"
+#include "fviDiv.H"
+#include "fviLaplacian.H"
 #include "fvcSnGrad.H"
 #include "fvmSup.H"
 #include "fvmLaplacian.H"
 #include "surfaceInterpolate.H"
 #include "speciesTable.H"
-#include "Function2Evaluate.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -258,7 +257,7 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::updateDii() const
             }
         }
 
-        Dii_.set(i, evaluate(DFuncs_[i][i], dimKinematicViscosity, p, T));
+        Dii_.set(i, DFuncs_[i][i].value(p, T));
 
         Dij[i].setSize(Y.size());
 
@@ -266,11 +265,7 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::updateDii() const
         {
             if (j > i)
             {
-                Dij[i].set
-                (
-                    j,
-                    evaluate(DFuncs_[i][j], dimKinematicViscosity, p, T)
-                );
+                Dij[i].set(j, DFuncs_[i][j].value(p, T));
             }
             else if (j < i)
             {
@@ -310,10 +305,7 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::updateDii() const
         {
             if (i != d)
             {
-                jexp_[i] -= fvc::interpolate
-                (
-                    evaluate(DTFuncs_[i], dimDynamicViscosity, p, T)
-                )*gradTbyT;
+                jexp_[i] -= fvc::interpolate(DTFuncs_[i].value(p, T))*gradTbyT;
             }
         }
     }
@@ -378,11 +370,11 @@ MaxwellStefan<BasicThermophysicalTransportModel>::Di() const
     if (!Di_.size())
     {
         const PtrList<volScalarField>& Y = this->thermo().Y();
-        Di_.setSize(Y.size()); // <-- Mark as to be computed from now on
+        Di_.setSize(Y.size()); // <-- Mark to be computed from now on
         updateDii();
     }
 
-    return Dii_;
+    return Di_;
 }
 
 
@@ -427,6 +419,13 @@ MaxwellStefan<BasicThermophysicalTransportModel>::MaxwellStefan
     invA(A.m()),
     D_(W.size())
 {
+    if (this->thermo().defaultSpecie() < 0)
+    {
+        FatalErrorInFunction
+           << "Required defaultSpecie not specified"
+           << exit(FatalError);
+    }
+
     // Set the molecular weights of the species
     forAll(W, i)
     {
@@ -459,8 +458,8 @@ bool MaxwellStefan<BasicThermophysicalTransportModel>::read()
             {
                 if (j >= i)
                 {
-                    const word nameij(species[i] + '-' + species[j]);
-                    const word nameji(species[j] + '-' + species[i]);
+                    const word nameij(species[i], '-', species[j]);
+                    const word nameji(species[j], '-', species[i]);
 
                     word Dname;
 
@@ -495,12 +494,12 @@ bool MaxwellStefan<BasicThermophysicalTransportModel>::read()
                     DFuncs_[i].set
                     (
                         j,
-                        Function2<scalar>::New
+                        DimensionedFunction2<scalar>::New
                         (
                             Dname,
-                            dimPressure,
-                            dimTemperature,
-                            dimKinematicViscosity,
+                            dimensions::pressure,
+                            dimensions::temperature,
+                            dimensions::kinematicDiffusivity,
                             Ddict
                         ).ptr()
                     );
@@ -519,12 +518,12 @@ bool MaxwellStefan<BasicThermophysicalTransportModel>::read()
                 DTFuncs_.set
                 (
                     i,
-                    Function2<scalar>::New
+                    DimensionedFunction2<scalar>::New
                     (
                         species[i],
-                        dimPressure,
-                        dimTemperature,
-                        dimDynamicViscosity,
+                        dimensions::pressure,
+                        dimensions::temperature,
+                        dimensions::dynamicDiffusivity,
                         DTdict
                     ).ptr()
                 );
@@ -627,7 +626,11 @@ MaxwellStefan<BasicThermophysicalTransportModel>::q() const
             (
                 "sumJ",
                 Y[0].mesh(),
-                dimensionedScalar(dimMass/dimArea/dimTime, 0)
+                dimensionedScalar
+                (
+                    dimensions::massFluxDensity,
+                    0
+                )
             )
         );
 
@@ -637,7 +640,11 @@ MaxwellStefan<BasicThermophysicalTransportModel>::q() const
             (
                 "sumJh",
                 Y[0].mesh(),
-                dimensionedScalar(sumJ.dimensions()*dimEnergy/dimMass, 0)
+                dimensionedScalar
+                (
+                    sumJ.dimensions()*dimensions::specificEnergy,
+                    0
+                )
             )
         );
 
@@ -681,7 +688,7 @@ tmp<scalarField> MaxwellStefan<BasicThermophysicalTransportModel>::q
       - (
             this->alpha().boundaryField()[patchi]
            *this->kappaEff(patchi)
-           *this->thermo().T().boundaryField()[patchi]
+           *this->thermo().T().boundaryField()[patchi].snGrad()
         )
     );
 
@@ -735,7 +742,7 @@ tmp<fvScalarMatrix> MaxwellStefan<BasicThermophysicalTransportModel>::divq
     (
         fvm::Su
         (
-            -fvc::laplacian(this->alpha()*this->kappaEff(), this->thermo().T()),
+            -fvi::laplacian(this->alpha()*this->kappaEff(), this->thermo().T()),
             he
         )
     );
@@ -755,7 +762,11 @@ tmp<fvScalarMatrix> MaxwellStefan<BasicThermophysicalTransportModel>::divq
         (
             "sumJ",
             he.mesh(),
-            dimensionedScalar(dimMass/dimArea/dimTime, 0)
+            dimensionedScalar
+            (
+                dimensions::massFluxDensity,
+                0
+            )
         )
     );
 
@@ -791,7 +802,7 @@ tmp<fvScalarMatrix> MaxwellStefan<BasicThermophysicalTransportModel>::divq
         sumJh -= sumJ*fvc::interpolate(hi);
     }
 
-    tmpDivq.ref() += fvc::div(sumJh*he.mesh().magSf());
+    tmpDivq.ref() += fvi::div(sumJh*he.mesh().magSf());
 
     return tmpDivq;
 }
@@ -819,7 +830,11 @@ tmp<surfaceScalarField> MaxwellStefan<BasicThermophysicalTransportModel>::j
                     this->thermo().phaseName()
                 ),
                 Yi.mesh(),
-                dimensionedScalar(dimMass/dimArea/dimTime, 0)
+                dimensionedScalar
+                (
+                    dimensions::massFluxDensity,
+                    0
+                )
             )
         );
 
@@ -890,7 +905,7 @@ tmp<fvScalarMatrix> MaxwellStefan<BasicThermophysicalTransportModel>::divj
 {
     return
         BasicThermophysicalTransportModel::divj(Yi)
-      + fvc::div(jexp()[this->thermo().specieIndex(Yi)]*Yi.mesh().magSf());
+      + fvi::div(jexp()[this->thermo().specieIndex(Yi)]*Yi.mesh().magSf());
 }
 
 

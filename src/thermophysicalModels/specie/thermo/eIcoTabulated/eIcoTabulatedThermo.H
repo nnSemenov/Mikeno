@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -113,6 +113,17 @@ class eIcoTabulatedThermo
         integratedNonUniformTable Cv_;
 
 
+    // Private Constructors
+
+        //- Construct from name and parent dictionary and dictionary
+        eIcoTabulatedThermo
+        (
+            const word& name,
+            const dictionary& dict,
+            const dictionary& subDict
+        );
+
+
 public:
 
     using EOS_type = EquationOfState;
@@ -130,7 +141,7 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return "eIcoTabulated<" + EquationOfState::typeName() + '>';
+            return word("eIcoTabulated<", EquationOfState::typeName(), '>');
         }
 
         //- Limit the temperature to be in the range Tlow_ to Thigh_

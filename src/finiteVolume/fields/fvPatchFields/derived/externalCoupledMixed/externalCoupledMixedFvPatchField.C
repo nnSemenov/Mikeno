@@ -26,6 +26,7 @@ License
 #include "externalCoupledMixedFvPatchField.H"
 #include "fieldMapper.H"
 #include "volFields.H"
+#include "globalMeshData.H"
 #include "IFstream.H"
 #include "globalIndex.H"
 #include "OSspecific.H"
@@ -45,7 +46,7 @@ Foam::externalCoupledMixedFvPatchField<Type>::patchKey = "# Patch: ";
 template<class Type>
 Foam::fileName Foam::externalCoupledMixedFvPatchField<Type>::baseDir() const
 {
-    word regionName(this->internalField().mesh().name());
+    word regionName(internalField().mesh().name());
     if (regionName == polyMesh::defaultRegion)
     {
         regionName = ".";
@@ -65,15 +66,15 @@ void Foam::externalCoupledMixedFvPatchField<Type>::setMaster
 )
 {
     const VolField<Type>& cvf =
-        static_cast<const VolField<Type>&>(this->internalField());
+        static_cast<const VolField<Type>&>(internalField());
 
     VolField<Type>& vf = const_cast<VolField<Type>&>(cvf);
 
-    typename VolField<Type>::Boundary& bf = vf.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bf = vf.boundaryFieldRef();
 
     // number of patches can be different in parallel...
     label nPatch = bf.size();
-    reduce(nPatch, maxOp<label>());
+    reduce(nPatch, maxOp());
 
     offsets_.setSize(nPatch);
     forAll(offsets_, i)
@@ -140,7 +141,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::writeGeometry
     int tag = Pstream::msgType() + 1;
 
     const label proci = Pstream::myProcNo();
-    const polyPatch& p = this->patch().poly();
+    const polyPatch& p = patch().poly();
     const polyMesh& mesh = p.mesh();
 
     labelList pointToGlobal;
@@ -171,19 +172,19 @@ void Foam::externalCoupledMixedFvPatchField<Type>::writeGeometry
     {
         pointField pts
         (
-            ListListOps::combine<pointField>(allPoints, accessOp<pointField>())
+            ListListOps::combine<pointField>(allPoints, accessOp())
         );
 
         // write points
-        osPoints << patchKey.c_str() << this->patch().name() << pts << endl;
+        osPoints << patchKey.c_str() << patch().name() << pts << endl;
 
         faceList fcs
         (
-            ListListOps::combine<faceList>(allFaces, accessOp<faceList>())
+            ListListOps::combine<faceList>(allFaces, accessOp())
         );
 
         // write faces
-        osFaces<< patchKey.c_str() << this->patch().name() << fcs << endl;
+        osFaces<< patchKey.c_str() << patch().name() << fcs << endl;
     }
 }
 
@@ -244,9 +245,9 @@ void Foam::externalCoupledMixedFvPatchField<Type>::startWait() const
     // only wait on master patch
 
     const VolField<Type>& cvf =
-        static_cast<const VolField<Type>&>(this->internalField());
+        static_cast<const VolField<Type>&>(internalField());
 
-    const typename VolField<Type>::Boundary& bf =
+    const typename VolField<Type>::BoundaryField& bf =
         cvf.boundaryField();
 
     forAll(coupledPatchIndices_, i)
@@ -312,7 +313,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::wait() const
         }
 
         // prevent other procs from racing ahead
-        reduce(found, sumOp<label>());
+        reduce(found, sumOp());
     }
 }
 
@@ -327,11 +328,11 @@ void Foam::externalCoupledMixedFvPatchField<Type>::initialiseRead
     {
         FatalErrorInFunction
             << "Unable to open data transfer file " << is.name()
-            << " for patch " << this->patch().name()
+            << " for patch " << patch().name()
             << exit(FatalError);
     }
 
-    label offset = offsets_[this->patch().index()][Pstream::myProcNo()];
+    label offset = offsets_[patch().index()][Pstream::myProcNo()];
 
     // scan forward to start reading at relevant line/position
     string line;
@@ -346,7 +347,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::initialiseRead
             FatalErrorInFunction
                 << "Unable to scan forward to appropriate read position for "
                 << "data transfer file " << is.name()
-                << " for patch " << this->patch().name()
+                << " for patch " << patch().name()
                 << exit(FatalError);
         }
     }
@@ -368,7 +369,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::readData
     initialiseRead(is);
 
     // read data from file
-    forAll(this->patch(), facei)
+    forAll(patch(), facei)
     {
         if (is.good())
         {
@@ -380,7 +381,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::readData
         {
             FatalErrorInFunction
                 << "Insufficient data for patch "
-                << this->patch().name()
+                << patch().name()
                 << " in file " << is.name()
                 << exit(FatalError);
         }
@@ -409,9 +410,9 @@ void Foam::externalCoupledMixedFvPatchField<Type>::writeData
     writeHeader(os);
 
     const VolField<Type>& cvf =
-        static_cast<const VolField<Type>&>(this->internalField());
+        static_cast<const VolField<Type>&>(internalField());
 
-    const typename VolField<Type>::Boundary& bf =
+    const typename VolField<Type>::BoundaryField& bf =
         cvf.boundaryField();
 
     forAll(coupledPatchIndices_, i)
@@ -469,7 +470,7 @@ externalCoupledMixedFvPatchField
     }
     else
     {
-        fvPatchField<Type>::operator=(this->patchInternalField());
+        fvPatchField<Type>::operator=(patchInternalField());
     }
 
     commsDir_.expand();
@@ -563,11 +564,11 @@ void Foam::externalCoupledMixedFvPatchField<Type>::initialise
     }
 
     const VolField<Type>& cvf =
-        static_cast<const VolField<Type>&>(this->internalField());
+        static_cast<const VolField<Type>&>(internalField());
 
     VolField<Type>& vf = const_cast<VolField<Type>&>(cvf);
 
-    typename VolField<Type>::Boundary& bf = vf.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bf = vf.boundaryFieldRef();
 
     // identify all coupled patches
     DynamicList<label> coupledPatchIDs(bf.size());
@@ -632,7 +633,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::evaluate
     const Pstream::commsTypes comms
 )
 {
-    if (!initialised_ || this->time().timeIndex() % calcFrequency_ == 0)
+    if (!initialised_ || time().timeIndex() % calcFrequency_ == 0)
     {
         const fileName transferFile(baseDir()/fName_);
 
@@ -679,17 +680,17 @@ void Foam::externalCoupledMixedFvPatchField<Type>::transferData
         int tag = Pstream::msgType() + 1;
 
         List<Field<scalar>> magSfs(Pstream::nProcs());
-        magSfs[Pstream::myProcNo()].setSize(this->patch().size());
-        magSfs[Pstream::myProcNo()] = this->patch().magSf();
+        magSfs[Pstream::myProcNo()].setSize(patch().size());
+        magSfs[Pstream::myProcNo()] = patch().magSf();
         Pstream::gatherList(magSfs, tag);
 
         List<Field<Type>> values(Pstream::nProcs());
-        values[Pstream::myProcNo()].setSize(this->patch().size());
+        values[Pstream::myProcNo()].setSize(patch().size());
         values[Pstream::myProcNo()] = this->refValue();
         Pstream::gatherList(values, tag);
 
         List<Field<Type>> snGrads(Pstream::nProcs());
-        snGrads[Pstream::myProcNo()].setSize(this->patch().size());
+        snGrads[Pstream::myProcNo()].setSize(patch().size());
         snGrads[Pstream::myProcNo()] = this->snGrad();
         Pstream::gatherList(snGrads, tag);
 
@@ -714,7 +715,7 @@ void Foam::externalCoupledMixedFvPatchField<Type>::transferData
     }
     else
     {
-        const Field<scalar>& magSf(this->patch().magSf());
+        const Field<scalar>& magSf(patch().magSf());
         const Field<Type>& value(this->refValue());
         const Field<Type> snGrad(this->snGrad());
 
@@ -734,9 +735,9 @@ template<class Type>
 void Foam::externalCoupledMixedFvPatchField<Type>::writeGeometry() const
 {
     const VolField<Type>& cvf =
-        static_cast<const VolField<Type>&>(this->internalField());
+        static_cast<const VolField<Type>&>(internalField());
 
-    const typename VolField<Type>::Boundary& bf =
+    const typename VolField<Type>::BoundaryField& bf =
         cvf.boundaryField();
 
     OFstream osPoints(baseDir()/"patchPoints");

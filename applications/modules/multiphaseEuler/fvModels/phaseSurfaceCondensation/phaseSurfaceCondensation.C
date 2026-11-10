@@ -30,7 +30,6 @@ License
 #include "diameterModel.H"
 #include "twoResistanceHeatTransfer.H"
 #include "generateBlendedInterfacialModels.H"
-#include "saturationPressureModel.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -66,9 +65,9 @@ void Foam::fv::phaseSurfaceCondensation::readCoeffs(const dictionary& dict)
     (
         blendedSidedDiffusiveMassTransferModel::New
         (
-            modelSubDicts(diffusiveMassTransferDict),
+            modelEntries(diffusiveMassTransferDict),
             interface,
-            blendingDict<blendedSidedDiffusiveMassTransferModel>
+            blendingEntry<blendedSidedDiffusiveMassTransferModel>
             (
                 fluid_,
                 diffusiveMassTransferDict
@@ -76,11 +75,12 @@ void Foam::fv::phaseSurfaceCondensation::readCoeffs(const dictionary& dict)
         ).ptr()
     );
 
-    saturationModelPtr_.reset
+    pSat_.reset
     (
-        saturationPressureModel::New
+        DimensionedFunction1<scalar>::New
         (
             "saturationPressure",
+            {dimTemperature, dimPressure},
             dict
         ).ptr()
     );
@@ -101,30 +101,27 @@ void Foam::fv::phaseSurfaceCondensation::correctMDot() const
     );
 
     const rhoThermo& solidThermo = solid_.thermo();
-    const volScalarField::Internal& solidT = solidThermo.T();
+    const volInternalScalarField& solidT = solidThermo.T();
 
     const fluidMulticomponentThermo& vapourThermo =
         fluidMulticomponentThermos(true, false)[0];
-    const volScalarField::Internal& vapourT = vapourThermo.T();
+    const volInternalScalarField& vapourT = vapourThermo.T();
 
     const label speciei = specieis()[0];
 
     const Pair<tmp<volScalarField>> Hs =
         solver_.heatTransfer.Hs(vapour_, solid_);
-    const volScalarField::Internal& vapourH = Hs.first();
-    const volScalarField::Internal& solidH = Hs.second();
-    const volScalarField::Internal Tsurface
+    const volInternalScalarField& vapourH = Hs.first();
+    const volInternalScalarField& solidH = Hs.second();
+    const volInternalScalarField Tsurface
     (
         (solidH*solidT + vapourH*vapourT + q_)
        /max(solidH + vapourH, rootVSmallH)
     );
 
-    const volScalarField::Internal pSat
-    (
-        saturationModelPtr_->pSat(Tsurface)
-    );
+    const volInternalScalarField pSat(pSat_->value(Tsurface));
 
-    const volScalarField::Internal L(this->L(Tsurface));
+    const volInternalScalarField L(this->L(Tsurface));
 
     const fluidThermophysicalTransportModel& ttmVapour =
         mesh().lookupType<fluidThermophysicalTransportModel>
@@ -132,25 +129,28 @@ void Foam::fv::phaseSurfaceCondensation::correctMDot() const
             vapour_.name()
         );
 
-    const volScalarField::Internal freeSurf(vapour_/(1 - solid_));
-
-    const volScalarField::Internal xc
+    const volInternalScalarField freeSurf
     (
-        vapour_.Y(species()[0])/vapourThermo.Wi(speciei)*vapourThermo.W()
+        vapour_.alpha()()/(1 - solid_.alpha()())
     );
 
-    const volScalarField::Internal xw(pSat/vapourThermo.p()());
+    const volInternalScalarField xc
+    (
+        vapour_.Y(species()[0])()/vapourThermo.Wi(speciei)*vapourThermo.W()()()
+    );
+
+    const volInternalScalarField xw(pSat/vapourThermo.p()());
 
     // Optional relaxation factor
     const scalar f = mesh().solution().fieldRelaxationFactor(mDot_.member());
 
     mDot_ =
         (1 - f)*mDot_
-      - f*freeSurf*vapourThermo.Wi(speciei)/vapourThermo.W()()
-       *diffusiveMassTransferModel_->KinThe(vapour_)()
-       *ttmVapour.D(vapour_.Y(species()[0]))()
+      - f*freeSurf*vapourThermo.Wi(speciei)/vapourThermo.W()()()
+       *diffusiveMassTransferModel_->KinThe(vapour_)()()
+       *ttmVapour.D(vapour_.Y(species()[0]))()()
        *log(max(1 - xc, scalar(0.001))/max(1 - xw, scalar(0.001)));
-    mDot_.max(scalar(0));
+    mDot_.primitiveFieldRef().boundLower(0);
 
     infoField("mDot", mDot_);
 
@@ -159,8 +159,8 @@ void Foam::fv::phaseSurfaceCondensation::correctMDot() const
         mDotDy_ =
             (1 - f)*mDotDy_
           + f*freeSurf
-           *diffusiveMassTransferModel_->KinThe(vapour_)()
-           *ttmVapour.D(vapour_.Y(species()[0]))()
+           *diffusiveMassTransferModel_->KinThe(vapour_)()()
+           *ttmVapour.D(vapour_.Y(species()[0]))()()
            /(1 - min(xc, scalar(0.999)))*pos(xc - xw);
     }
     else
@@ -199,7 +199,7 @@ Foam::fv::phaseSurfaceCondensation::phaseSurfaceCondensation
     vapour_(fluid_.phases()[phaseNames().first()]),
     solid_(fluid_.phases()[dict.lookup("phase")]),
     diffusiveMassTransferModel_(nullptr),
-    saturationModelPtr_(nullptr),
+    pSat_(nullptr),
     pressureEquationIndex_(-1),
     specieSemiImplicit_(false),
     q_
@@ -213,7 +213,7 @@ Foam::fv::phaseSurfaceCondensation::phaseSurfaceCondensation
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimEnergy/dimVolume/dimTime, scalar(0))
+        dimensionedScalar(dimensions::powerDensity, scalar(0))
     ),
     mDot_
     (
@@ -226,7 +226,7 @@ Foam::fv::phaseSurfaceCondensation::phaseSurfaceCondensation
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, scalar(0))
+        dimensionedScalar(dimensions::density/dimensions::time, scalar(0))
     ),
     mDotDy_
     (
@@ -239,7 +239,7 @@ Foam::fv::phaseSurfaceCondensation::phaseSurfaceCondensation
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, scalar(0))
+        dimensionedScalar(dimensions::density/dimensions::time, scalar(0))
     )
 {
     readCoeffs(coeffs(dict));
@@ -257,13 +257,13 @@ Foam::fv::phaseSurfaceCondensation::addsSupToField(const word& fieldName) const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::phaseSurfaceCondensation::Lfraction() const
 {
     // Put all the latent heat into the vapour, additional source term
     // will transfer this to solid phase in addSup
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             name() + ":Lfraction",
             mesh(),
@@ -272,14 +272,14 @@ Foam::fv::phaseSurfaceCondensation::Lfraction() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::phaseSurfaceCondensation::mDot() const
 {
     return mDot_;
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::phaseSurfaceCondensation::mDotDy() const
 {
     return mDotDy_;
@@ -357,8 +357,8 @@ void Foam::fv::phaseSurfaceCondensation::addSup
         if (!species().found(specieName)) return;
 
         // The transferring specie. Add a linearised source.
-        tmp<volScalarField::Internal> tmDot = this->mDot();
-        tmp<volScalarField::Internal> tmDotDy = this->mDotDy();
+        tmp<volInternalScalarField> tmDot = this->mDot();
+        tmp<volInternalScalarField> tmDotDy = this->mDotDy();
 
         eqn += s*(tmDot() + correction(fvm::Sp(tmDotDy, eqn.psi())));
 

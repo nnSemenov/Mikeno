@@ -25,6 +25,7 @@ License
 
 #include "LamBremhorstKE.H"
 #include "wallDist.H"
+#include "fviGrad.H"
 #include "bound.H"
 #include "makeMomentumTransportModel.H"
 
@@ -70,20 +71,30 @@ tmp<volScalarField> LamBremhorstKE::Rt() const
 }
 
 
-tmp<volScalarField> LamBremhorstKE::fMu(const volScalarField& Rt) const
+tmp<volScalarField> LamBremhorstKE::fMu
+(
+    const volScalarField& Rt
+) const
 {
-    tmp<volScalarField> Ry(sqrt(k_)*y()/nu());
-    return sqr(scalar(1) - exp(-0.0165*Ry))*(scalar(1) + 20.5/(Rt + small));
+    return
+        sqr(scalar(1) - exp(-0.0165*sqrt(k_)*y()/nu()))
+       *(scalar(1) + 20.5/(Rt + small));
 }
 
 
-tmp<volScalarField> LamBremhorstKE::f1(const volScalarField& fMu) const
+tmp<volInternalScalarField> LamBremhorstKE::f1
+(
+    const volInternalScalarField& fMu
+) const
 {
     return scalar(1) + pow3(0.05/(fMu + small));
 }
 
 
-tmp<volScalarField> LamBremhorstKE::f2(const volScalarField& Rt) const
+tmp<volInternalScalarField> LamBremhorstKE::f2
+(
+    const volInternalScalarField& Rt
+) const
 {
     return scalar(1) - exp(-sqr(Rt));
 }
@@ -91,7 +102,7 @@ tmp<volScalarField> LamBremhorstKE::f2(const volScalarField& Rt) const
 
 void LamBremhorstKE::correctNut(const volScalarField& fMu)
 {
-    nut_ = fMu*boundEpsilon()/epsilon_;
+    nut_ = fMu*Cmu_*sqr(k_)/epsilon_;
     nut_.correctBoundaryConditions();
 }
 
@@ -143,7 +154,8 @@ LamBremhorstKE::LamBremhorstKE
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentKineticEnergy
     ),
 
     epsilon_
@@ -156,7 +168,8 @@ LamBremhorstKE::LamBremhorstKE
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, kMin_);
@@ -193,12 +206,12 @@ void LamBremhorstKE::correct()
 
     eddyViscosity<incompressible::RASModel>::correct();
 
-    tmp<volTensorField> tgradU = fvc::grad(U_);
-    volScalarField G(GName(), nut_*(twoSymm(tgradU()) && tgradU()));
+    tmp<volInternalTensorField> tgradU = fvi::grad(U_);
+    volInternalScalarField G(GName(), nut_()*(twoSymm(tgradU()) && tgradU()));
     tgradU.clear();
 
     // Update epsilon and G at the wall
-    epsilon_.boundaryFieldRef().updateCoeffs();
+    epsilon_.boundaryRef().updateCoeffs();
 
     const volScalarField Rt(this->Rt());
     const volScalarField fMu(this->fMu(Rt));
@@ -210,12 +223,12 @@ void LamBremhorstKE::correct()
       + fvm::div(phi_, epsilon_)
       - fvm::laplacian(DepsilonEff(), epsilon_)
      ==
-        Ceps1_*f1(fMu)*G*epsilon_/k_
-      - fvm::Sp(Ceps2_*f2(Rt)*epsilon_/k_, epsilon_)
+        Ceps1_*f1(fMu())*G*epsilon_()/k_()
+      - fvm::Sp(Ceps2_*f2(Rt())*epsilon_()/k_(), epsilon_)
     );
 
     epsEqn.ref().relax();
-    epsEqn.ref().boundaryManipulate(epsilon_.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilon_.boundaryRef());
     solve(epsEqn);
     boundEpsilon();
 
@@ -226,7 +239,7 @@ void LamBremhorstKE::correct()
       + fvm::div(phi_, k_)
       - fvm::laplacian(DkEff(), k_)
      ==
-        G - fvm::Sp(epsilon_/k_, k_)
+        G - fvm::Sp(epsilon_()/k_(), k_)
     );
 
     kEqn.ref().relax();

@@ -120,7 +120,7 @@ class Standard
         const ReactionList<ThermoType> reactions_;
 
         //- List of reaction rate per specie [kg/m^3/s]
-        PtrList<volScalarField::Internal> RR_;
+        PtrList<volInternalScalarField> RR_;
 
         //- Temporary mass fraction field
         mutable scalarField Y_;
@@ -128,17 +128,17 @@ class Standard
         //- Temporary simplified mechanism mass fraction field
         DynamicField<scalar> sY_;
 
-        //- Temporary concentration field
-        mutable scalarField c_;
+        //- Temporary reaction state
+        mutable reaction::state s_;
 
         //- Temporary simplified mechanism concentration field
         DynamicField<scalar> sc_;
 
         //- Specie-temperature-pressure workspace fields
-        mutable FixedList<scalarField, 5> YTpWork_;
+        mutable FixedList<scalarField, 5> YTWork_;
 
         //- Specie-temperature-pressure workspace matrices
-        mutable FixedList<scalarSquareMatrix, 2> YTpYTpWork_;
+        mutable FixedList<scalarSquareMatrix, 2> YTYTWork_;
 
         //- Mechanism reduction method
         autoPtr<chemistryReductionMethod<ThermoType>> mechRedPtr_;
@@ -204,7 +204,7 @@ public:
             virtual inline label nReaction() const;
 
             //- Return reaction rates of the species [kg/m^3/s]
-            virtual inline const PtrList<volScalarField::Internal>& RR() const;
+            virtual inline const PtrList<volInternalScalarField>& RR() const;
 
             //- Return the name of reactioni
             virtual inline const word& reactionName
@@ -213,13 +213,13 @@ public:
             ) const;
 
             //- Return the rate of reactioni [kmol/m^3/s]
-            virtual tmp<volScalarField::Internal> reactionRR
+            virtual tmp<volInternalScalarField> reactionRR
             (
                 const label reactioni
             ) const;
 
             //- Return reaction rates of the species in reactioni [kg/m^3/s]
-            virtual PtrList<volScalarField::Internal> specieReactionRR
+            virtual PtrList<volInternalScalarField> specieReactionRR
             (
                 const label reactioni
             ) const;
@@ -236,10 +236,10 @@ public:
             virtual scalar solve(const scalarField& deltaT);
 
             //- Return the chemical time scale
-            virtual tmp<volScalarField> tc() const;
+            virtual tmp<volInternalScalarField> tc() const;
 
             //- Return the heat release rate [kg/m/s^3]
-            virtual tmp<volScalarField> Qdot() const;
+            virtual tmp<volInternalScalarField> Qdot() const;
 
 
         // ODE solution functions
@@ -248,18 +248,18 @@ public:
             virtual void derivatives
             (
                 const scalar t,
-                const scalarField& YTp,
+                const scalarField& YT,
                 const label li,
-                scalarField& dYTpdt
+                scalarField& dYTdt
             ) const;
 
             //- Calculate the ODE jacobian
             virtual void jacobian
             (
                 const scalar t,
-                const scalarField& YTp,
+                const scalarField& YT,
                 const label li,
-                scalarField& dYTpdt,
+                scalarField& dYTdt,
                 scalarSquareMatrix& J
             ) const;
 

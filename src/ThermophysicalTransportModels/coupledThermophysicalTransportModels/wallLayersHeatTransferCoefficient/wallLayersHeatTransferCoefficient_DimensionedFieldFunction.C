@@ -40,10 +40,10 @@ namespace DimensionedFieldFunctions
     );
 
     typedef DimensionedFieldFunction<DimensionedField<scalar, fvPatch>>
-        DimensionedFieldFunctionScalarFvPatch;
+        scalarFvPatchDimensionedFieldFunction;
     addToRunTimeSelectionTable
     (
-        DimensionedFieldFunctionScalarFvPatch,
+        scalarFvPatchDimensionedFieldFunction,
         wallLayersHeatTransferCoefficient,
         dictionary
     );
@@ -61,8 +61,14 @@ wallLayersHeatTransferCoefficient::wallLayersHeatTransferCoefficient
 )
 :
     DimensionedFieldFunction<DimensionedField<scalar, fvPatch>>(dict, field),
-    thicknessLayers_(dict.lookup<scalarList>("thicknessLayers", dimLength)),
-    kappaLayers_(dict.lookup<scalarList>("kappaLayers", dimThermalConductivity))
+    thicknessLayers_
+    (
+        dict.lookup<scalarList>("thicknessLayers", dimensions::length)
+    ),
+    kappaLayers_
+    (
+        dict.lookup<scalarList>("kappaLayers", dimensions::thermalConductivity)
+    )
 {}
 
 

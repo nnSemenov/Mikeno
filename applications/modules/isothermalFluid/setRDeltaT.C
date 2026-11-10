@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,7 @@ License
 #include "isothermalFluid.H"
 #include "fvcFlux.H"
 #include "fvcSmooth.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -52,7 +52,8 @@ void Foam::solvers::isothermalFluid::setRDeltaT()
 
     // Set the reciprocal time-step from the local Courant number
     rDeltaT.internalFieldRef() =
-        fvc::surfaceSum(mag(phi_))/((2*maxCo)*mesh.V()*rho_);
+        fvi::surfaceSum(mag(phi_)) /
+        ((2 * maxCo) * mesh.V() * rho_.internalField());
 
     // Set the reciprocal time-step from the local acoustic Courant number
     if (pimple.transonic())
@@ -63,7 +64,7 @@ void Foam::solvers::isothermalFluid::setRDeltaT()
             max
             (
                 rDeltaT(),
-                fvc::surfaceSum(mag(phid))/((2*maxCo)*mesh.V()*psi())
+                fvi::surfaceSum(mag(phid))/((2*maxCo)*mesh.V()*psi())
             );
     }
 
@@ -72,13 +73,13 @@ void Foam::solvers::isothermalFluid::setRDeltaT()
     if (pimpleDict.found("maxDeltaT") || minRDeltaT < rootVSmall)
     {
         const scalar clipRDeltaT = 1/pimpleDict.lookup<scalar>("maxDeltaT");
-        rDeltaT.max(clipRDeltaT);
+        rDeltaT.primitiveFieldRef().boundLower(clipRDeltaT);
         minRDeltaT = max(minRDeltaT, clipRDeltaT);
     }
     if (pimpleDict.found("minDeltaT"))
     {
         const scalar clipRDeltaT = 1/pimpleDict.lookup<scalar>("minDeltaT");
-        rDeltaT.min(clipRDeltaT);
+        rDeltaT.primitiveFieldRef().boundUpper(clipRDeltaT);
         minRDeltaT = min(minRDeltaT, clipRDeltaT);
     }
 

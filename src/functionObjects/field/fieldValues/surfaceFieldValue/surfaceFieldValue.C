@@ -175,7 +175,7 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setFaceZoneFaces()
     facePatchId_.transfer(facePatchIds);
     faceSign_.transfer(faceSigns);
 
-    nFaces_ = returnReduce(faceId_.size(), sumOp<label>());
+    nFaces_ = returnReduce(faceId_.size(), sumOp());
 }
 
 
@@ -216,7 +216,7 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setPatchesFaces()
         }
     }
 
-    nFaces_ = returnReduce(faceId_.size(), sumOp<label>());
+    nFaces_ = returnReduce(faceId_.size(), sumOp());
 }
 
 
@@ -225,7 +225,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::setSampledSurfaceFaces()
 {
     surfacePtr_().update();
 
-    nFaces_ = returnReduce(surfacePtr_().faces().size(), sumOp<label>());
+    nFaces_ = returnReduce(surfacePtr_().faces().size(), sumOp());
 }
 
 
@@ -502,7 +502,6 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::moveMesh()
         case selectionTypes::patches:
             break;
         case selectionTypes::sampledSurface:
-            surfacePtr_->movePoints();
             setSampledSurfaceFaces();
             break;
     }
@@ -783,7 +782,7 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::write()
     (
         selectionType_ == selectionTypes::sampledSurface
       ? surfacePtr_().Sf()
-      : (signs*filterField(mesh_.Sf()))()
+      : eval(signs*filterField(mesh_.Sf()))()
     );
 
     // Create storage for the values
@@ -866,14 +865,17 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::write()
             surfaceWriterPtr_->write
             (
                 baseFileDir()/name()/time_.name(),
-                word(selectionTypeNames[selectionType_])
-              + "("
-              + (
-                    selectionType_ == selectionTypes::patches
-                  ? selectionName_.replaceAll(" ", ",").c_str()
-                  : selectionName_.c_str()
-                )
-              + ")",
+                word
+                (
+                    selectionTypeNames[selectionType_],
+                    '(',
+                    (
+                        selectionType_ == selectionTypes::patches
+                      ? selectionName_.replaceAll(" ", ",").c_str()
+                      : selectionName_.c_str()
+                    ),
+                    ')'
+                ),
                 points,
                 faces,
                 fields_,
@@ -902,6 +904,10 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::movePoints
         {
             faceZonePtr_->movePoints();
         }
+        else if (selectionType_ == selectionTypes::sampledSurface)
+        {
+            surfacePtr_->movePoints();
+        }
         moveMesh();
     }
 }
@@ -918,6 +924,10 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::topoChange
         if (selectionType_ == selectionTypes::faceZone)
         {
             faceZonePtr_->topoChange(map);
+        }
+        else if (selectionType_ == selectionTypes::sampledSurface)
+        {
+            surfacePtr_->topoChange(map);
         }
         changeMesh();
     }
@@ -936,6 +946,10 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::mapMesh
         {
             faceZonePtr_->mapMesh(map);
         }
+        else if (selectionType_ == selectionTypes::sampledSurface)
+        {
+            surfacePtr_->mapMesh(map);
+        }
         changeMesh();
     }
 }
@@ -952,6 +966,10 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::distribute
         if (selectionType_ == selectionTypes::faceZone)
         {
             faceZonePtr_->distribute(map);
+        }
+        else if (selectionType_ == selectionTypes::sampledSurface)
+        {
+            surfacePtr_->distribute(map);
         }
         changeMesh();
     }

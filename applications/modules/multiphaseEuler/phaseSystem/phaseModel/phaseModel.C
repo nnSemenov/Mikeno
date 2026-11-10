@@ -149,7 +149,10 @@ void Foam::phaseModel::correct()
 }
 
 
-void Foam::phaseModel::correctContinuityError(const volScalarField& source)
+void Foam::phaseModel::correctContinuityError
+(
+    const volInternalScalarField& source
+)
 {}
 
 
@@ -197,9 +200,9 @@ bool Foam::phaseModel::read()
 
 void Foam::phaseModel::correctInflowOutflow(surfaceScalarField& alphaPhi) const
 {
-    surfaceScalarField::Boundary& alphaPhiBf = alphaPhi.boundaryFieldRef();
-    const volScalarField::Boundary& alphaBf = boundaryField();
-    const surfaceScalarField::Boundary& phiBf = phiRef().boundaryField();
+    surfaceScalarField::BoundaryField& alphaPhiBf = alphaPhi.boundaryFieldRef();
+    const volScalarField::BoundaryField& alphaBf = boundaryField();
+    const surfaceScalarField::BoundaryField& phiBf = phiRef().boundaryField();
 
     forAll(alphaPhiBf, patchi)
     {

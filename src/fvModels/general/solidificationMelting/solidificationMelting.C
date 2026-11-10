@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "solidificationMelting.H"
-#include "fvcDdt.H"
+#include "fviDdt.H"
 #include "fvMatrices.H"
 #include "basicThermo.H"
 #include "uniformDimensionedFields.H"
@@ -121,7 +121,7 @@ Foam::fv::solidificationMelting::Cp() const
                     mesh(),
                     dimensionedScalar
                     (
-                        dimEnergy/dimMass/dimTemperature,
+                        dimensions::specificHeatCapacity,
                         CpRef_
                     ),
                     extrapolatedCalculatedFvPatchScalarField::typeName
@@ -235,20 +235,21 @@ void Foam::fv::solidificationMelting::apply
             << type() << ": applying source to " << eqn.psi().name() << endl;
     }
 
-    const volScalarField Cp(this->Cp());
+    const tmp<volScalarField> tCp(this->Cp());
+    const volScalarField& Cp = tCp();
 
     update(Cp);
 
-    dimensionedScalar L("L", dimEnergy/dimMass, L_);
+    dimensionedScalar L("L", dimensions::specificEnergy, L_);
 
     // Contributions added to rhs of solver equation
-    if (eqn.psi().dimensions() == dimTemperature)
+    if (eqn.psi().dimensions() == dimensions::temperature)
     {
-        eqn -= L/Cp*(fvc::ddt(rho, alpha1_));
+        eqn -= L/Cp()*(fvi::ddt(rho, alpha1_));
     }
     else
     {
-        eqn -= L*(fvc::ddt(rho, alpha1_));
+        eqn -= L*(fvi::ddt(rho, alpha1_));
     }
 }
 
@@ -319,7 +320,7 @@ Foam::wordList Foam::fv::solidificationMelting::addSupFields() const
         }
     }
 
-    return wordList::null();
+    return wordList{};
 }
 
 

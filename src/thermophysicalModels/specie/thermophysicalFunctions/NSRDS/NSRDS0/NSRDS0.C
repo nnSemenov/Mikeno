@@ -73,24 +73,13 @@ Foam::Function1s::NSRDS0::NSRDS0
     c_(dict.lookup<scalar>("c")),
     d_(dict.lookup<scalar>("d")),
     e_(dict.lookup<scalar>("e")),
-    f_(dict.lookup<scalar>("f"))
+    f_(dict.lookupOrDefault<scalar>("f", scalar(0)))
 {
     assertNoConvertUnits(typeName, units, dict);
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-Foam::scalar Foam::Function1s::NSRDS0::integral
-(
-    const scalar x1,
-    const scalar x2
-) const
-{
-    NotImplemented;
-    return 0;
-}
-
 
 Foam::Function1s::NSRDS0 Foam::Function1s::NSRDS0::integral
 (
@@ -121,7 +110,7 @@ void Foam::Function1s::NSRDS0::write
     writeEntry(os, "c", c_);
     writeEntry(os, "d", d_);
     writeEntry(os, "e", e_);
-    writeEntry(os, "f", f_);
+    writeEntryIfDifferent(os, "f", scalar(0), f_);
 }
 
 

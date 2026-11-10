@@ -26,11 +26,9 @@ License
 #include "MRFZone.H"
 #include "MRFPatchField.H"
 #include "fvMesh.H"
-#include "volFields.H"
-#include "fvMatrices.H"
 #include "geometricOneField.H"
-#include "faceSet.H"
 #include "syncTools.H"
+#include "polyTopoChangeMap.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -85,7 +83,7 @@ void Foam::MRFZone::setMRFFaces()
     }
 
     // Synchronise the faceInMRF across processor patches
-    syncTools::syncFaceList(mesh_, faceInMRF, orEqOp<bool>());
+    syncTools::syncFaceList(mesh_, faceInMRF, orEqOp());
 
     // Construct a list of all internal FV faces in the MRF zone
     internalFaces_ =
@@ -139,7 +137,7 @@ void Foam::MRFZone::checkMRFBCs(const volVectorField& U) const
 
     if (!checked && U.nOldTimes())
     {
-        const volVectorField::Boundary& Ubf = U.boundaryField();
+        const volVectorField::BoundaryField& Ubf = U.boundaryField();
 
         forAll(Ubf, patchi)
         {
@@ -229,7 +227,8 @@ void Foam::MRFZone::addCentrifugalAcceleration
         cac[celli] -= Omega ^ (Omega ^ (C[celli] - origin_));
     }
 
-    volVectorField::Boundary& caf = centrifugalAcceleration.boundaryFieldRef();
+    volVectorField::BoundaryField& caf =
+        centrifugalAcceleration.boundaryFieldRef();
 
     forAll(patchFaces_, patchi)
     {
@@ -257,7 +256,7 @@ void Foam::MRFZone::makeRelative(volVectorField& U) const
         U[celli] -= (Omega ^ (C[celli] - origin_));
     }
 
-    volVectorField::Boundary& Ubf = U.boundaryFieldRef();
+    volVectorField::BoundaryField& Ubf = U.boundaryFieldRef();
 
     forAll(patchFaces_, patchi)
     {
@@ -280,7 +279,7 @@ void Foam::MRFZone::makeRelative(surfaceScalarField& phi) const
 
 void Foam::MRFZone::makeRelative
 (
-    FieldField<surfaceMesh::PatchField, scalar>& phi
+    SurfaceBoundaryField<scalar>& phi
 ) const
 {
     makeRelativeRhoFlux(oneFieldField(), phi);
@@ -324,7 +323,7 @@ void Foam::MRFZone::makeAbsolute(volVectorField& U) const
         U[celli] += (Omega ^ (C[celli] - origin_));
     }
 
-    volVectorField::Boundary& Ubf = U.boundaryFieldRef();
+    volVectorField::BoundaryField& Ubf = U.boundaryFieldRef();
 
     forAll(patchFaces_, patchi)
     {
@@ -372,12 +371,24 @@ bool Foam::MRFZone::read(const dictionary& dict)
 }
 
 
-void Foam::MRFZone::update()
+void Foam::MRFZone::topoChange(const polyTopoChangeMap& map)
 {
-    if (mesh_.topoChanged())
-    {
-        setMRFFaces();
-    }
+    zone_.topoChange(map);
+    setMRFFaces();
+}
+
+
+void Foam::MRFZone::mapMesh(const polyMeshMap& map)
+{
+    zone_.mapMesh(map);
+    setMRFFaces();
+}
+
+
+void Foam::MRFZone::distribute(const polyDistributionMap& map)
+{
+    zone_.distribute(map);
+    setMRFFaces();
 }
 
 

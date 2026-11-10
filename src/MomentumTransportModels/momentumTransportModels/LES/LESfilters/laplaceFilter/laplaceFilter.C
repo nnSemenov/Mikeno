@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "laplaceFilter.H"
-#include "fvcLaplacian.H"
+#include "fviLaplacian.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -51,11 +51,11 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, scalar widthCoeff)
             mesh
         ),
         mesh,
-        dimensionedScalar(dimLength*dimLength, 0),
+        dimensionedScalar(dimensions::area, 0),
         calculatedFvPatchScalarField::typeName
     )
 {
-    coeff_.internalFieldRef() = pow(mesh.V(), 2.0/3.0)/widthCoeff_;
+    coeff_.internalFieldRef() = pow(mesh.V(), static_cast<scalar>(2.0/3.0))/widthCoeff_;
 }
 
 
@@ -75,11 +75,11 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, const dictionary& bd)
             mesh
         ),
         mesh,
-        dimensionedScalar(dimLength*dimLength, 0),
+        dimensionedScalar(dimensions::area, 0),
         calculatedFvPatchScalarField::typeName
     )
 {
-    coeff_.internalFieldRef() = pow(mesh.V(), 2.0/3.0)/widthCoeff_;
+    coeff_.internalFieldRef() = pow(mesh.V(), static_cast<scalar>(2.0/3.0))/widthCoeff_;
 }
 
 
@@ -93,67 +93,39 @@ void Foam::laplaceFilter::read(const dictionary& bd)
 
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField> Foam::laplaceFilter::operator()
+Foam::tmp<Foam::volInternalScalarField> Foam::laplaceFilter::operator[]
 (
-    const tmp<volScalarField>& unFilteredField
+    const volScalarField& unFilteredField
 ) const
 {
-    correctBoundaryConditions(unFilteredField);
-
-    tmp<volScalarField> filteredField =
-        unFilteredField() + fvc::laplacian(coeff_, unFilteredField());
-
-    unFilteredField.clear();
-
-    return filteredField;
+    return unFilteredField() + fvi::laplacian(coeff_, unFilteredField);
 }
 
 
-Foam::tmp<Foam::volVectorField> Foam::laplaceFilter::operator()
+Foam::tmp<Foam::volInternalVectorField> Foam::laplaceFilter::operator[]
 (
-    const tmp<volVectorField>& unFilteredField
+    const volVectorField& unFilteredField
 ) const
 {
-    correctBoundaryConditions(unFilteredField);
-
-    tmp<volVectorField> filteredField =
-        unFilteredField() + fvc::laplacian(coeff_, unFilteredField());
-
-    unFilteredField.clear();
-
-    return filteredField;
+    return unFilteredField() + fvi::laplacian(coeff_, unFilteredField);
 }
 
 
-Foam::tmp<Foam::volSymmTensorField> Foam::laplaceFilter::operator()
+Foam::tmp<Foam::volInternalSymmTensorField> Foam::laplaceFilter::operator[]
 (
-    const tmp<volSymmTensorField>& unFilteredField
+    const volSymmTensorField& unFilteredField
 ) const
 {
-    correctBoundaryConditions(unFilteredField);
-
-    tmp<volSymmTensorField> filteredField =
-        unFilteredField() + fvc::laplacian(coeff_, unFilteredField());
-
-    unFilteredField.clear();
-
-    return filteredField;
+    return unFilteredField() + fvi::laplacian(coeff_, unFilteredField);
 }
 
 
-Foam::tmp<Foam::volTensorField> Foam::laplaceFilter::operator()
+Foam::tmp<Foam::volInternalTensorField> Foam::laplaceFilter::operator[]
 (
-    const tmp<volTensorField>& unFilteredField
+    const volTensorField& unFilteredField
 ) const
 {
-    correctBoundaryConditions(unFilteredField);
-
-    tmp<volTensorField> filteredField =
-        unFilteredField() + fvc::laplacian(coeff_, unFilteredField());
-
-    unFilteredField.clear();
-
-    return filteredField;
+    return unFilteredField() + fvi::laplacian(coeff_, unFilteredField);
 }
 
 

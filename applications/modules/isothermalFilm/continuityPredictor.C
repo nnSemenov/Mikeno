@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,8 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "isothermalFilm.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "fvmDdt.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -34,11 +34,11 @@ void Foam::solvers::isothermalFilm::continuityPredictor()
 {
     // Update delta and alpha BCs for time-varying inlets etc.
     delta_.correctBoundaryConditions();
-    alpha_.boundaryFieldRef() == delta.boundaryField()/VbyA.boundaryField();
+    alpha_.boundaryRef() == delta.boundaryField()/VbyA.boundaryField();
 
     fvScalarMatrix alphaEqn
     (
-        fvm::ddt(rho, alpha_) + fvc::div(alphaRhoPhi)
+        fvm::ddt(rho, alpha_) + fvi::div(alphaRhoPhi)
       ==
         fvModels().source(rho, alpha_)
     );
@@ -48,7 +48,7 @@ void Foam::solvers::isothermalFilm::continuityPredictor()
     fvConstraints().constrain(alpha_);
 
     // Remove potential unboundedness in alpha caused by div(alphaRhoPhi)
-    alpha_.max(0);
+    alpha_.boundLower(0);
 
     // Calculate the continuity error caused by limiting alpha
     // Reset to ~0 following the alpha corrector
@@ -63,8 +63,8 @@ void Foam::solvers::isothermalFilm::correctContinuityError()
 {
     contErr =
     (
-        fvc::ddt(rho, alpha)()() + fvc::div(alphaRhoPhi)()()
-      - (fvModels().source(rho, alpha) & alpha)()()
+        fvi::ddt(rho, alpha) + fvi::div(alphaRhoPhi)
+      - (fvModels().source(rho, alpha) & alpha())
     );
 }
 

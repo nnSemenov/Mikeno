@@ -46,10 +46,14 @@ namespace fv
 void Foam::fv::solidElectricalConduction::readCoeffs(const dictionary& dict)
 {
     const word sigmaKey = "sigma";
-    const word sigmaScalarKey =
-        sigmaKey + '<' + pTraits<scalar>::typeName + '>';
-    const word sigmaTensorKey =
-        sigmaKey + '<' + pTraits<tensor>::typeName + '>';
+    const word sigmaScalarKey
+    (
+        sigmaKey, '<', pTraits<scalar>::typeName, '>'
+    );
+    const word sigmaTensorKey
+    (
+        sigmaKey, '<', pTraits<tensor>::typeName, '>'
+    );
 
     const bool haveSigma = dict.found(sigmaKey);
     const bool haveScalarSigma = dict.found(sigmaScalarKey);
@@ -77,7 +81,7 @@ void Foam::fv::solidElectricalConduction::readCoeffs(const dictionary& dict)
                 sigmaKey,
                 haveSigma ? sigmaKey : sigmaScalarKey,
                 mesh(),
-                sqr(dimCurrent)/dimLength/dimPower,
+                dimensions::electricalConductivity,
                 dict
             )
         );
@@ -91,7 +95,7 @@ void Foam::fv::solidElectricalConduction::readCoeffs(const dictionary& dict)
                 sigmaKey,
                 sigmaTensorKey,
                 mesh(),
-                sqr(dimCurrent)/dimLength/dimPower,
+                dimensions::electricalConductivity,
                 dict
             )
         );
@@ -122,7 +126,8 @@ Foam::fv::solidElectricalConduction::solidElectricalConduction
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh()
+        mesh(),
+        dimensions::electricPotential
     ),
     I_
     (
@@ -135,7 +140,7 @@ Foam::fv::solidElectricalConduction::solidElectricalConduction
             IOobject::AUTO_WRITE
         ),
         mesh(),
-        dimensionedScalar(dimCurrent, scalar(0))
+        dimensionedScalar(dimensions::current, scalar(0))
     ),
     sigmaScalarPtr_(),
     sigmaTensorPtr_(),
@@ -166,7 +171,7 @@ void Foam::fv::solidElectricalConduction::addSup
     fvMatrix<scalar>& eqn
 ) const
 {
-    eqn += fvc::div(I_*fvc::interpolate(phi_));
+    eqn += fvi::div(I_*fvc::interpolate(phi_));
 }
 
 
@@ -259,16 +264,19 @@ bool Foam::fv::solidElectricalConduction::read(const dictionary& dict)
 }
 
 
-bool Foam::fv::solidElectricalConduction::write(const bool write) const
+bool Foam::fv::solidElectricalConduction::write(const bool updateInstance) const
 {
-    if (write && writeSigma_)
+    if (writeSigma_)
     {
-        sigmaScalarPtr_.valid()
-      ? sigmaScalarPtr_->write()
-      : sigmaTensorPtr_->write();
+        return
+            sigmaScalarPtr_.valid()
+          ? sigmaScalarPtr_->write(updateInstance)
+          : sigmaTensorPtr_->write(updateInstance);
     }
-
-    return write;
+    else
+    {
+        return true;
+    }
 }
 
 

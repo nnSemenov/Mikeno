@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,13 +40,13 @@ License
 
 void Foam::interfaceProperties::correctContactAngle
 (
-    surfaceVectorField::Boundary& nHatb,
-    const surfaceVectorField::Boundary& gradAlphaf
+    surfaceVectorField::BoundaryField& nHatb,
+    const surfaceVectorField::BoundaryField& gradAlphaf
 )
 {
     const fvMesh& mesh = alpha1_.mesh();
-    volScalarField::Boundary& a1bf = alpha1_.boundaryFieldRef();
-    volScalarField::Boundary& a2bf = alpha2_.boundaryFieldRef();
+    volScalarField::BoundaryField& a1bf = alpha1_.boundaryFieldRef();
+    volScalarField::BoundaryField& a2bf = alpha2_.boundaryFieldRef();
 
     const fvBoundaryMesh& boundary = mesh.boundary();
 
@@ -92,7 +92,7 @@ void Foam::interfaceProperties::correctContactAngle
 
             a1cap.gradient() = (nf & nHatp)*mag(gradAlphaf[patchi]);
             a1cap.evaluate();
-            a2bf[patchi] = 1 - a1cap;
+            a2bf[patchi] = 1 - a1cap.field();
         }
     }
 }
@@ -175,7 +175,7 @@ Foam::interfaceProperties::interfaceProperties
             alpha1_.mesh()
         ),
         alpha1_.mesh(),
-        dimensionedScalar(dimArea, 0)
+        dimensionedScalar(dimensions::area, 0)
     ),
 
     K_
@@ -187,7 +187,7 @@ Foam::interfaceProperties::interfaceProperties
             alpha1_.mesh()
         ),
         alpha1_.mesh(),
-        dimensionedScalar(dimless/dimLength, 0)
+        dimensionedScalar(inv(dimensions::length), 0)
     )
 {
     calculateK();

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,6 +26,7 @@ License
 #include "pointConstraints.H"
 #include "pointFields.H"
 #include "valuePointPatchFields.H"
+#include "globalMeshData.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -92,7 +93,7 @@ void Foam::pointConstraints::setPatchFields
 )
 {
     typename PointField<Type>::
-        Boundary& pfbf = pf.boundaryFieldRef();
+        BoundaryField& pfbf = pf.boundaryFieldRef();
 
     forAll(pfbf, patchi)
     {
@@ -141,7 +142,7 @@ void Foam::pointConstraints::constrain
     (
         mesh()(),
         pf.primitiveFieldRef(),
-        maxMagSqrEqOp<Type>()
+        maxMagSqrEqOp()
     );
 
     // Apply multiple constraints on edge/corner points

@@ -60,7 +60,8 @@ Foam::radiationModels::P1::P1(const volScalarField& T)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::heatFluxDensity
     ),
     qr_
     (
@@ -73,7 +74,7 @@ Foam::radiationModels::P1::P1(const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimMass/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::heatFluxDensity, 0)
     ),
     a_
     (
@@ -86,7 +87,7 @@ Foam::radiationModels::P1::P1(const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimless/dimLength, 0)
+        dimensionedScalar(inv(dimensions::length), 0)
     ),
     e_
     (
@@ -99,7 +100,7 @@ Foam::radiationModels::P1::P1(const volScalarField& T)
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimless/dimLength, 0)
+        dimensionedScalar(inv(dimensions::length), 0)
     ),
     E_
     (
@@ -112,7 +113,7 @@ Foam::radiationModels::P1::P1(const volScalarField& T)
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimMass/dimLength/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::powerDensity, 0)
     )
 {}
 
@@ -130,7 +131,8 @@ Foam::radiationModels::P1::P1(const dictionary& dict, const volScalarField& T)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::heatFluxDensity
     ),
     qr_
     (
@@ -143,7 +145,7 @@ Foam::radiationModels::P1::P1(const dictionary& dict, const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimMass/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::heatFluxDensity, 0)
     ),
     a_
     (
@@ -156,7 +158,7 @@ Foam::radiationModels::P1::P1(const dictionary& dict, const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimless/dimLength, 0)
+        dimensionedScalar(inv(dimensions::length), 0)
     ),
     e_
     (
@@ -169,7 +171,7 @@ Foam::radiationModels::P1::P1(const dictionary& dict, const volScalarField& T)
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimless/dimLength, 0)
+        dimensionedScalar(inv(dimensions::length), 0)
     ),
     E_
     (
@@ -182,7 +184,7 @@ Foam::radiationModels::P1::P1(const dictionary& dict, const volScalarField& T)
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar(dimMass/dimLength/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::powerDensity, 0)
     )
 {}
 
@@ -235,12 +237,12 @@ void Foam::radiationModels::P1::calculate()
     solve
     (
         fvm::laplacian(gamma, G_)
-      - fvm::Sp(a_, G_)
+      - fvm::Sp(a_(), G_)
      ==
-      - 4*e_*physicoChemical::sigma*pow4(T_) - E_
+      - 4*e_()*physicoChemical::sigma*pow4(T_()) - E_()
     );
 
-    volScalarField::Boundary& qrBf = qr_.boundaryFieldRef();
+    volScalarField::BoundaryField& qrBf = qr_.boundaryFieldRef();
 
     // Calculate radiative heat flux on boundaries.
     forAll(mesh_.boundary(), patchi)
@@ -268,9 +270,9 @@ Foam::tmp<Foam::volScalarField> Foam::radiationModels::P1::Rp() const
 Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::fvMesh>>
 Foam::radiationModels::P1::Ru() const
 {
-    const volScalarField::Internal& G = G_();
-    const volScalarField::Internal E = absorptionEmission_->ECont()()();
-    const volScalarField::Internal a = absorptionEmission_->aCont()()();
+    const volInternalScalarField& G = G_();
+    const volInternalScalarField E = absorptionEmission_->ECont()()();
+    const volInternalScalarField a = absorptionEmission_->aCont()()();
 
     return a*G - E;
 }

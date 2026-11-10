@@ -52,7 +52,7 @@ Foam::directionMixedFvPatchField<Type>::directionMixedFvPatchField
 :
     transformFvPatchField<Type>(p, iF, dict),
     refValue_("refValue", iF.dimensions(), dict, p.size()),
-    refGrad_("refGradient", iF.dimensions()/dimLength, dict, p.size()),
+    refGrad_("refGradient", iF.dimensions()/dimensions::length, dict, p.size()),
     valueFraction_("valueFraction", units::fraction, dict, p.size())
 {
     evaluate();
@@ -130,18 +130,18 @@ template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::directionMixedFvPatchField<Type>::snGrad() const
 {
-    const Field<Type> pif(this->patchInternalField());
+    const Field<Type> pif(patchInternalField());
 
     tmp<Field<Type>> normalValue = transform(valueFraction_, refValue_);
 
-    tmp<Field<Type>> gradValue = pif + refGrad_/this->patch().deltaCoeffs();
+    tmp<Field<Type>> gradValue = pif + refGrad_/patch().deltaCoeffs();
 
     tmp<Field<Type>> transformGradValue =
         transform(I - valueFraction_, gradValue);
 
     return
         (normalValue + transformGradValue - pif)*
-        this->patch().deltaCoeffs();
+        patch().deltaCoeffs();
 }
 
 
@@ -156,7 +156,7 @@ void Foam::directionMixedFvPatchField<Type>::evaluate(const Pstream::commsTypes)
     tmp<Field<Type>> normalValue = transform(valueFraction_, refValue_);
 
     tmp<Field<Type>> gradValue =
-        this->patchInternalField() + refGrad_/this->patch().deltaCoeffs();
+        patchInternalField() + refGrad_/patch().deltaCoeffs();
 
     tmp<Field<Type>> transformGradValue =
         transform(I - valueFraction_, gradValue);
@@ -189,7 +189,11 @@ Foam::directionMixedFvPatchField<Type>::snGradTransformDiag() const
         sqrt(mag(valueFraction_.component(symmTensor::ZZ)))
     );
 
-    return transformFieldMask<Type>(pow<vector, pTraits<Type>::rank>(diag));
+    return transformMask
+    (
+        pTraits<Type>::zero,
+        pow<pTraits<Type>::rank>(diag)
+    );
 }
 
 

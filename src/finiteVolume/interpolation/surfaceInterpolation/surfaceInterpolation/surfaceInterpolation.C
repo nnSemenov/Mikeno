@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -153,7 +153,8 @@ void Foam::surfaceInterpolation::makeWeights() const
             false // Do not register
         ),
         mesh_,
-        dimless
+        dimless,
+        fvsPatchField<scalar>::calculatedType()
     );
     surfaceScalarField& weights = *weights_;
 
@@ -192,7 +193,7 @@ void Foam::surfaceInterpolation::makeWeights() const
         }
     }
 
-    surfaceScalarField::Boundary& wBf =
+    surfaceScalarField::BoundaryField& wBf =
         weights.boundaryFieldRef();
 
     forAll(mesh_.boundary(), patchi)
@@ -234,7 +235,8 @@ void Foam::surfaceInterpolation::makeDeltaCoeffs() const
             false // Do not register
         ),
         mesh_,
-        dimless/dimLength
+        dimless/dimensions::length,
+        fvsPatchField<scalar>::calculatedType()
     );
     surfaceScalarField& deltaCoeffs = *deltaCoeffs_;
 
@@ -249,7 +251,7 @@ void Foam::surfaceInterpolation::makeDeltaCoeffs() const
         deltaCoeffs[facei] = 1.0/mag(C[neighbour[facei]] - C[owner[facei]]);
     }
 
-    surfaceScalarField::Boundary& deltaCoeffsBf =
+    surfaceScalarField::BoundaryField& deltaCoeffsBf =
         deltaCoeffs.boundaryFieldRef();
 
     forAll(deltaCoeffsBf, patchi)
@@ -284,7 +286,8 @@ void Foam::surfaceInterpolation::makeNonOrthDeltaCoeffs() const
             false // Do not register
         ),
         mesh_,
-        dimless/dimLength
+        dimless/dimensions::length,
+        fvsPatchField<scalar>::calculatedType()
     );
     surfaceScalarField& nonOrthDeltaCoeffs = *nonOrthDeltaCoeffs_;
 
@@ -314,7 +317,7 @@ void Foam::surfaceInterpolation::makeNonOrthDeltaCoeffs() const
         nonOrthDeltaCoeffs[facei] = 1.0/max(unitArea & delta, 0.05*mag(delta));
     }
 
-    surfaceScalarField::Boundary& nonOrthDeltaCoeffsBf =
+    surfaceScalarField::BoundaryField& nonOrthDeltaCoeffsBf =
         nonOrthDeltaCoeffs.boundaryFieldRef();
 
     forAll(nonOrthDeltaCoeffsBf, patchi)
@@ -348,7 +351,8 @@ void Foam::surfaceInterpolation::makeNonOrthCorrectionVectors() const
             false // Do not register
         ),
         mesh_,
-        dimless
+        dimless,
+        fvsPatchField<scalar>::calculatedType()
     );
     surfaceVectorField& corrVecs = *nonOrthCorrectionVectors_;
 
@@ -372,7 +376,7 @@ void Foam::surfaceInterpolation::makeNonOrthCorrectionVectors() const
     // and calculated consistently with internal corrections for
     // coupled patches
 
-    surfaceVectorField::Boundary& corrVecsBf =
+    surfaceVectorField::BoundaryField& corrVecsBf =
         corrVecs.boundaryFieldRef();
 
     forAll(corrVecsBf, patchi)

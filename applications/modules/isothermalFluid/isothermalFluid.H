@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,7 +59,7 @@ See also
 #include "compressibleMomentumTransportModel.H"
 #include "buoyancy.H"
 #include "pressureReference.H"
-#include "IOMRFZoneList.H"
+#include "MRFZones.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -94,7 +94,7 @@ protected:
 
         //- Rate of change of the pressure
         //  Used in the enthalpy equation
-        volScalarField::Internal dpdt;
+        volInternalScalarField dpdt;
 
 
     // Optional buoyancy
@@ -143,8 +143,8 @@ protected:
 
     // Optional models
 
-        //- MRF zone list
-        IOMRFZoneList MRF;
+        //- Reference to the MRFZones MeshObject
+        const MRFZones& MRF;
 
 
     // Cached temporary fields
@@ -164,7 +164,7 @@ protected:
         //- Pointer to the vol momentum divergence field
         //  used in correctPhi to ensure the corrected phi has the
         //  same divergence
-        autoPtr<volScalarField> divrhoU;
+        autoPtr<volInternalScalarField> divrhoU;
 
         //- Optional LTS reciprocal time-step field
         tmp<volScalarField> trDeltaT;
@@ -202,9 +202,9 @@ private:
 protected:
 
         //- Adds the mesh-motion work to the pressure work term provided
-        tmp<volScalarField::Internal> pressureWork
+        tmp<volInternalScalarField> pressureWork
         (
-            const tmp<volScalarField::Internal>&
+            const tmp<volInternalScalarField>&
         ) const;
 
 

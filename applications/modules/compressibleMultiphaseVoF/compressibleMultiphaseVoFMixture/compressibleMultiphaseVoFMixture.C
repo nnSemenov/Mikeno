@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -58,7 +58,7 @@ Foam::compressibleMultiphaseVoFMixture::compressibleMultiphaseVoFMixture
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("rho", dimDensity, 0)
+        dimensionedScalar("rho", dimensions::density, 0)
     ),
 
     nu_
@@ -70,7 +70,7 @@ Foam::compressibleMultiphaseVoFMixture::compressibleMultiphaseVoFMixture
             mesh
         ),
         mesh,
-        dimensionedScalar(dimKinematicViscosity, 0),
+        dimensionedScalar(dimensions::kinematicViscosity, 0),
         calculatedFvPatchScalarField::typeName
     )
 {
@@ -99,13 +99,13 @@ Foam::compressibleMultiphaseVoFMixture::psiByRho() const
 {
     tmp<volScalarField> tpsiByRho
     (
-        phases_[0]*phases_[0].thermo().psi()/phases_[0].thermo().rho()
+        phases_[0].alpha()*phases_[0].thermo().psi()/phases_[0].thermo().rho()
     );
 
     for (label phasei=1; phasei<phases_.size(); phasei++)
     {
         tpsiByRho.ref() +=
-            phases_[phasei]*phases_[phasei].thermo().psi()
+            phases_[phasei].alpha()*phases_[phasei].thermo().psi()
            /phases_[phasei].thermo().rho();
     }
 
@@ -120,7 +120,7 @@ Foam::tmp<Foam::volScalarField> Foam::compressibleMultiphaseVoFMixture::alphaEff
 {
     tmp<volScalarField> talphaEff
     (
-        phases_[0]
+        phases_[0].alpha()
        *(
            phases_[0].thermo().kappa()
          + phases_[0].thermo().rho()*phases_[0].thermo().Cp()*nut
@@ -130,7 +130,7 @@ Foam::tmp<Foam::volScalarField> Foam::compressibleMultiphaseVoFMixture::alphaEff
     for (label phasei=1; phasei<phases_.size(); phasei++)
     {
         talphaEff.ref() +=
-            phases_[phasei]
+            phases_[phasei].alpha()
            *(
                phases_[phasei].thermo().kappa()
              + phases_[phasei].thermo().rho()*phases_[phasei].thermo().Cp()*nut
@@ -144,11 +144,11 @@ Foam::tmp<Foam::volScalarField> Foam::compressibleMultiphaseVoFMixture::alphaEff
 Foam::tmp<Foam::volScalarField>
 Foam::compressibleMultiphaseVoFMixture::rCv() const
 {
-    tmp<volScalarField> trCv(phases_[0]/phases_[0].thermo().Cv());
+    tmp<volScalarField> trCv(phases_[0].alpha()/phases_[0].thermo().Cv());
 
     for (label phasei=1; phasei<phases_.size(); phasei++)
     {
-        trCv.ref() += phases_[phasei]/phases_[phasei].thermo().Cv();
+        trCv.ref() += phases_[phasei].alpha()/phases_[phasei].thermo().Cv();
     }
 
     return trCv;
@@ -166,13 +166,13 @@ void Foam::compressibleMultiphaseVoFMixture::correctThermo()
 
 void Foam::compressibleMultiphaseVoFMixture::correct()
 {
-    rho_ = phases_[0]*phases_[0].thermo().rho();
-    volScalarField mu(phases_[0]*phases_[0].thermo().mu());
+    rho_ = phases_[0].alpha()*phases_[0].thermo().rho();
+    volScalarField mu(phases_[0].alpha()*phases_[0].thermo().mu());
 
     for (label phasei=1; phasei<phases_.size(); phasei++)
     {
-        rho_ += phases_[phasei]*phases_[phasei].thermo().rho();
-        mu += phases_[phasei]*phases_[phasei].thermo().mu();
+        rho_ += phases_[phasei].alpha()*phases_[phasei].thermo().rho();
+        mu += phases_[phasei].alpha()*phases_[phasei].thermo().mu();
     }
 
     // Update the mixture kinematic viscosity

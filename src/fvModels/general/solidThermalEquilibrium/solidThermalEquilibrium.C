@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -76,7 +76,8 @@ Foam::fv::solidThermalEquilibrium::solidAlpha() const
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE
                 ),
-                mesh()
+                mesh(),
+                dimless
             );
 
         alphaPtr->store();
@@ -158,15 +159,15 @@ void Foam::fv::solidThermalEquilibrium::addSup
     );
 
     const volScalarField& A = solidAlpha();
-    const volScalarField B(1 - A);
+    const volInternalScalarField B(1 - A());
 
     eqn -=
-        A/B*fvm::ddt(solidThermo().rho(), eqn.psi());
+        A()/B*fvm::ddt(solidThermo().rho()(), eqn.psi());
       - 1/B*fvm::laplacian
         (
             A*alphahe,
             eqn.psi(),
-            "laplacian(" + alphahe.name() + "," + eqn.psi().name() + ")"
+            word("laplacian(", alphahe.name(), ',', eqn.psi().name(), ')')
         );
 }
 
@@ -186,15 +187,15 @@ void Foam::fv::solidThermalEquilibrium::addSup
     );
 
     const volScalarField& A = solidAlpha();
-    const volScalarField B(1 - A);
+    const volInternalScalarField B(1 - A());
 
     eqn -=
-        A/B*fvm::ddt(alpha, solidThermo().rho(), eqn.psi());
+        A()/B*fvm::ddt(alpha, solidThermo().rho(), eqn.psi());
       - 1/B*fvm::laplacian
         (
             A*alphahe,
             eqn.psi(),
-            "laplacian(" + alphahe.name() + "," + eqn.psi().name() + ")"
+            word("laplacian(", alphahe.name(), ',', eqn.psi().name(), ')')
         );
 }
 

@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "kOmega.H"
+#include "fviGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 #include "bound.H"
@@ -61,8 +62,8 @@ tmp<fvScalarMatrix> kOmega<BasicMomentumTransportModel>::kSource() const
         new fvScalarMatrix
         (
             k_,
-            dimVolume*this->rho_.dimensions()*k_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*k_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -76,7 +77,8 @@ tmp<fvScalarMatrix> kOmega<BasicMomentumTransportModel>::omegaSource() const
         new fvScalarMatrix
         (
             omega_,
-            dimVolume*this->rho_.dimensions()*omega_.dimensions()/dimTime
+            dimensions::volume*this->rho_.dimensions()
+           *omega_.dimensions()/dimensions::time
         )
     );
 }
@@ -123,7 +125,8 @@ kOmega<BasicMomentumTransportModel>::kOmega
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
     omega_
     (
@@ -135,7 +138,8 @@ kOmega<BasicMomentumTransportModel>::kOmega
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentOmega
     )
 {
     bound(k_, this->kMin_);
@@ -187,21 +191,18 @@ void kOmega<BasicMomentumTransportModel>::correct()
 
     eddyViscosity<RASModel<BasicMomentumTransportModel>>::correct();
 
-    volScalarField::Internal divU
-    (
-        fvc::div(fvc::absolute(this->phi(), U))().v()
-    );
+    volInternalScalarField divU(fvi::div(fvc::absolute(this->phi(), U)));
 
-    tmp<volTensorField> tgradU = fvc::grad(U);
-    volScalarField::Internal G
+    tmp<volInternalTensorField> tgradU = fvi::grad(U);
+    volInternalScalarField G
     (
         this->GName(),
-        nut.v()*(dev(twoSymm(tgradU().v())) && tgradU().v())
+        nut()*(dev(twoSymm(tgradU())) && tgradU())
     );
     tgradU.clear();
 
     // Update omega and G at the wall
-    omega_.boundaryFieldRef().updateCoeffs();
+    omega_.boundaryRef().updateCoeffs();
 
     // Turbulence specific dissipation rate equation
     tmp<fvScalarMatrix> omegaEqn
@@ -219,7 +220,7 @@ void kOmega<BasicMomentumTransportModel>::correct()
 
     omegaEqn.ref().relax();
     fvConstraints.constrain(omegaEqn.ref());
-    omegaEqn.ref().boundaryManipulate(omega_.boundaryFieldRef());
+    omegaEqn.ref().boundaryManipulate(omega_.boundaryRef());
     solve(omegaEqn);
     fvConstraints.constrain(omega_);
     boundOmega();

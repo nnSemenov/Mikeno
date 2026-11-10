@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         "execute functionEntries"
     );
 
-    #include "setRootCaseNoFunctionObjects.H"
+    #include "setRootCase.H"
 
     entry::disableFunctionEntries = !args.optionFound("functionEntries");
 
@@ -104,7 +104,8 @@ int main(int argc, char *argv[])
                 (
                     Time::controlDictName,
                     args.rootPath(),
-                    args.caseName()/fileName(word("processor") + name(proci))
+                    args.caseName()/fileName(word("processor") + name(proci)),
+                    false
                 )
             );
         }
@@ -118,7 +119,8 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 args.rootPath(),
-                args.caseName()
+                args.caseName(),
+                false
             )
         );
     }

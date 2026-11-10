@@ -52,6 +52,12 @@ class fvsPatchField;
 template<class Type>
 using SurfaceField = GeometricField<Type, surfaceMesh, Field>;
 
+template<class Type>
+class PtrField;
+
+template<class Type>
+using SurfaceBoundaryField = PtrField<fvsPatchField<Type>>;
+
 typedef SurfaceField<label> surfaceLabelField;
 typedef SurfaceField<scalar> surfaceScalarField;
 typedef SurfaceField<vector> surfaceVectorField;

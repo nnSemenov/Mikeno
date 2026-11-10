@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,7 +62,7 @@ Foam::fv::compressible::VoFTurbulenceDamping::VoFTurbulenceDamping
 :
     fvModel(sourceName, modelType, mesh, dict),
     phaseName_(dict.lookupOrDefault("phase", word::null)),
-    delta_("delta", dimLength, dict),
+    delta_("delta", dimensions::length, dict),
     mixture_
     (
         mesh.lookupObject<compressibleTwoPhaseVoFMixture>
@@ -119,7 +119,7 @@ void Foam::fv::compressible::VoFTurbulenceDamping::addSup
         Info<< type() << ": applying source to " << eqn.psi().name() << endl;
     }
 
-    const volScalarField::Internal aRhoSqrnu
+    const volInternalScalarField aRhoSqrnu
     (
         mixture_.alpha1()()*mixture_.rho1()()*sqr(mixture_.thermo1().nu()()())
       + mixture_.alpha2()()*mixture_.rho2()()*sqr(mixture_.thermo2().nu()()())
@@ -128,7 +128,7 @@ void Foam::fv::compressible::VoFTurbulenceDamping::addSup
     if (field.name() == "epsilon")
     {
         eqn += mixture_.interfaceFraction()
-           *C2_*aRhoSqrnu*momentumTransport_.k()()/pow4(delta_);
+          *C2_*aRhoSqrnu*momentumTransport_.k()()()/pow4(delta_);
     }
     else if (field.name() == "omega")
     {
@@ -157,7 +157,7 @@ void Foam::fv::compressible::VoFTurbulenceDamping::addSup
         Info<< type() << ": applying source to " << eqn.psi().name() << endl;
     }
 
-    tmp<volScalarField::Internal> taRhoSqrnu;
+    tmp<volInternalScalarField> taRhoSqrnu;
 
     if (mixture_.alpha1().name() == alpha.name())
     {
@@ -179,7 +179,7 @@ void Foam::fv::compressible::VoFTurbulenceDamping::addSup
     if (field.name() == IOobject::groupName("epsilon", phaseName_))
     {
         eqn += mixture_.interfaceFraction()
-           *C2_*taRhoSqrnu*momentumTransport_.k()()/pow4(delta_);
+          *C2_*taRhoSqrnu*momentumTransport_.k()()()/pow4(delta_);
     }
     else if (field.name() == IOobject::groupName("omega", phaseName_))
     {

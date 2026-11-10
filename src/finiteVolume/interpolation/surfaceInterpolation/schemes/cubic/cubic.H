@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,6 +38,7 @@ SourceFiles
 
 #include "linear.H"
 #include "gradScheme.H"
+#include "GeometricVectorField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -132,7 +133,7 @@ public:
             (
                 SurfaceField<Type>::New
                 (
-                    "cubic::correction(" + vf.name() +')',
+                    word("cubic::correction(", vf.name(), ')'),
                     surfaceInterpolationScheme<Type>::interpolate(vf, -kSc, kSc)
                 )
             );
@@ -160,7 +161,7 @@ public:
                             (
                                 mesh,
                                 mesh.schemes().grad(gradSchemeName_)
-                            )().grad(vf.component(cmpt)),
+                            )().fvcGrad(vf.component(cmpt)),
                             kVecP,
                             kVecN
                         ) & mesh.delta()
@@ -168,8 +169,8 @@ public:
                 );
             }
 
-            typename SurfaceField<Type>::
-                Boundary& sfCorrbf = sfCorr.boundaryFieldRef();
+            typename SurfaceField<Type>::BoundaryField& sfCorrbf =
+                sfCorr.boundaryFieldRef();
 
             forAll(sfCorrbf, pi)
             {

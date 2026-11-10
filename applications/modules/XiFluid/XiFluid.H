@@ -124,7 +124,7 @@ See also
 #include "ubRhoThermo.H"
 #include "reactionModel.H"
 #include "ubMomentumTransportModel.H"
-#include "PhaseThermophysicalTransportModel.H"
+#include "phaseFluidMulticomponentThermophysicalTransportModel.H"
 #include "SuModel.H"
 #include "XiModel.H"
 
@@ -152,17 +152,17 @@ protected:
 
     // Unburnt and burnt gas momentumTransport
 
-        RASModels::ubMomentumTransportModel uMomentumTransport_;
-        RASModels::ubMomentumTransportModel bMomentumTransport_;
+        surfaceScalarField alphaPhiu_;
+        surfaceScalarField alphaPhib_;
+
+        ubMomentumTransportModel uMomentumTransport_;
+        ubMomentumTransportModel bMomentumTransport_;
 
 
     // Unburnt and burnt gas Thermophysical transport
 
-        typedef PhaseThermophysicalTransportModel
-        <
-            phaseCompressible::momentumTransportModel,
-            fluidThermo
-        > thermophysicalTransportModel;
+        typedef phaseFluidMulticomponentThermophysicalTransportModel
+            thermophysicalTransportModel;
 
         autoPtr<thermophysicalTransportModel> uThermophysicalTransport_;
         autoPtr<thermophysicalTransportModel> bThermophysicalTransport_;
@@ -208,24 +208,22 @@ protected:
         //- Solve for the unburnt gas thermophysical state
         void uSolve
         (
-            const volScalarField::Internal& bStab,
-            const surfaceScalarField& phib,
-            const volScalarField::Internal& bSource
+            const volInternalScalarField& bStab,
+            const volInternalScalarField& bSource
         );
 
         //- Solve for the unburnt gas thermophysical state
         void bSolve
         (
-            const volScalarField::Internal& cStab,
-            const surfaceScalarField& phic,
-            const volScalarField::Internal& bSource
+            const volInternalScalarField& cStab,
+            const volInternalScalarField& bSource
         );
 
         // Advective-diffusive stabilisation for b,c -> 0
         tmp<fvScalarMatrix> fvmStab
         (
             const volScalarField& bc,
-            const volScalarField::Internal& bcStab,
+            const volInternalScalarField& bcStab,
             const volScalarField& D,
             volScalarField& f
         );
@@ -237,8 +235,8 @@ protected:
             const word& fName,
             const volScalarField& alpha,
             const volScalarField& bc,
-            const volScalarField::Internal& bcStab,
-            const surfaceScalarField& phibc,
+            const volInternalScalarField& bcStab,
+            const surfaceScalarField& alphaPhiub,
             const volScalarField& D,
             const thermophysicalTransportModel& thermophysicalTransport,
             const fvScalarMatrix& source,
@@ -250,8 +248,7 @@ protected:
         (
             volScalarField& fu,
             const word& fuName,
-            const volScalarField::Internal& bStab,
-            const surfaceScalarField& phib,
+            const volInternalScalarField& bStab,
             const fvScalarMatrix& source
         );
 
@@ -260,25 +257,22 @@ protected:
         (
             volScalarField& fb,
             const word& fbName,
-            const volScalarField::Internal& cStab,
-            const surfaceScalarField& phic,
+            const volInternalScalarField& cStab,
             const fvScalarMatrix& source
         );
 
         //- Solve the unburnt enthalpy equation
         void HuSolve
         (
-            const volScalarField::Internal& bStab,
-            const surfaceScalarField& phib,
-            const volScalarField::Internal& bSource
+            const volInternalScalarField& bStab,
+            const volInternalScalarField& bSource
         );
 
         //- Solve the burnt enthalpy equation
         void HbSolve
         (
-            const volScalarField::Internal& cStab,
-            const surfaceScalarField& phic,
-            const volScalarField::Internal& bSource
+            const volInternalScalarField& cStab,
+            const volInternalScalarField& bSource
         );
 
 

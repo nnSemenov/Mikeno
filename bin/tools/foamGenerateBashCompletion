@@ -185,16 +185,22 @@ _findArgs () {
         xargs
 }
 
-_unitArgs ()
+_dimensions ()
 {
-    _opts="-help"
+    foamUnits | \\
+        sed -n -e "/^Fundamental Dimensions/,/^$/p" \\
+               -e "/^Derived Dimensions/,/^$/p" | \\
+        grep "^[\t ]" | tr -d "\[\]" | xargs
+}
 
-    # If '-all' is not selected, it is an option
-    _opts="\$_opts -all"
-
-    echo "\$@" | grep -q -- "-d" && _args="-d"
-    _opts="\$_opts \$(foamUnits \$_args | xargs -n 1 | grep '\\[' | tr -d '\\[\\]')"
-    echo "\$_opts" | xargs -n 1 | sort
+_units ()
+{
+    foamUnits | \\
+        sed -n -e "/^Fundamental Units/,/^$/p" \\
+               -e "/^Derived Units/,/^$/p" \\
+               -e "/^Scaled Units/,/^$/p" \\
+               -e "/^Derived-Scaled Units/,/^$/p" | \\
+        grep "^[\t ]" | tr -d "\[\]" | xargs
 }
 
 EOF
@@ -237,10 +243,12 @@ $(declareLocals)
     opts="\\
         -applications \\
         -coded \\
+        -C \\
         -dir \\
         -edit \\
         -files \\
         -help \\
+        -H \\
         -isearch \\
         -lnInclude \\
         -modules \\
@@ -251,6 +259,10 @@ $(declareLocals)
         -tutorials"
 
     for o in \$used ; do opts="\${opts/\$o/}" ; done
+
+    # use only one of '-C' and '-H'
+    local actions="-C -H"
+    _optSet "\$used" "\$actions" && opts="\$(_removeOpts "\$opts" "\$actions")"
 
     # use only one of '-edit', '-isearch', '-search', '-print'
     local actions="-edit -isearch -search -print"
@@ -410,9 +422,42 @@ _foamUnits () {
     cat<<EOF
 _foamUnits_ ()
 {
+    # Note: 'used' is redundant here
 $(declareLocals)
 
-    opts="-all -value \$(_unitArgs "\$used")"
+    # Default: '-help', '-all', units and dimensions
+    opts="-help -all \$(_units) \$(_dimensions)"
+
+    # '-help' or '-all' used: no further options
+    echo "\$line" | grep -qE -- "-(help|all)" && opts=""
+
+    # one dimension used: no further options
+    _dimensions | grep -wq "\$prev" && opts=""
+
+    # one unit used: return units and '-value'
+    _units | grep -wq "\$prev" && opts="\$(_units) -value"
+
+    # one unit used: return units and '-value'
+    _units | grep -wq "\$prev" && [ "\$COMP_CWORD" = 3 ] && opts="-value"
+
+    extra=""
+
+    COMPREPLY=( \$(compgen -W "\${opts}" \$extra -- \${cur}) )
+}
+complete -o filenames -o nospace -F _foamUnits_ foamUnits
+
+EOF
+}
+
+# shellcheck disable=SC2154
+_foamNewSolver () {
+    cat<<EOF
+_foamNewSolver_ ()
+{
+$(declareLocals)
+
+    opts="-help \$(_solver)"
+    for o in \$used ; do opts="\${opts/\$o/}" ; done
     extra=""
 
 $(caseStart)
@@ -420,7 +465,7 @@ $(caseStart)
         *) opts="" ;;
 $(caseEnd)
 }
-complete -o filenames -o nospace -F _foamUnits_ foamUnits
+complete -o filenames -o nospace -F _foamNewSolver_ foamNewSolver
 
 EOF
 }
@@ -437,6 +482,7 @@ specialApps="\
     foamCloneCase \
     foamInfo \
     foamUnits \
+    foamNewSolver \
     surfaceTransformPoints"
 
 banner > "$file"
@@ -536,7 +582,7 @@ do
     # shellcheck disable=SC2086
     allOpts=$(printf '%s\n' \
         $arglessOpts $dirOpts $fileOpts $handlerOpts $rangesOpts $argOpts $specialOpts | \
-        sort)
+        sort -u)
 
     # Write the completion function ...
     # shellcheck disable=SC2086

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,8 +54,8 @@ Foam::AveragingMethods::Dual<Type>::Dual
     AveragingMethod<Type>(io, dict, mesh, size(mesh)),
     volumeCell_(mesh.V()),
     volumeDual_(mesh.nPoints(), 0.0),
-    dataCell_(FieldField<Field, Type>::operator[](0)),
-    dataDual_(FieldField<Field, Type>::operator[](1))
+    dataCell_(Field<Field<Type>>::operator[](0)),
+    dataDual_(Field<Field<Type>>::operator[](1))
 {
     forAll(this->mesh_.C(), celli)
     {
@@ -75,7 +75,7 @@ Foam::AveragingMethods::Dual<Type>::Dual
     mesh.globalData().syncPointData
     (
         volumeDual_,
-        plusEqOp<scalar>(),
+        addEqOp(),
         distributionMap::transform()
     );
 }
@@ -90,8 +90,8 @@ Foam::AveragingMethods::Dual<Type>::Dual
     AveragingMethod<Type>(am),
     volumeCell_(am.volumeCell_),
     volumeDual_(am.volumeDual_),
-    dataCell_(FieldField<Field, Type>::operator[](0)),
-    dataDual_(FieldField<Field, Type>::operator[](1))
+    dataCell_(Field<Field<Type>>::operator[](0)),
+    dataDual_(Field<Field<Type>>::operator[](1))
 {}
 
 
@@ -110,7 +110,7 @@ void Foam::AveragingMethods::Dual<Type>::syncDualData()
     this->mesh_.globalData().syncPointData
     (
         dataDual_,
-        plusEqOp<Type>(),
+        addEqOp(),
         distributionMap::transform()
     );
 }

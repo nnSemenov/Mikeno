@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,6 @@ License
 
 #include "EulerDdtScheme.H"
 #include "surfaceInterpolate.H"
-#include "fvcDiv.H"
 #include "fvMatrices.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -41,6 +40,183 @@ namespace fv
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
+tmp<VolInternalField<Type>>
+EulerDdtScheme<Type>::fviDdt
+(
+    const dimensioned<Type>& dt
+)
+{
+    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+
+    const word ddtName("ddt(", dt.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*dt*(1.0 - mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            mesh(),
+            dimensioned<Type>
+            (
+                "0",
+                dt.dimensions()/dimensions::time,
+                Zero
+            )
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+EulerDdtScheme<Type>::fviDdt
+(
+    const VolInternalField<Type>& vf
+)
+{
+    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+
+    const word ddtName("ddt(", vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(vf - vf.oldTime()*mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(vf - vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+EulerDdtScheme<Type>::fviDdt
+(
+    const dimensionedScalar& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*rho*(vf - vf.oldTime()*mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*rho*(vf - vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+EulerDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*
+            (
+                rho*vf
+              - rho.oldTime()
+               *vf.oldTime()*mesh().Vsc0()/mesh().Vsc()
+            )
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(rho*vf - rho.oldTime()*vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+EulerDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& alpha,
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+
+    const word ddtName
+    (
+        "ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'
+    );
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*
+            (
+                alpha*rho*vf
+              - alpha.oldTime()*rho.oldTime()
+               *vf.oldTime()*mesh().Vsc0()/mesh().Vsc()
+            )
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT
+           *(
+               alpha*rho*vf
+             - alpha.oldTime()*rho.oldTime()*vf.oldTime()
+            )
+        );
+    }
+}
+
+
+template<class Type>
 tmp<VolField<Type>>
 EulerDdtScheme<Type>::fvcDdt
 (
@@ -49,7 +225,7 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+dt.name()+')');
+    const word ddtName("ddt(", dt.name(), ')');
 
     if (mesh().moving())
     {
@@ -62,14 +238,15 @@ EulerDdtScheme<Type>::fvcDdt
                 dimensioned<Type>
                 (
                     "0",
-                    dt.dimensions()/dimTime,
+                    dt.dimensions()/dimensions::time,
                     Zero
                 )
             )
         );
 
         tdtdt.ref().primitiveFieldRef() =
-            rDeltaT.value()*dt.value()*(1.0 - mesh().Vsc0()/mesh().Vsc());
+            rDeltaT.value()*dt.value()*(1.0 - mesh().Vsc0()().primitiveField()
+           /mesh().Vsc()().primitiveField());
 
         return tdtdt;
     }
@@ -82,7 +259,7 @@ EulerDdtScheme<Type>::fvcDdt
             dimensioned<Type>
             (
                 "0",
-                dt.dimensions()/dimTime,
+                dt.dimensions()/dimensions::time,
                 Zero
             ),
             calculatedFvPatchField<Type>::typeName
@@ -100,7 +277,7 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+vf.name()+')');
+    const word ddtName("ddt(", vf.name(), ')');
 
     if (mesh().moving())
     {
@@ -139,7 +316,7 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+rho.name()+','+vf.name()+')');
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
 
     if (mesh().moving())
     {
@@ -178,7 +355,7 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+rho.name()+','+vf.name()+')');
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
 
     if (mesh().moving())
     {
@@ -221,7 +398,10 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+alpha.name()+','+rho.name()+','+vf.name()+')');
+    const word ddtName
+    (
+        "ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'
+    );
 
     if (mesh().moving())
     {
@@ -274,7 +454,7 @@ EulerDdtScheme<Type>::fvcDdt
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    const word ddtName("ddt("+sf.name()+')');
+    const word ddtName("ddt(", sf.name(), ')');
 
     return SurfaceField<Type>::New
     (
@@ -296,7 +476,7 @@ EulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            vf.dimensions()*dimVolume/dimTime
+            vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 
@@ -304,15 +484,19 @@ EulerDdtScheme<Type>::fvmDdt
 
     const scalar rDeltaT = 1.0/mesh().time().deltaTValue();
 
-    fvm.diag() = rDeltaT*mesh().Vsc();
+    fvm.diag() = rDeltaT*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
-        fvm.source() = rDeltaT*vf.oldTime().primitiveField()*mesh().Vsc0();
+        fvm.source() =
+            rDeltaT*vf.oldTime().primitiveField()
+           *mesh().Vsc0()().primitiveField();
     }
     else
     {
-        fvm.source() = rDeltaT*vf.oldTime().primitiveField()*mesh().Vsc();
+        fvm.source() =
+            rDeltaT*vf.oldTime().primitiveField()
+           *mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -332,24 +516,26 @@ EulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
 
     const scalar rDeltaT = 1.0/mesh().time().deltaTValue();
 
-    fvm.diag() = rDeltaT*rho.value()*mesh().Vsc();
+    fvm.diag() = rDeltaT*rho.value()*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
         fvm.source() = rDeltaT
-            *rho.value()*vf.oldTime().primitiveField()*mesh().Vsc0();
+            *rho.value()*vf.oldTime().primitiveField()
+            *mesh().Vsc0()().primitiveField();
     }
     else
     {
         fvm.source() = rDeltaT
-            *rho.value()*vf.oldTime().primitiveField()*mesh().Vsc();
+            *rho.value()*vf.oldTime().primitiveField()
+            *mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -369,26 +555,26 @@ EulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
 
     const scalar rDeltaT = 1.0/mesh().time().deltaTValue();
 
-    fvm.diag() = rDeltaT*rho.primitiveField()*mesh().Vsc();
+    fvm.diag() = rDeltaT*rho.primitiveField()*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
         fvm.source() = rDeltaT
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc0();
+            *vf.oldTime().primitiveField()*mesh().Vsc0()().primitiveField();
     }
     else
     {
         fvm.source() = rDeltaT
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc();
+            *vf.oldTime().primitiveField()*mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -412,8 +598,8 @@ EulerDdtScheme<Type>::fvmDdt
             alpha.dimensions()
            *rho.dimensions()
            *vf.dimensions()
-           *dimVolume
-           /dimTime
+           *dimensions::volume
+           /dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
@@ -421,21 +607,22 @@ EulerDdtScheme<Type>::fvmDdt
     const scalar rDeltaT = 1.0/mesh().time().deltaTValue();
 
     fvm.diag() =
-        rDeltaT*alpha.primitiveField()*rho.primitiveField()*mesh().Vsc();
+        rDeltaT*alpha.primitiveField()*rho.primitiveField()
+       *mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
         fvm.source() = rDeltaT
             *alpha.oldTime().primitiveField()
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc0();
+            *vf.oldTime().primitiveField()*mesh().Vsc0()().primitiveField();
     }
     else
     {
         fvm.source() = rDeltaT
             *alpha.oldTime().primitiveField()
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc();
+            *vf.oldTime().primitiveField()*mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -460,7 +647,7 @@ EulerDdtScheme<Type>::fvcDdtUfCorr
 
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + Uf.name() + ')',
+        word("ddtCorr(",  U.name(), ',', Uf.name(), ')'),
         this->fvcDdtPhiCoeff(U.oldTime(), phiUf0, phiCorr)*rDeltaT*phiCorr
     );
 }
@@ -483,7 +670,7 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
 
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + phi.name() + ')',
+        word("ddtCorr(", U.name(), ',', phi.name(), ')'),
         this->fvcDdtPhiCoeff(U.oldTime(), phi.oldTime(), phiCorr)
        *rDeltaT*phiCorr
     );
@@ -503,8 +690,8 @@ EulerDdtScheme<Type>::fvcDdtUfCorr
 
     if
     (
-        U.dimensions() == dimVelocity
-     && rhoUf.dimensions() == rho.dimensions()*dimVelocity
+        U.dimensions() == dimensions::velocity
+     && rhoUf.dimensions() == rho.dimensions()*dimensions::velocity
     )
     {
         VolField<Type> rhoU0(rho.oldTime()*U.oldTime());
@@ -513,15 +700,15 @@ EulerDdtScheme<Type>::fvcDdtUfCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + rhoUf.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', rhoUf.name(), ')'),
             this->fvcDdtPhiCoeff(rhoU0, phiUf0, phiCorr, rho.oldTime())
            *rDeltaT*phiCorr
         );
     }
     else if
     (
-        U.dimensions() == rho.dimensions()*dimVelocity
-     && rhoUf.dimensions() == rho.dimensions()*dimVelocity
+        U.dimensions() == rho.dimensions()*dimensions::velocity
+     && rhoUf.dimensions() == rho.dimensions()*dimensions::velocity
     )
     {
         fluxFieldType phiUf0(mesh().Sf() & rhoUf.oldTime());
@@ -532,7 +719,7 @@ EulerDdtScheme<Type>::fvcDdtUfCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + rhoUf.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', rhoUf.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 U.oldTime(),
@@ -566,8 +753,8 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
 
     if
     (
-        U.dimensions() == dimVelocity
-     && phi.dimensions() == rho.dimensions()*dimVolumetricFlux
+        U.dimensions() == dimensions::velocity
+     && phi.dimensions() == rho.dimensions()*dimensions::volumetricFlux
     )
     {
         VolField<Type> rhoU0
@@ -582,7 +769,7 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + phi.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', phi.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 rhoU0,
@@ -594,8 +781,8 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
     }
     else if
     (
-        U.dimensions() == rho.dimensions()*dimVelocity
-     && phi.dimensions() == rho.dimensions()*dimVolumetricFlux
+        U.dimensions() == rho.dimensions()*dimensions::velocity
+     && phi.dimensions() == rho.dimensions()*dimensions::volumetricFlux
     )
     {
         fluxFieldType phiCorr
@@ -605,7 +792,7 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + phi.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', phi.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 U.oldTime(),
@@ -636,17 +823,23 @@ EulerDdtScheme<Type>::fvcDdtUfCorr
     const SurfaceField<Type>& Uf
 )
 {
-    const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
+    const dimensionedScalar rDeltaT(1.0/mesh().time().deltaT());
 
-    if (U.dimensions() == dimVelocity && Uf.dimensions() == dimVelocity)
+    if
+    (
+        U.dimensions() == dimensions::velocity
+     && Uf.dimensions() == dimensions::velocity
+    )
     {
         const volScalarField alphaRho0(alpha.oldTime()*rho.oldTime());
 
         return fluxFieldType::New
         (
-            "ddtCorr("
-          + alpha.name() + rho.name() + ',' + U.name() + ',' + Uf.name()
-          + ')',
+            word
+            (
+                "ddtCorr(",
+                alpha.name(), rho.name(), ',', U.name(), ',', Uf.name(), ')'
+            ),
             this->fvcDdtPhiCoeff(U.oldTime(), mesh().Sf() & Uf.oldTime())
            *rDeltaT
            *(
@@ -681,15 +874,21 @@ EulerDdtScheme<Type>::fvcDdtPhiCorr
 {
     const dimensionedScalar rDeltaT = 1.0/mesh().time().deltaT();
 
-    if (U.dimensions() == dimVelocity && phi.dimensions() == dimVolumetricFlux)
+    if
+    (
+        U.dimensions() == dimensions::velocity
+     && phi.dimensions() == dimensions::volumetricFlux
+    )
     {
         const volScalarField alphaRho0(alpha.oldTime()*rho.oldTime());
 
         return fluxFieldType::New
         (
-            "ddtCorr("
-          + alpha.name() + rho.name() + ',' + U.name() + ',' + phi.name()
-          + ')',
+            word
+            (
+                "ddtCorr(",
+                alpha.name(), rho.name(), ',', U.name(), ',', phi.name(), ')'
+            ),
             this->fvcDdtPhiCoeff(U.oldTime(), phi.oldTime())
            *rDeltaT
            *(

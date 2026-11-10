@@ -559,17 +559,27 @@ Foam::autoPtr<Foam::polyTopoChangeMap> Foam::fvMeshDistribute::repatch
     // Do mapping of fields from one patchField to the other ourselves since
     // is currently not supported by topoChange.
 
-    // Store boundary fields (we only do this for surfaceFields)
-    PtrList<FieldField<surfaceMesh::PatchField, scalar>> sFields;
-    saveBoundaryFields<scalar, surfaceMesh>(sFields);
-    PtrList<FieldField<surfaceMesh::PatchField, vector>> vFields;
-    saveBoundaryFields<vector, surfaceMesh>(vFields);
-    PtrList<FieldField<surfaceMesh::PatchField, sphericalTensor>> sptFields;
-    saveBoundaryFields<sphericalTensor, surfaceMesh>(sptFields);
-    PtrList<FieldField<surfaceMesh::PatchField, symmTensor>> sytFields;
-    saveBoundaryFields<symmTensor, surfaceMesh>(sytFields);
-    PtrList<FieldField<surfaceMesh::PatchField, tensor>> tFields;
-    saveBoundaryFields<tensor, surfaceMesh>(tFields);
+    // Store boundary fields
+    PtrList<VolBoundaryField<scalar>> vsf;
+    saveBoundaryFields<VolField<scalar>>(vsf);
+    PtrList<VolBoundaryField<vector>> vvf;
+    saveBoundaryFields<VolField<vector>>(vvf);
+    PtrList<VolBoundaryField<sphericalTensor>> vsptf;
+    saveBoundaryFields<VolField<sphericalTensor>>(vsptf);
+    PtrList<VolBoundaryField<symmTensor>> vsytf;
+    saveBoundaryFields<VolField<symmTensor>>(vsytf);
+    PtrList<VolBoundaryField<tensor>> vtf;
+    saveBoundaryFields<VolField<tensor>>(vtf);
+    PtrList<SurfaceBoundaryField<scalar>> ssf;
+    saveBoundaryFields<SurfaceField<scalar>>(ssf);
+    PtrList<SurfaceBoundaryField<vector>> svf;
+    saveBoundaryFields<SurfaceField<vector>>(svf);
+    PtrList<SurfaceBoundaryField<sphericalTensor>> ssptf;
+    saveBoundaryFields<SurfaceField<sphericalTensor>>(ssptf);
+    PtrList<SurfaceBoundaryField<symmTensor>> ssytf;
+    saveBoundaryFields<SurfaceField<symmTensor>>(ssytf);
+    PtrList<SurfaceBoundaryField<tensor>> stf;
+    saveBoundaryFields<SurfaceField<tensor>>(stf);
 
     // Change the mesh (without keeping old points).
     // Note: parallel comms allowed.
@@ -589,11 +599,16 @@ Foam::autoPtr<Foam::polyTopoChangeMap> Foam::fvMeshDistribute::repatch
 
     // Map patch fields using stored boundary fields. Note: assumes order
     // of fields has not changed in object registry!
-    mapBoundaryFields<scalar, surfaceMesh>(map, sFields);
-    mapBoundaryFields<vector, surfaceMesh>(map, vFields);
-    mapBoundaryFields<sphericalTensor, surfaceMesh>(map, sptFields);
-    mapBoundaryFields<symmTensor, surfaceMesh>(map, sytFields);
-    mapBoundaryFields<tensor, surfaceMesh>(map, tFields);
+    mapBoundaryFields<VolField<scalar>>(map, vsf);
+    mapBoundaryFields<VolField<vector>>(map, vvf);
+    mapBoundaryFields<VolField<sphericalTensor>>(map, vsptf);
+    mapBoundaryFields<VolField<symmTensor>>(map, vsytf);
+    mapBoundaryFields<VolField<tensor>>(map, vtf);
+    mapBoundaryFields<SurfaceField<scalar>>(map, ssf);
+    mapBoundaryFields<SurfaceField<vector>>(map, svf);
+    mapBoundaryFields<SurfaceField<sphericalTensor>>(map, ssptf);
+    mapBoundaryFields<SurfaceField<symmTensor>>(map, ssytf);
+    mapBoundaryFields<SurfaceField<tensor>>(map, stf);
 
     // Adapt constructMaps.
 
@@ -671,7 +686,7 @@ Foam::autoPtr<Foam::polyTopoChangeMap> Foam::fvMeshDistribute::mergeSharedPoints
         }
     }
 
-    if (returnReduce(pointToMaster.size(), sumOp<label>()) == 0)
+    if (returnReduce(pointToMaster.size(), sumOp()) == 0)
     {
         return autoPtr<polyTopoChangeMap>(nullptr);
     }
@@ -2015,23 +2030,23 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
 
     const wordList dimScalars
     (
-        fieldNames(volScalarField::Internal::typeName, nFields)
+        fieldNames(volInternalScalarField::typeName, nFields)
     );
     const wordList dimVectors
     (
-        fieldNames(volVectorField::Internal::typeName, nFields)
+        fieldNames(volInternalVectorField::typeName, nFields)
     );
     const wordList dimSphereTensors
     (
-        fieldNames(volSphericalTensorField::Internal::typeName, nFields)
+        fieldNames(volInternalSphericalTensorField::typeName, nFields)
     );
     const wordList dimSymmTensors
     (
-        fieldNames(volSymmTensorField::Internal::typeName, nFields)
+        fieldNames(volInternalSymmTensorField::typeName, nFields)
     );
     const wordList dimTensors
     (
-        fieldNames(volTensorField::Internal::typeName, nFields)
+        fieldNames(volInternalTensorField::typeName, nFields)
     );
 
     // Find patch to temporarily put exposed internal and processor faces into.
@@ -2053,15 +2068,18 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
         repatchFaceMap = repatchMap().faceMap();
 
         // Reorder all boundary face data (sourceProc, sourceFace etc.)
-        labelList bFaceMap
+        const labelList bFaceMap
         (
-            SubList<label>
+            eval
             (
-                repatchMap().reverseFaceMap(),
-                mesh_.nFaces() - mesh_.nInternalFaces(),
-                mesh_.nInternalFaces()
+                SubField<label>
+                (
+                    repatchMap().reverseFaceMap(),
+                    mesh_.nFaces() - mesh_.nInternalFaces(),
+                    mesh_.nInternalFaces()
+                )
+              - mesh_.nInternalFaces()
             )
-          - mesh_.nInternalFaces()
         );
 
         inplaceReorder(bFaceMap, sourceFace);
@@ -2328,35 +2346,35 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
             );
 
             // dimensionedFields
-            sendFields<volScalarField::Internal>
+            sendFields<volInternalScalarField>
             (
                 recvProc,
                 dimScalars,
                 subsetter,
                 str
             );
-            sendFields<volVectorField::Internal>
+            sendFields<volInternalVectorField>
             (
                 recvProc,
                 dimVectors,
                 subsetter,
                 str
             );
-            sendFields<volSphericalTensorField::Internal>
+            sendFields<volInternalSphericalTensorField>
             (
                 recvProc,
                 dimSphereTensors,
                 subsetter,
                 str
             );
-            sendFields<volSymmTensorField::Internal>
+            sendFields<volInternalSymmTensorField>
             (
                 recvProc,
                 dimSymmTensors,
                 subsetter,
                 str
             );
-            sendFields<volTensorField::Internal>
+            sendFields<volInternalTensorField>
             (
                 recvProc,
                 dimTensors,
@@ -2548,11 +2566,11 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
             PtrList<pointSymmTensorField> psytf;
             PtrList<pointTensorField> ptf;
 
-            PtrList<volScalarField::Internal> dsf;
-            PtrList<volVectorField::Internal> dvf;
-            PtrList<volSphericalTensorField::Internal> dstf;
-            PtrList<volSymmTensorField::Internal> dsytf;
-            PtrList<volTensorField::Internal> dtf;
+            PtrList<volInternalScalarField> dsf;
+            PtrList<volInternalVectorField> dvf;
+            PtrList<volInternalSphericalTensorField> dstf;
+            PtrList<volInternalSymmTensorField> dsytf;
+            PtrList<volInternalTensorField> dtf;
 
 
             // Opposite of sendMesh
@@ -2711,7 +2729,7 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                 );
 
                 // Dimensioned fields
-                receiveFields<volScalarField::Internal>
+                receiveFields<volInternalScalarField>
                 (
                     sendProc,
                     dimScalars,
@@ -2719,10 +2737,10 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                     dsf,
                     fieldDicts.subDict
                     (
-                        volScalarField::Internal::typeName
+                        volInternalScalarField::typeName
                     )
                 );
-                receiveFields<volVectorField::Internal>
+                receiveFields<volInternalVectorField>
                 (
                     sendProc,
                     dimVectors,
@@ -2730,10 +2748,10 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                     dvf,
                     fieldDicts.subDict
                     (
-                        volVectorField::Internal::typeName
+                        volInternalVectorField::typeName
                     )
                 );
-                receiveFields<volSphericalTensorField::Internal>
+                receiveFields<volInternalSphericalTensorField>
                 (
                     sendProc,
                     dimSphereTensors,
@@ -2741,11 +2759,11 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                     dstf,
                     fieldDicts.subDict
                     (
-                        volSphericalTensorField::Internal::
+                        volInternalSphericalTensorField::
                         typeName
                     )
                 );
-                receiveFields<volSymmTensorField::Internal>
+                receiveFields<volInternalSymmTensorField>
                 (
                     sendProc,
                     dimSymmTensors,
@@ -2753,10 +2771,10 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                     dsytf,
                     fieldDicts.subDict
                     (
-                        volSymmTensorField::Internal::typeName
+                        volInternalSymmTensorField::typeName
                     )
                 );
-                receiveFields<volTensorField::Internal>
+                receiveFields<volInternalTensorField>
                 (
                     sendProc,
                     dimTensors,
@@ -2764,7 +2782,7 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
                     dtf,
                     fieldDicts.subDict
                     (
-                        volTensorField::Internal::typeName
+                        volInternalTensorField::typeName
                     )
                 );
             }
@@ -3065,12 +3083,12 @@ Foam::autoPtr<Foam::polyDistributionMap> Foam::fvMeshDistribute::distribute
     // don't need to do any re-patching like with the processor patches.
     addNccProcPatches();
 
-    // Correct coupled patch fields
-    correctCoupledPatchFields<volScalarField>();
-    correctCoupledPatchFields<volVectorField>();
-    correctCoupledPatchFields<volSphericalTensorField>();
-    correctCoupledPatchFields<volSymmTensorField>();
-    correctCoupledPatchFields<volTensorField>();
+    // Correct processor patch fields
+    correctProcessorPatchFields<volScalarField>();
+    correctProcessorPatchFields<volVectorField>();
+    correctProcessorPatchFields<volSphericalTensorField>();
+    correctProcessorPatchFields<volSymmTensorField>();
+    correctProcessorPatchFields<volTensorField>();
 
     mesh_.setInstance(mesh_.time().name());
 

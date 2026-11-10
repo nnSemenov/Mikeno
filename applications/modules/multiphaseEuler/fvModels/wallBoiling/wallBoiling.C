@@ -29,7 +29,6 @@ License
 
 #include "fluidThermophysicalTransportModel.H"
 
-#include "saturationTemperatureModel.H"
 #include "partitioningModel.H"
 #include "nucleationSiteModel.H"
 #include "departureDiameterModel.H"
@@ -204,12 +203,9 @@ struct Foam::fv::wallBoiling::laggedProperties
         ),
         Tsat
         (
-            model.saturationModelPtr_->Tsat
+            model.Tsat_->value
             (
-                static_cast<const scalarField&>
-                (
-                    model.liquid_.fluidThermo().p().boundaryField()[patchi]
-                )
+                model.liquid_.fluidThermo().p().boundaryField()[patchi]
             )
         ),
         L
@@ -242,11 +238,12 @@ void Foam::fv::wallBoiling::readCoeffs(const dictionary& dict)
 {
     reReadSpecie(dict);
 
-    saturationModelPtr_.reset
+    Tsat_.reset
     (
-        saturationTemperatureModel::New
+        Function1<scalar>::New
         (
             "saturationTemperature",
+            {dimPressure, dimTemperature},
             dict
         ).ptr()
     );
@@ -676,8 +673,8 @@ void Foam::fv::wallBoiling::correctMDot() const
           + (1 - mDot.boiling_)*lagProps.alphatConvLiquid;
         infoField
         (
-            "mDot[" + mesh().boundary()[patchi].name() + "]",
-            dimDensity/dimTime,
+            word("mDot[", mesh().boundary()[patchi].name(), "]"),
+            dimensions::density/dimensions::time,
             mDot
         );
 
@@ -724,7 +721,7 @@ Foam::fv::wallBoiling::wallBoiling
     liquidTemperatureWallFunction_(true),
     Prt_(NaN),
     bubbleWaitingTimeRatio_(NaN),
-    saturationModelPtr_(nullptr),
+    Tsat_(nullptr),
     partitioningModel_(nullptr),
     nucleationSiteModel_(nullptr),
     departureDiameterModel_(nullptr),
@@ -741,7 +738,7 @@ Foam::fv::wallBoiling::wallBoiling
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, scalar(0)),
+        dimensionedScalar(dimensions::density/dimensions::time, scalar(0)),
         mDotBoundaryTypes
         (
             wallBoilingPhaseChangeRateFvPatchScalarField::typeName
@@ -777,12 +774,12 @@ Foam::Pair<const Foam::scalarField&> Foam::fv::wallBoiling::alphats
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallBoiling::Lfraction() const
 {
     // Put all the latent heat into the liquid
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             name() + ":Lfraction",
             mesh(),
@@ -791,20 +788,24 @@ Foam::fv::wallBoiling::Lfraction() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallBoiling::d() const
 {
     tmp<volScalarField> tdVapour = vapour_.d();
-    const volScalarField::Internal& dVapour = tdVapour();
+    const volInternalScalarField& dVapour = tdVapour();
 
-    const volScalarField::Internal mask
+    const volInternalScalarField mask
     (
-        neg(mag(mDot_) - dimensionedScalar(dimDensity/dimTime, rootVSmall))
+        neg
+        (
+            mag(mDot_())
+          - dimensionedScalar(dimensions::density/dimensions::time, rootVSmall)
+        )
     );
 
-    tmp<volScalarField::Internal> td =
-        volScalarField::Internal::New(name() + ":d", mask*dVapour);
-    volScalarField::Internal& d = td.ref();
+    tmp<volInternalScalarField> td =
+        volInternalScalarField::New(name() + ":d", mask*dVapour);
+    volInternalScalarField& d = td.ref();
 
     forAll(mDot_.boundaryField(), patchi)
     {
@@ -828,17 +829,17 @@ Foam::fv::wallBoiling::d() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallBoiling::nDot() const
 {
-    tmp<volScalarField::Internal> tnDot =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tnDot =
+        volInternalScalarField::New
         (
             name() + ":nDot",
             mesh(),
-            dimensionedScalar(inv(dimTime), scalar(0))
+            dimensionedScalar(inv(dimensions::time), scalar(0))
         );
-    volScalarField::Internal& nDot = tnDot.ref();
+    volInternalScalarField& nDot = tnDot.ref();
 
     forAll(mDot_.boundaryField(), patchi)
     {
@@ -860,15 +861,15 @@ Foam::fv::wallBoiling::nDot() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallBoiling::tau() const
 {
     NotImplemented;
-    return tmp<volScalarField::Internal>(nullptr);
+    return tmp<volInternalScalarField>(nullptr);
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallBoiling::mDot() const
 {
     return mDot_.internalField();

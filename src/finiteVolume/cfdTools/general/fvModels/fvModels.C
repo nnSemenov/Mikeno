@@ -37,10 +37,7 @@ namespace Foam
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-Foam::IOobject Foam::fvModels::createIOobject
-(
-    const fvMesh& mesh
-) const
+Foam::IOobject Foam::fvModels::createIOobject(const fvMesh& mesh)
 {
     typeIOobject<IOdictionary> io
     (
@@ -146,7 +143,13 @@ Foam::fvModels::fvModels
     const fvMesh& mesh
 )
 :
-    DemandDrivenMeshObject<fvMesh, TopoChangeableMeshObject, fvModels>
+    DemandDrivenMeshObject
+    <
+        fvMesh,
+        TopoChangeableMeshObject,
+        fvModels,
+        IOdictionary
+    >
     (
         createIOobject(mesh),
         mesh
@@ -155,8 +158,6 @@ Foam::fvModels::fvModels
     checkTimeIndex_(mesh.time().timeIndex() + 1),
     addSupFields_()
 {
-    readHeaderOk(IOstream::ASCII, typeName);
-
     const bool readFromFvModels = IOobject::name() == typeName;
 
     const dictionary& dict = *this;
@@ -213,13 +214,7 @@ Foam::fvModels::fvModels
     PtrListDictionary<fvModel>::setSize(i);
     addSupFields_.setSize(i);
 
-    if (readFromFvModels)
-    {
-        // Add file watch on the fvModels dictionary for
-        // MUST_READ_IF_MODIFIED
-        addWatch();
-    }
-    else
+    if (!readFromFvModels)
     {
         // If the fvOptions file was read re-name to fvModels
         rename(typeName);
@@ -344,26 +339,12 @@ bool Foam::fvModels::read()
 }
 
 
-bool Foam::fvModels::readData(Istream& is)
-{
-    is >> *this;
-    return !is.bad();
-}
-
-
-bool Foam::fvModels::writeData(Ostream& os) const
-{
-    dictionary::write(os, false);
-    return os.good();
-}
-
-
 bool Foam::fvModels::writeObject
 (
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     bool allOk = true;
@@ -372,7 +353,7 @@ bool Foam::fvModels::writeObject
 
     forAll(modelList, i)
     {
-        const bool ok = modelList[i].write(write);
+        const bool ok = modelList[i].write(updateInstance);
         allOk = (allOk && ok);
     }
 

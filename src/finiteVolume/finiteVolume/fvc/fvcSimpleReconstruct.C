@@ -60,12 +60,12 @@ reconstruct
     (
         VolField<GradType>::New
         (
-            "reconstruct("+ssf.name()+')',
+            word("reconstruct(", ssf.name(), ')'),
             mesh,
             dimensioned<GradType>
             (
                 "0",
-                ssf.dimensions()/dimArea,
+                ssf.dimensions()/dimensions::area,
                 Zero
             ),
             extrapolatedCalculatedFvPatchField<GradType>::typeName
@@ -83,8 +83,8 @@ reconstruct
         rf[nei] -= (Cf[facei] - C[nei])*ssf[facei];
     }
 
-    const typename SurfaceField<Type>::
-    Boundary& bsf = ssf.boundaryField();
+    const typename SurfaceField<Type>::BoundaryField& bsf =
+        ssf.boundaryField();
 
     forAll(bsf, patchi)
     {

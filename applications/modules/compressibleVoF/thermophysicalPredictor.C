@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "compressibleVoF.H"
 #include "fvcMeshPhi.H"
-#include "fvcDdt.H"
+#include "fviDdt.H"
 #include "fvmDiv.H"
 #include "fvmSup.H"
 #include "fvmLaplacian.H"
@@ -69,25 +69,32 @@ void Foam::solvers::compressibleVoF::thermophysicalPredictor()
             )
         )
 
-      + fvc::ddt(alpha1, rho1, e1) + fvc::div(alphaRhoPhi1, e1)
-      - contErr1()*e1
-      + fvc::ddt(alpha2, rho2, e2) + fvc::div(alphaRhoPhi2, e2)
-      - contErr2()*e2
+      + fvi::ddt(alpha1, rho1, e1) + fvi::div(alphaRhoPhi1, e1)
+      - contErr1()*e1()
+      + fvi::ddt(alpha2, rho2, e2) + fvi::div(alphaRhoPhi2, e2)
+      - contErr2()*e2()
 
       - fvm::laplacian(thermophysicalTransport.kappaEff(), T)
 
       + (
             mixture.totalInternalEnergy()
           ?
-            fvc::div(fvc::absolute(phi, U), p)()()
-          + (fvc::ddt(rho, K) + fvc::div(rhoPhi, K))()()
-          - (U()&(fvModels().source(rho, U)&U)()) - (contErr1() + contErr2())*K
+            eval
+            (
+                fvi::div(fvc::absolute(phi, U), p)
+              + (fvi::ddt(rho, K) + fvi::div(rhoPhi, K))
+              - (U() & (fvModels().source(rho, U) & U()))
+              - (contErr1() + contErr2())*K()
+            )
           :
-            p*fvc::div(fvc::absolute(phi, U))()()
+            eval
+            (
+                p()*fvi::div(fvc::absolute(phi, U))
+            )
         )
      ==
-        (e1Source&e1)
-      + (e2Source&e2)
+        (e1Source&e1())
+      + (e2Source&e2())
     );
 
     TEqn.relax();

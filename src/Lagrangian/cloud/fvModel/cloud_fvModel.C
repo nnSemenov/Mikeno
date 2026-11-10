@@ -70,7 +70,7 @@ void Foam::fv::cloud::fail
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::fv::cloud::S
+Foam::tmp<Foam::volInternalScalarField> Foam::fv::cloud::S
 (
     const word& phaseName,
     const dimensionSet& dims
@@ -87,20 +87,25 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::cloud::S
     // Volume source
     if (!isPhase && !isMultiphase && dims == dimless && notNull(ctcdfCloud))
     {
-        return
+        return eval
+        (
             ctcdfCloud.rhoByRhoc
-           *coupledCloud_.carrierEqn<scalar>("1").residual(dimless/dimTime);
+           *coupledCloud_.carrierEqn<scalar>("1").residual
+            (
+                inv(dimensions::time)
+            )
+        );
     }
     if (!isPhase && isMultiphase && dims == dimless && notNull(ctcdfCloud))
     {
-        tmp<volScalarField::Internal> tS =
-            volScalarField::Internal::New
+        tmp<volInternalScalarField> tS =
+            volInternalScalarField::New
             (
                 "S",
                 mesh(),
-                dimensionedScalar(dimless/dimTime, scalar(0))
+                dimensionedScalar(inv(dimensions::time), scalar(0))
             );
-        volScalarField::Internal& S = tS.ref();
+        volInternalScalarField& S = tS.ref();
 
         const carrierEqnTable carrierEqns =
             coupledCloud_.carrierEqns<scalar>("1");
@@ -115,7 +120,7 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::cloud::S
 
             S +=
                 ctcdfCloud.rho()/rhoPhase
-               *iter()->residual(dimless/dimTime);
+               *iter()->residual(inv(dimensions::time));
         }
 
         return tS;
@@ -134,39 +139,43 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::cloud::S
             ctcdfCloud.rho()/rhoPhase
            *coupledCloud_
            .carrierEqn<scalar>(IOobject::groupName("1", phaseName))
-           .residual(dimless/dimTime);
+           .residual(inv(dimensions::time));
     }
 
     // Mass source
-    if (!isPhase && dims == dimDensity)
+    if (!isPhase && dims == dimensions::density)
     {
-        tmp<volScalarField::Internal> tS =
-            volScalarField::Internal::New
+        tmp<volInternalScalarField> tS =
+            volInternalScalarField::New
             (
                 "S",
                 mesh(),
-                dimensionedScalar(dimDensity/dimTime, scalar(0))
+                dimensionedScalar
+                (
+                    dimensions::density/dimensions::time,
+                    scalar(0)
+                )
             );
-        volScalarField::Internal& S = tS.ref();
+        volInternalScalarField& S = tS.ref();
 
         const carrierEqnTable carrierEqns =
             coupledCloud_.carrierEqns<scalar>("rho");
 
         forAllConstIter(carrierEqnTable, carrierEqns, iter)
         {
-            S += iter()->residual(dimDensity/dimTime);
+            S += iter()->residual(dimensions::density/dimensions::time);
         }
 
         return tS;
     }
 
     // Phase mass source
-    if (isPhase && dims == dimDensity)
+    if (isPhase && dims == dimensions::density)
     {
         return
             coupledCloud_
            .carrierEqn<scalar>(IOobject::groupName("rho", phaseName))
-           .residual(dimDensity/dimTime);
+           .residual(dimensions::density/dimensions::time);
     }
 
     FatalError
@@ -174,7 +183,7 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::cloud::S
         << (isPhase ? "for phase " + phaseName : "").c_str()
         << " with dimensions " << dims << exit(FatalError);
 
-    return tmp<volScalarField::Internal>(nullptr);
+    return tmp<volInternalScalarField>(nullptr);
 }
 
 
@@ -185,14 +194,15 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::fv::cloud::Sfield
     const dimensionSet& dims
 ) const
 {
-    const volScalarField::Internal S(this->S(field.group(), dims));
+    const volInternalScalarField S(this->S(field.group(), dims));
 
-    tmp<typename VolField<Type>::Internal> sourceCoeff =
-        field.sources()[name()].sourceCoeff(*this, S);
-    tmp<typename volScalarField::Internal> internalCoeff =
-        field.sources()[name()].internalCoeff(*this, S);
-
-    return S*sourceCoeff + fvm::Sp(S*internalCoeff, field);
+    return
+        field.sources()[name()].sourceTerm(*this, S)
+      + fvm::Sp
+        (
+            S*field.sources()[name()].internalCoeff(*this, S),
+            field
+        );
 }
 
 
@@ -265,7 +275,7 @@ void Foam::fv::cloud::addSupType
      && alphaRhoOrField.dimensions() == dimless;
     const bool isRho =
         alphaRhoOrField.member() == "rho"
-     && alphaRhoOrField.dimensions() == dimDensity;
+     && alphaRhoOrField.dimensions() == dimensions::density;
 
     const word oneName = IOobject::groupName("1", phaseName);
     const word rhoName = IOobject::groupName("rho", phaseName);
@@ -318,7 +328,7 @@ void Foam::fv::cloud::addSupType
      && alphaOrRho.dimensions() == dimless;
     const bool isRho =
         alphaOrRho.member() == "rho"
-     && alphaOrRho.dimensions() == dimDensity;
+     && alphaOrRho.dimensions() == dimensions::density;
 
     const bool hasCarrierEqn = coupledCloud_.hasCarrierEqn(field);
 
@@ -349,7 +359,7 @@ void Foam::fv::cloud::addSupType
     // Generic material source into a mass-weighted property equation
     else if (!isPhase && isRho && !hasCarrierEqn)
     {
-        eqn += Sfield(field, dimDensity);
+        eqn += Sfield(field, dimensions::density);
     }
     // Volume-weighted cloud source into a volume-weighted phase property
     // equation
@@ -390,7 +400,7 @@ void Foam::fv::cloud::addSupType
      && alphaOrRho.dimensions() == dimless;
     const bool isRhoField =
         rhoOrField.member() == "rho"
-     && rhoOrField.dimensions() == dimDensity;
+     && rhoOrField.dimensions() == dimensions::density;
 
     DebugInFunction
         << "alphaOrRho=" << alphaOrRho.name()
@@ -440,7 +450,7 @@ void Foam::fv::cloud::addSupType
     // Generic material source into a mass-weighted phase property equation
     else
     {
-        eqn += Sfield(field, dimDensity);
+        eqn += Sfield(field, dimensions::density);
     }
 }
 
@@ -466,20 +476,12 @@ bool Foam::fv::cloud::addsSupToField(const word& fieldName) const
         models.addsSupToField
         (
             word::null,
-            IOobject::groupName
-            (
-                clouds::carried::nameToCarrierName("1"),
-                phaseName
-            )
+            clouds::carried::nameToCarrierName("1", phaseName)
         )
      || models.addsSupToField
         (
             word::null,
-            IOobject::groupName
-            (
-                clouds::carried::nameToCarrierName("rho"),
-                phaseName
-            )
+            clouds::carried::nameToCarrierName("rho", phaseName)
         )
         FOR_ALL_FIELD_TYPES(hasCarrierEqnType);
 }

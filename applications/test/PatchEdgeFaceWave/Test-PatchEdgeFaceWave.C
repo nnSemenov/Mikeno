@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 {
     argList::validArgs.append("patch");
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
     #include "createMesh.H"
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
             initialEdgesInfo,
             allEdgeInfo,
             allFaceInfo,
-            returnReduce(patch.nEdges(), sumOp<label>())
+            returnReduce(patch.nEdges(), sumOp())
         );
 
 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar(dimLength, 0)
+            dimensionedScalar(dimensions::length, 0)
         );
         scalarField pf(vsf.boundaryField()[patch.index()].size());
         forAll(pf, facei)
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar(dimLength, 0)
+            dimensionedScalar(dimensions::length, 0)
         );
         vsf.boundaryFieldRef()[patch.index()] = pwd;
 

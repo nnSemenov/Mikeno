@@ -89,7 +89,7 @@ public:
         template<class ... Args>
         SidedInterfacialModel
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface,
             const Args& ... args
         );
@@ -102,7 +102,7 @@ public:
 
 
     //- Destructor
-    ~SidedInterfacialModel();
+    virtual ~SidedInterfacialModel();
 
 
     // Member Functions
@@ -120,7 +120,7 @@ public:
         ModelType& modelInThe(const phaseModel& phase);
 
         //- Dummy write for regIOobject
-        bool writeData(Ostream& os) const;
+        virtual bool writeData(Ostream& os) const;
 
 
     // Member Operators
@@ -138,8 +138,8 @@ public:
     (                                                                          \
         SidedInterfacialModel<ModelType>,                                      \
         (                                                                      \
-            word(SidedInterfacialModel<ModelType>::typeName_()) + "<"          \
-          + ModelType::typeName + ">"                                          \
+            word(SidedInterfacialModel<ModelType>::typeName_(), '<',           \
+            ModelType::typeName, '>')                                          \
         ).c_str(),                                                             \
         DebugSwitch                                                            \
     );

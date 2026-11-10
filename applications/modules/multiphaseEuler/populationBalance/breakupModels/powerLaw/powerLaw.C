@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -56,17 +56,17 @@ Foam::populationBalance::breakupModels::powerLaw::powerLaw
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::breakupModels::powerLaw::rate(const label i) const
 {
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "breakupRate",
             popBal_.mesh(),
             dimensionedScalar
             (
-                inv(dimTime),
+                inv(dimensions::time),
                 pow(popBal_.v(i).value(), power_)
             )
         );

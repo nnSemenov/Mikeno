@@ -74,7 +74,7 @@ Foam::nucleationGroupFractionFvScalarFieldSource::sourceValue
     const populationBalanceModel& popBal = this->popBal();
     const label i = this->i();
 
-    tmp<volScalarField::Internal> d =
+    tmp<volInternalScalarField> d =
         refCast<const fv::nucleation>(model).d();
 
     return popBal.etaV(i, constant::mathematical::pi/6*pow3(d));
@@ -93,7 +93,10 @@ Foam::nucleationGroupFractionFvScalarFieldSource::internalCoeff
     return
         DimensionedField<scalar, fvMesh>::New
         (
-            model.name() + ":" + this->internalField().name() + "InternalCoeff",
+            word
+            (
+                model.name(), ':', this->internalField().name(), "InternalCoeff"
+            ),
             this->internalField().mesh(),
             dimensionedScalar(dimless, scalar(0))
         );

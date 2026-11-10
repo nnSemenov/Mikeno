@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,7 +57,8 @@ Foam::multivariateScheme<Type, Scheme>::multivariateScheme
             mesh
         ),
         mesh,
-        dimless
+        dimless,
+        fvsPatchField<scalar>::calculatedType()
     )
 {
     typename multivariateSurfaceInterpolationScheme<Type>::
@@ -65,6 +66,7 @@ Foam::multivariateScheme<Type, Scheme>::multivariateScheme
 
     surfaceScalarField limiter
     (
+        word("Limiter(", schemeData.name().name(), ')'),
         Scheme(mesh, faceFlux_, *this).limiter(*iter())
     );
 
@@ -75,6 +77,12 @@ Foam::multivariateScheme<Type, Scheme>::multivariateScheme
             limiter,
             Scheme(mesh, faceFlux_, *this).limiter(*iter())
         );
+    }
+
+    if (debug)
+    {
+        Info<< type() << " " << limiter.name()
+            << ": average limiter " << average(limiter) << endl;
     }
 
     weights_ =

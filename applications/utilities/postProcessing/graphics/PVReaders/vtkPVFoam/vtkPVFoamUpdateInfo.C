@@ -38,7 +38,9 @@ License
 #include "entry.H"
 #include "cloud.H"
 #include "pointMesh.H"
+#include "pointPatchField.H"
 #include "LagrangianMesh.H"
+#include "LagrangianPatchField.H"
 
 // VTK includes
 #include "vtkDataArraySelection.h"
@@ -70,7 +72,7 @@ public:
 
    // Member functions
 
-        bool writeData(Ostream&) const
+        virtual bool writeData(Ostream&) const
         {
             NotImplemented;
             return false;

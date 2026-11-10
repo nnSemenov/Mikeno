@@ -116,7 +116,7 @@ void Foam::fv::bXiKernelCorr::addSup
     const labelList& cells = zone_.zone();
 
     const scalarField bc(b, cells);
-    const scalar bMin = returnReduce(min(bc), minOp<scalar>());
+    const scalar bMin = returnReduce(min(bc), minOp());
 
     // Check if min(b) is < 1, i.e. ignition has occurred
     // and min(b) > small, i.e. burnout has not occurred requiring correction
@@ -148,7 +148,7 @@ void Foam::fv::bXiKernelCorr::addSup
         const scalarField Rc(scalarField(rhou, cells)/scalarField(rhob, cells));
 
         // Calculate volume of kernel
-        const dimensionedScalar Vk("Vk", dimVolume, gSum((1 - bc)*Vc));
+        const dimensionedScalar Vk("Vk", dimensions::volume, gSum((1 - bc)*Vc));
 
         // Calculate kernel area from its volume
         const scalar Ak(kernelShape_->Ak(Vk).value());

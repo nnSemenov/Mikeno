@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,6 +64,12 @@ namespace fvc
         const tmp<VolField<Type>>& tvf
     );
 
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto flux(const Expression& e)
+    {
+        return flux(eval(e));
+    }
+
     template<class Type>
     tmp<SurfaceField<Type>> flux
     (
@@ -95,6 +101,22 @@ namespace fvc
         const word& name
     );
 
+    template
+    <
+        class Type,
+        class PhiExpression,
+        class = EnableIfExpression<PhiExpression>
+    >
+    inline auto flux
+    (
+        const PhiExpression& phi,
+        const VolField<Type>& vf,
+        const word& name
+    )
+    {
+        return flux(eval(phi), vf, name);
+    }
+
     template<class Type>
     tmp<SurfaceField<Type>> flux
     (
@@ -102,6 +124,21 @@ namespace fvc
         const tmp<VolField<Type>>&,
         const word& name
     );
+
+    template
+    <
+        class Expression,
+        class = EnableIfExpression<Expression>
+    >
+    inline auto flux
+    (
+        const surfaceScalarField& phi,
+        const Expression& e,
+        const word& name
+    )
+    {
+        return flux(phi, eval(e), name);
+    }
 
     template<class Type>
     tmp<SurfaceField<Type>> flux
@@ -111,6 +148,21 @@ namespace fvc
         const word& name
     );
 
+    template
+    <
+        class PhiExpression,
+        class Expression,
+        class = EnableIfExpression<Expression>
+    >
+    inline auto flux
+    (
+        const PhiExpression& phi,
+        const Expression& e,
+        const word& name
+    )
+    {
+        return flux(eval(phi), eval(e), name);
+    }
 
     template<class Type>
     tmp<SurfaceField<Type>> flux
@@ -126,6 +178,21 @@ namespace fvc
         const VolField<Type>&
     );
 
+    template
+    <
+        class Type,
+        class PhiExpression,
+        class = EnableIfExpression<PhiExpression>
+    >
+    inline auto flux
+    (
+        const PhiExpression& phi,
+        const VolField<Type>& vf
+    )
+    {
+        return flux(eval(phi), vf);
+    }
+
     template<class Type>
     tmp<SurfaceField<Type>> flux
     (
@@ -133,12 +200,41 @@ namespace fvc
         const tmp<VolField<Type>>&
     );
 
+    template
+    <
+        class Expression,
+        class = EnableIfExpression<Expression>
+    >
+    inline auto flux
+    (
+        const surfaceScalarField& phi,
+        const Expression& e
+    )
+    {
+        return flux(phi, eval(e));
+    }
+
     template<class Type>
     tmp<SurfaceField<Type>> flux
     (
         const tmp<surfaceScalarField>&,
         const tmp<VolField<Type>>&
     );
+
+    template
+    <
+        class PhiExpression,
+        class Expression,
+        class = EnableIfExpression<Expression>
+    >
+    inline auto flux
+    (
+        const PhiExpression& phi,
+        const Expression& e
+    )
+    {
+        return flux(eval(phi), eval(e));
+    }
 }
 
 

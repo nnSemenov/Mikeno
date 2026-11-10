@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LienLeschziner.H"
+#include "fviGrad.H"
 #include "wallDist.H"
 #include "bound.H"
 #include "makeMomentumTransportModel.H"
@@ -147,7 +148,8 @@ LienLeschziner::LienLeschziner
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentKineticEnergy
     ),
 
     epsilon_
@@ -160,7 +162,8 @@ LienLeschziner::LienLeschziner
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, kMin_);
@@ -202,16 +205,16 @@ void LienLeschziner::correct()
 
     eddyViscosity<incompressible::RASModel>::correct();
 
-    tmp<volTensorField> tgradU = fvc::grad(U_);
-    volScalarField G
+    tmp<volInternalTensorField> tgradU = fvi::grad(U_);
+    volInternalScalarField G
     (
         GName(),
-        nut_*(tgradU() && twoSymm(tgradU()))
+        nut_()*(tgradU() && twoSymm(tgradU()))
     );
     tgradU.clear();
 
     // Update epsilon and G at the wall
-    epsilon_.boundaryFieldRef().updateCoeffs();
+    epsilon_.boundaryRef().updateCoeffs();
 
     const volScalarField f2(this->f2());
 
@@ -222,13 +225,13 @@ void LienLeschziner::correct()
       + fvm::div(phi_, epsilon_)
       - fvm::laplacian(DepsilonEff(), epsilon_)
      ==
-        Ceps1_*G*epsilon_/k_
-      - fvm::Sp(Ceps2_*f2*epsilon_/k_, epsilon_)
+        Ceps1_*G*epsilon_()/k_()
+      - fvm::Sp(Ceps2_*f2()*epsilon_()/k_(), epsilon_)
       + E(f2)
     );
 
     epsEqn.ref().relax();
-    epsEqn.ref().boundaryManipulate(epsilon_.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilon_.boundaryRef());
     solve(epsEqn);
     boundEpsilon();
 
@@ -241,7 +244,7 @@ void LienLeschziner::correct()
       - fvm::laplacian(DkEff(), k_)
      ==
         G
-      - fvm::Sp(epsilon_/k_, k_)
+      - fvm::Sp(epsilon_()/k_(), k_)
     );
 
     kEqn.ref().relax();

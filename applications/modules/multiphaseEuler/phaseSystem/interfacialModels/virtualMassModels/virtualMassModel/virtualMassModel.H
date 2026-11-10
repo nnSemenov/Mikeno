@@ -101,14 +101,14 @@ public:
 
         static autoPtr<virtualMassModel> New
         (
-            const dictionary& subDicts,
+            const dictionary& entries,
             const phaseInterface& interface,
             const bool registerObject = false
         );
 
         static autoPtr<virtualMassModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface
         );
 
@@ -122,7 +122,7 @@ public:
         virtual tmp<volScalarField> K() const = 0;
 
         // Dummy write for regIOobject
-        bool writeData(Ostream& os) const;
+        virtual bool writeData(Ostream& os) const;
 };
 
 
@@ -148,9 +148,9 @@ public:
 
         inline static autoPtr<blendedVirtualMassModel> New
         (
-            const UPtrList<const dictionary>& subDicts,
+            const UPtrList<const entry>& entries,
             const phaseInterface& interface,
-            const dictionary& blendingDict
+            const entry& blendingEntry
         )
         {
             return
@@ -158,9 +158,9 @@ public:
                 (
                     new blendedVirtualMassModel
                     (
-                        subDicts,
+                        entries,
                         interface,
-                        blendingDict
+                        blendingEntry
                     )
                 );
         }

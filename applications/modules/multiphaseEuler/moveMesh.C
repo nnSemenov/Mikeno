@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "multiphaseEuler.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 #include "fvcMeshPhi.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -35,16 +35,16 @@ void Foam::solvers::multiphaseEuler::moveMesh()
     {
         if
         (
-            (correctPhi || mesh.topoChanged())
+            (correctPhi || mesh.poly().topoChanged())
       // && divergent()
          && !divU.valid()
         )
         {
             // Construct and register divU for mapping
-            divU = new volScalarField
+            divU = new volInternalScalarField
             (
                 "divU0",
-                fvc::div
+                fvi::div
                 (
                     fvc::absolute(phi, movingPhases[0].U())
                 )
@@ -65,7 +65,7 @@ void Foam::solvers::multiphaseEuler::motionCorrector()
         {
             buoyancy.moveMesh();
 
-            if (correctPhi || mesh.topoChanged())
+            if (correctPhi || mesh.poly().topoChanged())
             {
                 fluid_.meshUpdate();
 
@@ -78,7 +78,7 @@ void Foam::solvers::multiphaseEuler::motionCorrector()
                 );
             }
 
-            meshCourantNo();
+            correctMeshCourantNo();
         }
 
         divU.clear();

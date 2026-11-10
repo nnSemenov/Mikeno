@@ -57,11 +57,11 @@ tmp<volScalarField> reconstructMag(const surfaceScalarField& ssf)
     (
         volScalarField::New
         (
-            "reconstruct("+ssf.name()+')',
+            word("reconstruct(", ssf.name(), ')'),
             mesh,
             dimensionedScalar
             (
-                ssf.dimensions()/dimArea,
+                ssf.dimensions()/dimensions::area,
                 scalar(0)
             ),
             extrapolatedCalculatedFvPatchScalarField::typeName
@@ -78,7 +78,7 @@ tmp<volScalarField> reconstructMag(const surfaceScalarField& ssf)
         rf[nei] -= (Sf[facei] & (Cf[facei] - C[nei]))*ssf[facei]/magSf[facei];
     }
 
-    const surfaceScalarField::Boundary& bsf = ssf.boundaryField();
+    const surfaceScalarField::BoundaryField& bsf = ssf.boundaryField();
 
     forAll(bsf, patchi)
     {
@@ -98,7 +98,7 @@ tmp<volScalarField> reconstructMag(const surfaceScalarField& ssf)
         }
     }
 
-    rf /= mesh.V();
+    rf /= mesh.V().primitiveField();
 
     treconField.ref().correctBoundaryConditions();
 

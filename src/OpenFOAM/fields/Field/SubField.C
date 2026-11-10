@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "SubField.H"
+#include "expressionAssert.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -150,12 +151,31 @@ inline void Foam::SubField<Type>::operator=(const zero)
 }
 
 
+template<class Type>
+template<class Expression, class>
+void Foam::SubField<Type>::operator=(const Expression& e)
+{
+    #ifdef FULLDEBUG
+    expression::assertSameAllContainerProperty<expression::Size>
+    (
+        *this,
+        e
+    );
+    #endif
+
+    std::copy(expression::begin(e), expression::end(e), this->begin());
+}
+
+
 #define COMPUTED_ASSIGNMENT(TYPE, op)                                          \
                                                                                \
 template<class Type>                                                           \
 void Foam::SubField<Type>::operator op(const UList<TYPE>& f)                   \
 {                                                                              \
-    TFOR_ALL_F_OP_F(Type, *this, op, TYPE, f)                                  \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op f[i];                                           \
+    }                                                                          \
 }                                                                              \
                                                                                \
 template<class Type>                                                           \
@@ -168,7 +188,10 @@ void Foam::SubField<Type>::operator op(const tmp<Field<TYPE>>& tf)             \
 template<class Type>                                                           \
 void Foam::SubField<Type>::operator op(const TYPE& t)                          \
 {                                                                              \
-    TFOR_ALL_F_OP_S(Type, *this, op, TYPE, t)                                  \
+    forAll(*this, i)                                                           \
+    {                                                                          \
+        this->operator[](i) op t;                                              \
+    }                                                                          \
 }
 
 COMPUTED_ASSIGNMENT(Type, +=)

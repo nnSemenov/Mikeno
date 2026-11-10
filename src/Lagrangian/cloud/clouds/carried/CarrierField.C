@@ -25,7 +25,6 @@ License
 
 #include "CarrierField.H"
 #include "carried.H"
-#include "volFields.H"
 
 /*---------------------------------------------------------------------------*\
                   Class CloudDerivedField::Functor Declaration
@@ -230,7 +229,7 @@ Foam::CarrierFieldGradBase<Type>::interpolateGrad
         (
             IOobject
             (
-                subMesh.sub("grad(" + this->name_ + ')'),
+                subMesh.sub(word("grad(", this->name_, ')')),
                 mesh.time().name(),
                 mesh,
                 IOobject::NO_READ,
@@ -238,7 +237,7 @@ Foam::CarrierFieldGradBase<Type>::interpolateGrad
                 false
             ),
             subMesh,
-            this->psi().dimensions()/dimLength,
+            this->psi().dimensions()/dimensions::length,
             tpsic
         )
     );

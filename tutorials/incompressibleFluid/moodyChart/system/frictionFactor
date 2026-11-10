@@ -23,7 +23,7 @@ nu       ${${FOAM_CASE}/constant/physicalProperties!nu};
 codeInclude
 #{
     #include "volFields.H"
-    #include "fvcVolumeIntegrate.H"
+    #include "fvcDomainIntegrate.H"
     #include "OFstream.H"
     #include "OSspecific.H"
     #include "fvModels.H"
@@ -61,12 +61,13 @@ codeRead
 codeWrite
 #{
     const volVectorField& U = mesh().lookupObject<volVectorField>("U");
-    const scalar Umean = mag(fvc::domainIntegrate(U).value())/gSum(mesh().V());
-    scalar Re = Umean*$diameter / $nu;
+    const scalar Umean =
+        mag(fvc::domainIntegrate(U).value())/gSum(mesh().V()).value();
+    const scalar Re = Umean*$diameter / $nu;
 
-    scalar gradP =
-        mesh().lookupObject<volVectorField::Internal>("gradPUSu")[0].x();
-    scalar fDarcy = gradP*$diameter /(0.5*sqr(Umean));
+    const scalar gradP =
+        mesh().lookupObject<volInternalVectorField>("gradPUSu")[0].x();
+    const scalar fDarcy = gradP*$diameter /(0.5*sqr(Umean));
 
     file()<< mesh().time().userTimeValue() << tab
           << Re << tab

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -130,14 +130,6 @@ class domainDecomposition
 
         // Decomposition
 
-            //- Mark all elements with value or -2 if occur twice
-            static void mark
-            (
-                const labelList& zoneElems,
-                const label zoneI,
-                labelList& elementToZone
-            );
-
             //- Add face to inter-processor patch
             void addInterProcFace
             (
@@ -176,6 +168,10 @@ class domainDecomposition
             //  the processor meshes
             void decomposePoints();
 
+            //- Decompose the complete mesh's zones and apply the result to
+            //  the processor meshes
+            void decomposeZones(const bool force = false);
+
 
         // Reconstruction
 
@@ -199,6 +195,10 @@ class domainDecomposition
             //  to the complete mesh
             void reconstructPoints();
 
+            //- Reconstruct the processor meshes' zones and apply the result
+            //  to the complete mesh
+            void reconstructZones(const bool force = false);
+
 
         // Non conformal
 
@@ -207,6 +207,9 @@ class domainDecomposition
 
             //- Are the processor meshes conformal?
             bool procsConformal() const;
+
+            //- Get the decomposition for the given named region
+            const domainDecomposition& regionDecomposition(const word&) const;
 
             //- Generate the reverse of proc-face-face addressing. -1 indicates
             //  a face that is on a (conformal) processor boundary and hence
@@ -351,12 +354,12 @@ class domainDecomposition
         //- Write the processor meshes' points for an instance different from
         //  the current. Used to additionally write out points associated with
         //  the face instance.
-        void writeProcPoints(const fileName& inst);
+        void writeProcPoints(const fileName& inst) const;
 
         //- Write the complete mesh's points for an instance different from
         //  the current. Used to additionally write out points associated with
         //  the face instance.
-        void writeCompletePoints(const fileName& inst);
+        void writeCompletePoints(const fileName& inst) const;
 
         //- Get the complete index for a given processor set element
         template<class SetType>
@@ -452,9 +455,6 @@ public:
         //- Synchronise non-conformal structure after read-decompose
         void unconformReadDecompose();
 
-        //- Write following read-decompose
-        void writeReadDecompose(const bool decomposed, const bool doSets);
-
         //- Read in the processor meshes. Read the complete mesh if it is
         //  available and up to date relative to the processor meshes, or
         //  reconstruct if not. Return whether or not reconstruction happened.
@@ -465,9 +465,6 @@ public:
 
         //- Synchronise non-conformal structure after read-reconstruct
         void unconformReadReconstruct();
-
-        //- Write following read-reconstruct
-        void writeReadReconstruct(const bool reconstructed, const bool doSets);
 
         //- Read-update the complete mesh only
         fvMesh::readUpdateState readUpdateComplete();

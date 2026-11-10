@@ -44,7 +44,8 @@ target_link_libraries(${target_name} PUBLIC
     momentumTransportModels 
     compressibleMomentumTransportModels 
     phaseCompressibleMomentumTransportModels 
-    phaseFluidThermophysicalTransportModels 
+    phaseFluidThermophysicalTransportModels
+    phaseFluidMulticomponentThermophysicalTransportModels
     coupledThermophysicalTransportModels 
     multicomponentThermophysicalModels 
     reactionModels 

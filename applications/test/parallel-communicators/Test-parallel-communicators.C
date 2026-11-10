@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -130,7 +130,7 @@ scalar sumReduce
 int main(int argc, char *argv[])
 {
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -177,14 +177,14 @@ int main(int argc, char *argv[])
         //(
         //    UPstream::treeCommunication(comm),
         //    sum,
-        //    sumOp<scalar>(),
+        //    sumOp(),
         //    Pstream::msgType(),
         //    comm
         //);
         scalar sum = returnReduce
         (
             localValue,
-            sumOp<scalar>(),
+            sumOp(),
             Pstream::msgType(),
             comm
         );

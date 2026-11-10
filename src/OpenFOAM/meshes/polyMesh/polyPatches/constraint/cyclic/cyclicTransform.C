@@ -33,24 +33,9 @@ License
 namespace Foam
 {
 
-template<class Type>
-Type sum(const Type& x, const bool global)
+label sum(const label& x, const bool global)
 {
-    return global ? returnReduce(x, sumOp<Type>()) : x;
-}
-
-template<class Type>
-Type sum(const Field<Type>& x, const bool global)
-{
-    return global ? gSum(x) : sum(x);
-}
-
-template<class Type>
-Type sum(const tmp<Field<Type>>& x, const bool global)
-{
-    const Type s = sum(x(), global);
-    x.clear();
-    return s;
+    return global ? returnReduce(x, sumOp()) : x;
 }
 
 }

@@ -57,22 +57,22 @@ void kOmega2006<BasicMomentumTransportModel>::correctNut
 
 
 template<class BasicMomentumTransportModel>
-tmp<volScalarField::Internal> kOmega2006<BasicMomentumTransportModel>::beta
+tmp<volInternalScalarField> kOmega2006<BasicMomentumTransportModel>::beta
 (
-    const volTensorField& gradU
+    const volInternalTensorField& gradU
 ) const
 {
-    const volSymmTensorField::Internal S(symm(gradU()));
-    const volSymmTensorField::Internal Shat(S - 0.5*tr(S)*I);
-    const volTensorField::Internal Omega(skew(gradU.v()));
+    const volInternalSymmTensorField S(symm(gradU));
+    const volInternalSymmTensorField Shat(S - 0.5*tr(S)*I);
+    const volInternalTensorField Omega(skew(gradU));
 
-    const volScalarField::Internal ChiOmega
+    const volInternalScalarField ChiOmega
     (
         typedName("ChiOmega"),
-        mag((Omega & Omega) && Shat)/pow3(betaStar_*omega_.v())
+        mag((Omega & Omega) && Shat)/pow3(betaStar_*omega_())
     );
 
-    const volScalarField::Internal fBeta
+    const volInternalScalarField fBeta
     (
         typedName("fBeta"),
         (1 + 85*ChiOmega)/(1 + 100*ChiOmega)
@@ -83,13 +83,13 @@ tmp<volScalarField::Internal> kOmega2006<BasicMomentumTransportModel>::beta
 
 
 template<class BasicMomentumTransportModel>
-tmp<volScalarField::Internal>
+tmp<volInternalScalarField>
 kOmega2006<BasicMomentumTransportModel>::CDkOmega() const
 {
     return max
     (
-        sigmaDo_*(fvc::grad(k_)().v() & fvc::grad(omega_)().v())/omega_(),
-        dimensionedScalar(dimless/sqr(dimTime), 0)
+        sigmaDo_*(fvi::grad(k_) & fvi::grad(omega_))/omega_(),
+        dimensionedScalar(dimensions::turbulentOmega/dimensions::time, 0)
     );
 }
 
@@ -111,8 +111,8 @@ tmp<fvScalarMatrix> kOmega2006<BasicMomentumTransportModel>::kSource() const
         new fvScalarMatrix
         (
             k_,
-            dimVolume*this->rho_.dimensions()*k_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*k_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -126,7 +126,8 @@ tmp<fvScalarMatrix> kOmega2006<BasicMomentumTransportModel>::omegaSource() const
         new fvScalarMatrix
         (
             omega_,
-            dimVolume*this->rho_.dimensions()*omega_.dimensions()/dimTime
+            dimensions::volume*this->rho_.dimensions()
+           *omega_.dimensions()/dimensions::time
         )
     );
 }
@@ -175,7 +176,8 @@ kOmega2006<BasicMomentumTransportModel>::kOmega2006
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
     omega_
     (
@@ -187,7 +189,8 @@ kOmega2006<BasicMomentumTransportModel>::kOmega2006
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentOmega
     )
 {
     bound(k_, this->kMin_);
@@ -240,21 +243,21 @@ void kOmega2006<BasicMomentumTransportModel>::correct()
 
     eddyViscosity<RASModel<BasicMomentumTransportModel>>::correct();
 
-    volScalarField::Internal divU
+    const volInternalScalarField divU
     (
         typedName("divU"),
-        fvc::div(fvc::absolute(this->phi(), U))().v()
+        fvi::div(fvc::absolute(this->phi(), U))
     );
 
     const volTensorField gradU(fvc::grad(U));
-    volScalarField::Internal G
+    const volInternalScalarField G
     (
         this->GName(),
-        nut.v()*(dev(twoSymm(gradU.v())) && gradU.v())
+        nut()*(dev(twoSymm(gradU())) && gradU())
     );
 
     // Update omega and G at the wall
-    omega_.boundaryFieldRef().updateCoeffs();
+    omega_.boundaryRef().updateCoeffs();
 
     // Turbulence specific dissipation rate equation
     tmp<fvScalarMatrix> omegaEqn
@@ -265,7 +268,7 @@ void kOmega2006<BasicMomentumTransportModel>::correct()
      ==
         gamma_*alpha()*rho()*G*omega_()/k_()
       - fvm::SuSp(((2.0/3.0)*gamma_)*alpha()*rho()*divU, omega_)
-      - fvm::Sp(beta(gradU)*alpha()*rho()*omega_(), omega_)
+      - fvm::Sp(beta(gradU())*alpha()*rho()*omega_(), omega_)
       + alpha()*rho()*CDkOmega()
       + omegaSource()
       + fvModels.source(alpha, rho, omega_)
@@ -273,7 +276,7 @@ void kOmega2006<BasicMomentumTransportModel>::correct()
 
     omegaEqn.ref().relax();
     fvConstraints.constrain(omegaEqn.ref());
-    omegaEqn.ref().boundaryManipulate(omega_.boundaryFieldRef());
+    omegaEqn.ref().boundaryManipulate(omega_.boundaryRef());
     solve(omegaEqn);
     fvConstraints.constrain(omega_);
     boundOmega();

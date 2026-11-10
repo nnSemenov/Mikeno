@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,9 +46,9 @@ Description
 #include "IOporosityModelList.H"
 
 #include "fvcDdt.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 #include "fvcFlux.H"
-#include "fvcVolumeIntegrate.H"
+#include "fvcDomainIntegrate.H"
 
 #include "fvmDdt.H"
 #include "fvmDiv.H"
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 {
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"

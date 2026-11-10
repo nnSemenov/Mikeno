@@ -62,8 +62,7 @@ void Foam::fvMeshAdder::MapVolField
     // Patch fields from old mesh
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    typename VolField<Type>::
-    Boundary& bfld = fld.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bfld = fld.boundaryFieldRef();
 
     {
         const labelList& oldPatchMap = meshMap.oldPatchMap();
@@ -313,15 +312,14 @@ void Foam::fvMeshAdder::MapSurfaceField
     const fvMesh& mesh = fld.mesh()();
     const labelList& oldPatchStarts = meshMap.oldPatchStarts();
 
-    typename SurfaceField<Type>::
-    Boundary& bfld = fld.boundaryFieldRef();
+    typename SurfaceField<Type>::BoundaryField& bfld = fld.boundaryFieldRef();
 
     // Internal field
     // ~~~~~~~~~~~~~~
 
     // Store old internal field
     {
-        Field<Type> oldField(fld);
+        Field<Type> oldField(fld.primitiveField());
 
         // Modify internal field
         Field<Type>& intFld = fld.primitiveFieldRef();
@@ -602,15 +600,14 @@ void Foam::fvMeshAdder::MapPointField
     // - mesh pointed to by fld is invalid
     // - pointPatches pointed to be fld are invalid
 
-    typename PointField<Type>::
-    Boundary& bfld = fld.boundaryFieldRef();
+    typename PointField<Type>::BoundaryField& bfld = fld.boundaryFieldRef();
 
     // Internal field
     // ~~~~~~~~~~~~~~
 
     // Store old internal field
     {
-        Field<Type> oldField(fld);
+        Field<Type> oldField(fld.primitiveField());
 
         // Modify internal field
         Field<Type>& intFld = fld.primitiveFieldRef();
@@ -898,7 +895,7 @@ void Foam::fvMeshAdder::MapDimField
     const fvMesh& mesh = fld.mesh();
 
     // Store old field
-    Field<Type> oldField(fld);
+    Field<Type> oldField(fld.primitiveField());
 
     fld.setSize(mesh.nCells());
 

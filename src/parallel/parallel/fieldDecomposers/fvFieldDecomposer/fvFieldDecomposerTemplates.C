@@ -163,7 +163,7 @@ Foam::fvFieldDecomposer::decomposeVolField
     forAll(procMeshes_, proci)
     {
         // Create dummy patch fields
-        PtrList<fvPatchField<Type>> patchFields
+        PtrField<fvPatchField<Type>> patchFields
         (
             procMeshes_[proci].boundary().size()
         );
@@ -209,7 +209,7 @@ Foam::fvFieldDecomposer::decomposeVolField
 
         // Change the patch fields to the correct type using a mapper
         // constructor (with reference to the now correct internal field)
-        typename VolField<Type>::Boundary& bf = vf.boundaryFieldRef();
+        typename VolField<Type>::BoundaryField& bf = vf.boundaryFieldRef();
         forAll(bf, procPatchi)
         {
             const fvPatch& procPatch =
@@ -344,7 +344,7 @@ Foam::fvFieldDecomposer::decomposeFvSurfaceField
         );
 
         // Create dummy patch fields
-        PtrList<fvsPatchField<Type>> patchFields
+        PtrField<fvsPatchField<Type>> patchFields
         (
             procMeshes_[proci].boundary().size()
         );
@@ -394,7 +394,7 @@ Foam::fvFieldDecomposer::decomposeFvSurfaceField
 
         // Change the patch fields to the correct type using a mapper
         // constructor (with reference to the now correct internal field)
-        typename SurfaceField<Type>::Boundary& bf = sf.boundaryFieldRef();
+        typename SurfaceField<Type>::BoundaryField& bf = sf.boundaryFieldRef();
         forAll(procMeshes_[proci].boundary(), procPatchi)
         {
             const fvPatch& procPatch =

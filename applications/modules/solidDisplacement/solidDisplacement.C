@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,9 +24,10 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "solidDisplacement.H"
+#include "fviGrad.H"
 #include "fvcGrad.H"
-#include "fvcDiv.H"
-#include "fvcLaplacian.H"
+#include "fviDiv.H"
+#include "fviLaplacian.H"
 #include "fvmD2dt2.H"
 #include "fvmLaplacian.H"
 #include "addToRunTimeSelectionTable.H"
@@ -88,7 +89,8 @@ Foam::solvers::solidDisplacement::solidDisplacement(fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::length
     ),
 
     E(thermo_.E()),
@@ -99,15 +101,15 @@ Foam::solvers::solidDisplacement::solidDisplacement(fvMesh& mesh)
     lambda
     (
         thermo_.planeStress()
-      ? nu*E/((1 + nu)*(1 - nu))
-      : nu*E/((1 + nu)*(1 - 2*nu))
+      ? eval(nu*E/((1 + nu)*(1 - nu)))
+      : eval(nu*E/((1 + nu)*(1 - 2*nu)))
     ),
 
     threeK
     (
         thermo_.planeStress()
-      ? E/(1 - nu)
-      : E/(1 - 2*nu)
+      ? eval(E/(1 - nu))
+      : eval(E/(1 - 2*nu))
     ),
 
     threeKalpha("threeKalpha", threeK*thermo_.alphav()),
@@ -131,11 +133,11 @@ Foam::solvers::solidDisplacement::solidDisplacement(fvMesh& mesh)
             runTime.name(),
             mesh
         ),
-        fvc::div(sigmaD)
+        fvi::div(sigmaD)
       - (
             compactNormalStress
-          ? fvc::laplacian(2*mu + lambda, D_, "laplacian(DD,D)")
-          : fvc::div((2*mu + lambda)*fvc::grad(D_), "div(sigmaD)")
+          ? fvi::laplacian(2*mu + lambda, D_, "laplacian(DD,D)")
+          : fvi::div((2*mu + lambda)*fvc::grad(D_), "div(sigmaD)")
         )
     ),
 
@@ -184,6 +186,7 @@ void Foam::solvers::solidDisplacement::pressureCorrector()
     int iCorr = 0;
     scalar initialResidual = 0;
 
+    do
     {
         {
             fvVectorMatrix DEqn
@@ -197,7 +200,7 @@ void Foam::solvers::solidDisplacement::pressureCorrector()
 
             if (thermo.thermalStress())
             {
-                DEqn += fvc::grad(threeKalpha*T);
+                DEqn += fvi::grad(threeKalpha*T);
             }
 
             fvConstraints().constrain(DEqn);
@@ -213,7 +216,7 @@ void Foam::solvers::solidDisplacement::pressureCorrector()
 
             if (!compactNormalStress)
             {
-                divSigmaExp = fvc::div(DEqn.flux());
+                divSigmaExp = fvi::div(DEqn.flux());
             }
         }
 
@@ -222,7 +225,7 @@ void Foam::solvers::solidDisplacement::pressureCorrector()
 
         if (compactNormalStress)
         {
-            divSigmaExp = fvc::div
+            divSigmaExp = fvi::div
             (
                 sigmaD - (2*mu + lambda)*gradD,
                 "div(sigmaD)"
@@ -230,7 +233,7 @@ void Foam::solvers::solidDisplacement::pressureCorrector()
         }
         else
         {
-            divSigmaExp += fvc::div(sigmaD);
+            divSigmaExp += fvi::div(sigmaD);
         }
 
     } while (initialResidual > convergenceTolerance && ++iCorr < nCorr);

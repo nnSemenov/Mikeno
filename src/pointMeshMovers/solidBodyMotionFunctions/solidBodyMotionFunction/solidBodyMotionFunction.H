@@ -43,9 +43,8 @@ SourceFiles
 #define solidBodyMotionFunction_H
 
 #include "Time.H"
-#include "dictionary.H"
 #include "septernion.H"
-#include "autoPtr.H"
+#include "PtrListDictionary.H"
 #include "runTimeSelectionTables.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -74,7 +73,7 @@ public:
     TypeName("solidBodyMotionFunction");
 
 
-    // Declare run-time constructor selection table
+    // Declare run-time constructor selection tables
 
         declareRunTimeSelectionTable
         (
@@ -87,6 +86,20 @@ public:
                 const Time& runTime
             ),
             (name, SBMFCoeffs, runTime)
+        );
+
+        declareRunTimeSelectionTable
+        (
+            autoPtr,
+            solidBodyMotionFunction,
+            PtrListDictionary,
+            (
+                const word& name,
+                const PtrListDictionary<solidBodyMotionFunction>& SBMFs,
+                const dictionary& SBMFCoeffs,
+                const Time& runTime
+            ),
+            (name, SBMFs, SBMFCoeffs, runTime)
         );
 
 
@@ -109,9 +122,19 @@ public:
 
     // Selectors
 
-        //- Select constructed from the SBMFCoeffs dictionary and Time
+        //- Selector from the SBMFCoeffs dictionary and Time
         static autoPtr<solidBodyMotionFunction> New
         (
+            const dictionary& SBMFCoeffs,
+            const Time& runTime,
+            const word& name = "solidBodyMotionFunction"
+        );
+
+        //- Selector from PtrListDictionary of solidBodyMotionFunctions
+        //  the SBMFCoeffs dictionary and Time
+        static autoPtr<solidBodyMotionFunction> New
+        (
+            const PtrListDictionary<solidBodyMotionFunction>& SBMFs,
             const dictionary& SBMFCoeffs,
             const Time& runTime,
             const word& name = "solidBodyMotionFunction"
@@ -132,8 +155,11 @@ public:
         //- Return the solid-body motion transformation septernion
         virtual septernion transformation() const = 0;
 
-        //- Update properties from given dictionary
-        virtual bool read(const dictionary& dict) = 0;
+        //- Return the septernion transformation as a spatialTranform
+        spatialTransform spatialTransformation() const
+        {
+            return spatialTransform(transformation());
+        }
 
         //- Write in dictionary format
         virtual void writeData(Ostream&) const;

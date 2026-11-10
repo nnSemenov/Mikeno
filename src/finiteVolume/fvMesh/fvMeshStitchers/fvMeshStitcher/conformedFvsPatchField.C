@@ -140,8 +140,8 @@ void Foam::conformedFvsPatchField<Type>::unconform
 
     // Extract the conformed orig and non-conformal boundary fields from
     // the stored conformed patch fields
-    PtrList<fvsPatchField<Type>> origPFs(fvbm.size());
-    PtrList<fvsPatchField<Type>> ncPFs(fvbm.size());
+    PtrField<fvsPatchField<Type>> origPFs(fvbm.size());
+    PtrField<fvsPatchField<Type>> ncPFs(fvbm.size());
     forAll(origPatchIndices, i)
     {
         const label origPatchi = origPatchIndices[i];
@@ -152,7 +152,7 @@ void Foam::conformedFvsPatchField<Type>::unconform
         // If the mesh has topo-changed then maintained surface fields should
         // have been mapped or re-interpolated. So, copy the value from the
         // base field into the original field.
-        if (iF.mesh()().topoChanged())
+        if (iF.mesh().poly().topoChanged())
         {
             cpF.origFieldPtr_() = bF[origPatchi];
         }
@@ -179,7 +179,7 @@ void Foam::conformedFvsPatchField<Type>::unconform
 
     // If the mesh has topo-changed then just use the original parts and leave
     // the non-conformal parts unset
-    if (iF.mesh()().topoChanged())
+    if (iF.mesh().poly().topoChanged())
     {
         bF.transfer(origPFs);
     }

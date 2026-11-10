@@ -147,11 +147,11 @@ void executeFunctionObjects
     ReadFields(volTensorField);
 
     // Read internal fields
-    ReadFields(volScalarField::Internal);
-    ReadFields(volVectorField::Internal);
-    ReadFields(volSphericalTensorField::Internal);
-    ReadFields(volSymmTensorField::Internal);
-    ReadFields(volTensorField::Internal);
+    ReadFields(volInternalScalarField);
+    ReadFields(volInternalVectorField);
+    ReadFields(volInternalSphericalTensorField);
+    ReadFields(volInternalSymmTensorField);
+    ReadFields(volInternalTensorField);
 
     // Read surface fields
     ReadFields(surfaceScalarField);
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
     // Set functionObject post-processing mode
     functionObject::postProcess = true;
 
-    #include "setRootCaseNoFunctionObjects.H"
+    #include "setRootCase.H"
 
     bool printedList = false;
 
@@ -323,7 +323,8 @@ int main(int argc, char *argv[])
 
         if (mesh.readUpdate() != fvMesh::UNCHANGED)
         {
-            // Update functionObjectList if mesh changes
+            // Clear and reconstruct functionObjectList if mesh changes
+            functionsPtr.clear();
             functionsPtr = functionObjectList::New(args, runTime);
         }
 

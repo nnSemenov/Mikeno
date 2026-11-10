@@ -25,7 +25,7 @@ Class
     Foam::momentumTransportModel
 
 Description
-    Abstract base class for turbulence models (RAS, LES and laminar).
+    Abstract base class for momentum transport models (RAS, LES and laminar).
 
 SourceFiles
     momentumTransportModel.C
@@ -172,7 +172,7 @@ public:
         const volScalarField& y() const;
 
         //- Return the near wall distance
-        const volScalarField::Boundary& yb() const;
+        const volScalarField::BoundaryField& yb() const;
 
         //- Return the laminar viscosity
         virtual tmp<volScalarField> nu() const

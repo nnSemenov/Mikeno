@@ -24,106 +24,14 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "fvMesh.H"
 #include "extrapolatedCalculatedFvPatchFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-namespace fvc
-{
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 template<class Type>
-void surfaceIntegrate
-(
-    Field<Type>& ivf,
-    const SurfaceField<Type>& ssf
-)
-{
-    const fvMesh& mesh = ssf.mesh()();
-
-    const labelUList& owner = mesh.owner();
-    const labelUList& neighbour = mesh.neighbour();
-
-    const Field<Type>& issf = ssf;
-
-    forAll(owner, facei)
-    {
-        ivf[owner[facei]] += issf[facei];
-        ivf[neighbour[facei]] -= issf[facei];
-    }
-
-    forAll(mesh.boundary(), patchi)
-    {
-        const labelUList& pFaceCells =
-            mesh.boundary()[patchi].faceCells();
-
-        const fvsPatchField<Type>& pssf = ssf.boundaryField()[patchi];
-
-        forAll(mesh.boundary()[patchi], facei)
-        {
-            ivf[pFaceCells[facei]] += pssf[facei];
-        }
-    }
-
-    ivf /= mesh.Vsc();
-}
-
-
-template<class Type>
-tmp<VolInternalField<Type>>
-surfaceIntegrate
-(
-    const SurfaceField<Type>& ssf
-)
-{
-    tmp<VolInternalField<Type>> tvf
-    (
-        VolInternalField<Type>::New
-        (
-            "surfaceIntegrate("+ssf.name()+')',
-            ssf.mesh()(),
-            dimensioned<Type>
-            (
-                "0",
-                ssf.dimensions()/dimVolume,
-                Zero
-            )
-        )
-    );
-    VolInternalField<Type>& vf = tvf.ref();
-
-    surfaceIntegrate(vf.primitiveFieldRef(), ssf);
-
-    return tvf;
-}
-
-
-template<class Type>
-tmp<VolInternalField<Type>>
-surfaceIntegrate
-(
-    const tmp<SurfaceField<Type>>& tssf
-)
-{
-    tmp<VolInternalField<Type>> tvf
-    (
-        fvc::surfaceIntegrate(tssf())
-    );
-    tssf.clear();
-    return tvf;
-}
-
-
-template<class Type>
-tmp<VolField<Type>>
-surfaceIntegrateExtrapolate
+Foam::tmp<Foam::VolField<Type>> Foam::fvc::surfaceIntegrate
 (
     const SurfaceField<Type>& ssf
 )
@@ -132,12 +40,12 @@ surfaceIntegrateExtrapolate
     (
         VolField<Type>::New
         (
-            "surfaceIntegrate("+ssf.name()+')',
+            word("surfaceIntegrate(", ssf.name(), ')'),
             ssf.mesh()(),
             dimensioned<Type>
             (
                 "0",
-                ssf.dimensions()/dimVolume,
+                ssf.dimensions()/dimensions::volume,
                 Zero
             ),
             extrapolatedCalculatedFvPatchField<Type>::typeName
@@ -145,7 +53,7 @@ surfaceIntegrateExtrapolate
     );
     VolField<Type>& vf = tvf.ref();
 
-    surfaceIntegrate(vf.primitiveFieldRef(), ssf);
+    fvi::surfaceIntegrate(vf.primitiveFieldRef(), ssf);
     vf.correctBoundaryConditions();
 
     return tvf;
@@ -153,81 +61,22 @@ surfaceIntegrateExtrapolate
 
 
 template<class Type>
-tmp<VolField<Type>>
-surfaceIntegrateExtrapolate
+Foam::tmp<Foam::VolField<Type>> Foam::fvc::surfaceIntegrate
 (
     const tmp<SurfaceField<Type>>& tssf
 )
 {
-    tmp<VolField<Type>> tvf
-    (
-        fvc::surfaceIntegrateExtrapolate(tssf())
-    );
+    tmp<VolField<Type>> tvf(fvc::surfaceIntegrate(tssf()));
     tssf.clear();
     return tvf;
 }
 
 
-template<class Type>
-tmp<VolInternalField<Type>> surfaceSum(const SurfaceField<Type>& ssf)
+template<class Expression, class>
+auto Foam::fvc::surfaceIntegrate(const Expression& e)
 {
-    const fvMesh& mesh = ssf.mesh()();
-
-    tmp<VolInternalField<Type>> tvf
-    (
-        VolInternalField<Type>::New
-        (
-            "surfaceSum("+ssf.name()+')',
-            mesh,
-            dimensioned<Type>("0", ssf.dimensions(), Zero)
-        )
-    );
-    VolInternalField<Type>& vf = tvf.ref();
-
-    const labelUList& owner = mesh.owner();
-    const labelUList& neighbour = mesh.neighbour();
-
-    forAll(owner, facei)
-    {
-        vf[owner[facei]] += ssf[facei];
-        vf[neighbour[facei]] += ssf[facei];
-    }
-
-    forAll(mesh.boundary(), patchi)
-    {
-        const labelUList& pFaceCells =
-            mesh.boundary()[patchi].faceCells();
-
-        const fvsPatchField<Type>& pssf = ssf.boundaryField()[patchi];
-
-        forAll(mesh.boundary()[patchi], facei)
-        {
-            vf[pFaceCells[facei]] += pssf[facei];
-        }
-    }
-
-    return tvf;
+    return surfaceIntegrate(eval(e));
 }
 
-
-template<class Type>
-tmp<VolInternalField<Type>> surfaceSum
-(
-    const tmp<SurfaceField<Type>>& tssf
-)
-{
-    tmp<VolInternalField<Type>> tvf = surfaceSum(tssf());
-    tssf.clear();
-    return tvf;
-}
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace fvc
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
 
 // ************************************************************************* //

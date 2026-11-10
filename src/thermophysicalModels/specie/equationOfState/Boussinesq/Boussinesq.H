@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -123,6 +123,17 @@ class Boussinesq
         scalar beta_;
 
 
+    // Private Constructors
+
+        //- Construct from name and parent dictionary and dictionary
+        Boussinesq
+        (
+            const word& name,
+            const dictionary& dict,
+            const dictionary& subDict
+        );
+
+
 public:
 
     // Constructors
@@ -155,9 +166,11 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return
-                "Boussinesq<"
-              + word(Specie::typeName_()) + '>';
+            return word
+            (
+                "Boussinesq<",
+                word(Specie::typeName_()), '>'
+            );
         }
 
 

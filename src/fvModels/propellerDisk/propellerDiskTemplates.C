@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
     vectorField& Usource,
     const AlphaFieldType& alpha,
     const RhoFieldType& rho,
-    const volVectorField::Internal& U
+    const volInternalVectorField& U
 ) const
 {
     const labelList& cells = zone_.zone();
@@ -46,7 +46,7 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
 
     if (!forcePtr_.valid())
     {
-        forcePtr_ = new volVectorField::Internal
+        forcePtr_ = new volInternalVectorField
         (
             IOobject
             (
@@ -57,11 +57,15 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
                 IOobject::AUTO_WRITE
             ),
             mesh(),
-            dimensionedVector(rho.dimensions()*U.dimensions()/dimTime, Zero)
+            dimensionedVector
+            (
+                rho.dimensions()*U.dimensions()/dimensions::time,
+                Zero
+            )
         );
     }
 
-    volVectorField::Internal& force = forcePtr_();
+    volInternalVectorField& force = forcePtr_();
 
     const vector centre(this->centre());
     const vector normal(this->normal());
@@ -166,8 +170,8 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
             }
         }
 
-        reduce(force_, sumOp<vector>());
-        reduce(moment_, sumOp<vector>());
+        reduce(force_, sumOp());
+        reduce(moment_, sumOp());
 
         if
         (

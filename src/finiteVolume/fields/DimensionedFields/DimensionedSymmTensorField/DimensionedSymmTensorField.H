@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,20 +35,7 @@ SourceFiles
 #ifndef DimensionedSymmTensorField_H
 #define DimensionedSymmTensorField_H
 
-#include "DimensionedField.H"
-#include "vector.H"
-#include "sphericalTensor.H"
-#include "symmTensor.H"
-
-#define TEMPLATE template<class GeoMesh, template<class> class PrimitiveField>
-#define TEMPLATE2                                                              \
-    template                                                                   \
-    <                                                                          \
-        class GeoMesh,                                                         \
-        template<class> class PrimitiveField1,                                 \
-        template<class> class PrimitiveField2                                  \
-    >
-#include "DimensionedFieldFunctionsM.H"
+#include "DimensionedTensorField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -57,32 +44,25 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-UNARY_FUNCTION(symmTensor, vector, sqr, sqr)
-UNARY_FUNCTION(symmTensor, symmTensor, innerSqr, sqr)
+template<class GeoMesh, template<class> class PrimitiveField>
+tmp<DimensionedField<symmTensor, GeoMesh, Field>> inv
+(
+    const DimensionedField<symmTensor, GeoMesh, PrimitiveField>&,
+    const Vector<label>& solutionD
+);
 
-UNARY_FUNCTION(scalar, symmTensor, tr, transform)
-UNARY_FUNCTION(sphericalTensor, symmTensor, sph, transform)
-UNARY_FUNCTION(symmTensor, symmTensor, symm, transform)
-UNARY_FUNCTION(symmTensor, symmTensor, twoSymm, transform)
-UNARY_FUNCTION(symmTensor, symmTensor, dev, transform)
-UNARY_FUNCTION(symmTensor, symmTensor, dev2, transform)
-UNARY_FUNCTION(scalar, symmTensor, det, transform)
-UNARY_FUNCTION(symmTensor, symmTensor, cof, cof)
-UNARY_FUNCTION(symmTensor, symmTensor, inv, inv)
-
-
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
-
-UNARY_OPERATOR(vector, symmTensor, *, hdual, transform)
-
+template<class GeoMesh, template<class> class PrimitiveField>
+tmp<DimensionedField<symmTensor, GeoMesh, Field>> inv
+(
+    const tmp<DimensionedField<symmTensor, GeoMesh, PrimitiveField>>& tdtf,
+    const Vector<label>& solutionD
+);
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
 
 #ifdef NoRepository
     #include "DimensionedSymmTensorField.C"

@@ -189,7 +189,7 @@ void Foam::functionObjects::cloudSurfaceDistribution::readCoeffs
     {
         FatalIOErrorInFunction(dict)
             << "Cannot change the selected surface at run-time"
-            << exit(FatalError);
+            << exit(FatalIOError);
     }
 
     // If we are continuing then the number of bins must not have changed
@@ -293,7 +293,7 @@ Foam::boolList Foam::functionObjects::cloudSurfaceDistribution::selected
             forAll(facei, subi)
             {
                 if (states[subi] <= LagrangianState::inCell) continue;
-                result = z.lookupMap().found(facei[subi]);
+                result[subi] = z.lookupMap().found(facei[subi]);
             }
             break;
         }
@@ -302,7 +302,7 @@ Foam::boolList Foam::functionObjects::cloudSurfaceDistribution::selected
             forAll(facei, subi)
             {
                 if (states[subi] <= LagrangianState::inCell) continue;
-                result = selectionSet_.found(facei[subi]);
+                result[subi] = selectionSet_.found(facei[subi]);
             }
             break;
         }
@@ -395,11 +395,11 @@ bool Foam::functionObjects::cloudSurfaceDistribution::addField
         }
 
         // Synchronise
-        reduce(rangeHasChanged, orOp<bool>());
+        reduce(rangeHasChanged, orOp());
         if (rangeHasChanged)
         {
-            reduce(range.first(), minOp<scalar>());
-            reduce(range.second(), maxOp<scalar>());
+            reduce(range.first(), minOp());
+            reduce(range.second(), maxOp());
         }
 
         // If the range was expanded then re-sample the old sums onto the new
@@ -571,7 +571,7 @@ bool Foam::functionObjects::cloudSurfaceDistribution::read
 
 Foam::wordList Foam::functionObjects::cloudSurfaceDistribution::fields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
@@ -656,7 +656,7 @@ bool Foam::functionObjects::cloudSurfaceDistribution::write()
     forAll(sums_, fieldi)
     {
         // Quit if this PDF has nothing in it yet
-        if (returnReduce(nSamples_[fieldi], sumOp<label>()) == 0) continue;
+        if (returnReduce(nSamples_[fieldi], sumOp()) == 0) continue;
 
         // Get the component names for this field
         const char* const* componentNames = this->componentNames(fieldi);
@@ -693,7 +693,7 @@ bool Foam::functionObjects::cloudSurfaceDistribution::write()
             // correcting the ends (which have half the sample space of the
             // interior points)
             scalarField PDF(sum);
-            Pstream::listCombineGather(PDF, plusEqOp<scalar>());
+            Pstream::listCombineGather(PDF, addEqOp());
             Pstream::listCombineScatter(PDF);
             PDF /= Foam::sum(PDF)*(range.second() - range.first())/nBins_;
             PDF.first() *= 2;
@@ -717,6 +717,7 @@ bool Foam::functionObjects::cloudSurfaceDistribution::write()
     propsDict.add("select", selectionTypeNames[selectionType_]);
     propsDict.add(selectionTypeNames[selectionType_], selectionName_);
     propsDict.add("fields", fields_);
+    propsDict.add("weightFields", weightFields_);
     propsDict.add("nBins", nBins_);
     propsDict.add("sums", sums_);
     propsDict.add("ranges", ranges_);

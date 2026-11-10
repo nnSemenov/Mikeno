@@ -156,20 +156,8 @@ public:
 
     // Member Functions
 
-        // Access
-
-            //- Return the heat capacity ratio
-            scalar gamma() const
-            {
-                return gamma_;
-            }
-
-            //- Return reference to the heat capacity ratio to allow adjustment
-            scalar& gamma()
-            {
-                return gamma_;
-            }
-
+        using fvPatchField<Type>::db;
+        using fvPatchField<Type>::patch;
 
         // Evaluation functions
 

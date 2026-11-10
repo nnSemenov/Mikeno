@@ -30,8 +30,6 @@ License
 #include "fluidMulticomponentThermo.H"
 #include "fluidThermophysicalTransportModel.H"
 
-#include "saturationPressureModel.H"
-
 #include "alphatPhaseChangeWallFunctionFvPatchScalarField.H"
 #include "alphatJayatillekeWallFunctionFvPatchScalarField.H"
 #include "wallCondensationPhaseChangeRateFvPatchScalarField.H"
@@ -152,10 +150,7 @@ struct Foam::fv::wallCondensation::properties
         ),
         pSat
         (
-            model.saturationModelPtr_->pSat
-            (
-                TwVapour
-            )
+            model.pSat_->value(TwVapour)
         ),
         L
         (
@@ -187,11 +182,12 @@ void Foam::fv::wallCondensation::readCoeffs(const dictionary& dict)
 {
     reReadSpecie(dict);
 
-    saturationModelPtr_.reset
+    pSat_.reset
     (
-        saturationPressureModel::New
+        Function1<scalar>::New
         (
             "saturationPressure",
+            {dimTemperature, dimPressure},
             dict
         ).ptr()
     );
@@ -281,8 +277,8 @@ void Foam::fv::wallCondensation::correctMDot() const
         }
 
         // Only allow condensation
-        mDot.condensing_ = pos(mDot);
-        mDot = max(mDot, scalar(0));
+        mDot.condensing_ = pos(mDot.field());
+        mDot = max(mDot.field(), scalar(0));
 
         const scalarField gradT
         (
@@ -290,7 +286,7 @@ void Foam::fv::wallCondensation::correctMDot() const
            *min(props.TwVapour - props.TcVapour, -rootSmall*props.TcVapour)
         );
 
-        const scalarField q(mDot*props.L/props.AbyV);
+        const scalarField q(mDot.field()*props.L/props.AbyV);
 
         const scalarField alphatCondensingVapour
         (
@@ -302,8 +298,8 @@ void Foam::fv::wallCondensation::correctMDot() const
 
         infoField
         (
-            "mDot[" + mesh().boundary()[patchi].name() + "]",
-            dimDensity/dimTime,
+            word("mDot[", mesh().boundary()[patchi].name(), "]"),
+            dimensions::density/dimensions::time,
             mDot
         );
 
@@ -348,7 +344,7 @@ Foam::fv::wallCondensation::wallCondensation
     ),
     Prt_(NaN),
     Sct_(NaN),
-    saturationModelPtr_(nullptr),
+    pSat_(nullptr),
     pressureEquationIndex_(-1),
     specieSemiImplicit_(false),
     mDot_
@@ -362,7 +358,7 @@ Foam::fv::wallCondensation::wallCondensation
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, scalar(0)),
+        dimensionedScalar(dimensions::density/dimensions::time, scalar(0)),
         mDotBoundaryTypes
         (
             wallCondensationPhaseChangeRateFvPatchScalarField::typeName
@@ -379,7 +375,7 @@ Foam::fv::wallCondensation::wallCondensation
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, scalar(0))
+        dimensionedScalar(dimensions::density/dimensions::time, scalar(0))
     )
 {
     readCoeffs(coeffs(dict));
@@ -411,12 +407,12 @@ Foam::Pair<const Foam::scalarField&> Foam::fv::wallCondensation::alphats
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallCondensation::Lfraction() const
 {
     // Put all the latent heat into the vapour
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             name() + ":Lfraction",
             mesh(),
@@ -425,14 +421,14 @@ Foam::fv::wallCondensation::Lfraction() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallCondensation::mDot() const
 {
     return mDot_.internalField();
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::wallCondensation::mDotDy() const
 {
     return mDotDy_.internalField();
@@ -530,8 +526,8 @@ void Foam::fv::wallCondensation::addSup
         if (!species().found(specieName)) return;
 
         // The transferring specie. Add a linearised source.
-        tmp<volScalarField::Internal> tmDot = this->mDot();
-        tmp<volScalarField::Internal> tmDotDy = this->mDotDy();
+        tmp<volInternalScalarField> tmDot = this->mDot();
+        tmp<volInternalScalarField> tmDotDy = this->mDotDy();
 
         eqn += s*(tmDot() + correction(fvm::Sp(tmDotDy, eqn.psi())));
 

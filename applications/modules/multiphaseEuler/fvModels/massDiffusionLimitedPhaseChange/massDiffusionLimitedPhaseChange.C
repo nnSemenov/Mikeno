@@ -69,7 +69,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::readCoeffs
     (
         sidedInterfaceCompositionModel::New
         (
-            modelSubDicts(interfaceCompositionDict),
+            modelEntries(interfaceCompositionDict),
             interface
         ).ptr()
     );
@@ -87,9 +87,9 @@ void Foam::fv::massDiffusionLimitedPhaseChange::readCoeffs
     (
         blendedSidedDiffusiveMassTransferModel::New
         (
-            blendedModelSubDicts(diffusiveMassTransferDict),
+            blendedModelEntries(diffusiveMassTransferDict),
             interface,
-            blendingDict<blendedSidedDiffusiveMassTransferModel>
+            blendingEntry<blendedSidedDiffusiveMassTransferModel>
             (
                 fluid_,
                 diffusiveMassTransferDict
@@ -120,7 +120,7 @@ Foam::wordList Foam::fv::massDiffusionLimitedPhaseChange::getSpecies() const
 
 void Foam::fv::massDiffusionLimitedPhaseChange::correctMDot() const
 {
-    mDot_ = dimensionedScalar(dimDensity/dimTime, 0);
+    mDot_ = dimensionedScalar(dimensions::density/dimensions::time, 0);
 
     forAll(phaseNames(), i)
     {
@@ -141,7 +141,8 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correctMDot() const
                 s
                *(
                    mDotSus_[i][phaseIcmSpeciei]
-                 + mDotSps_[i][phaseIcmSpeciei]*phaseIcm.thermo().Y()[speciei]
+                 + mDotSps_[i][phaseIcmSpeciei]
+                  *phaseIcm.thermo().Y()[speciei]()
                 );
         }
     }
@@ -192,7 +193,7 @@ Foam::fv::massDiffusionLimitedPhaseChange::massDiffusionLimitedPhaseChange
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, 0)
+        dimensionedScalar(dimensions::density/dimensions::time, 0)
     )
 {
     readCoeffs(coeffs(dict));
@@ -219,32 +220,32 @@ Foam::fv::massDiffusionLimitedPhaseChange::massDiffusionLimitedPhaseChange
             mDotSus_[i].set
             (
                 phaseIcmSpeciei,
-                new volScalarField::Internal
+                new volInternalScalarField
                 (
                     IOobject
                     (
-                        name + ":mDot" + specieName.capitalise() + "Su",
+                        word(name, ":mDot", specieName.capitalise(), "Su"),
                         mesh.time().name(),
                         mesh
                     ),
                     mesh,
-                    dimensionedScalar(dimDensity/dimTime, 0)
+                    dimensionedScalar(dimensions::density/dimensions::time, 0)
                 )
             );
 
             mDotSps_[i].set
             (
                 phaseIcmSpeciei,
-                new volScalarField::Internal
+                new volInternalScalarField
                 (
                     IOobject
                     (
-                        name + ":mDot" + specieName.capitalise() + "Sp",
+                        word(name, ":mDot", specieName.capitalise(), "Sp"),
                         mesh.time().name(),
                         mesh
                     ),
                     mesh,
-                    dimensionedScalar(dimDensity/dimTime, 0)
+                    dimensionedScalar(dimensions::density/dimensions::time, 0)
                 )
             );
         }
@@ -254,44 +255,44 @@ Foam::fv::massDiffusionLimitedPhaseChange::massDiffusionLimitedPhaseChange
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::massDiffusionLimitedPhaseChange::Tchange() const
 {
     return Ts_;
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::massDiffusionLimitedPhaseChange::Lfraction() const
 {
     // Heat transfer coefficients
     const Pair<tmp<volScalarField>> Hs =
         solver_.heatTransfer.Hs(phase1_, phase2_);
-    const volScalarField::Internal& H1 = Hs.first();
-    const volScalarField::Internal& H2 = Hs.second();
+    const volInternalScalarField& H1 = Hs.first();
+    const volInternalScalarField& H2 = Hs.second();
 
     return H2/(H1 + H2);
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::massDiffusionLimitedPhaseChange::mDot() const
 {
     return mDot_;
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::massDiffusionLimitedPhaseChange::mDot(const label mDoti) const
 {
     const word& specieName = species()[mDoti];
 
-    tmp<volScalarField::Internal> tResult =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tResult =
+        volInternalScalarField::New
         (
-            name() + ":mDot" + specieName.capitalise(),
+            word(name(), ":mDot", specieName.capitalise()),
             this->mesh(),
-            dimensionedScalar(dimDensity/dimTime, 0)
+            dimensionedScalar(dimensions::density/dimensions::time, 0)
         );
 
     forAll(phaseNames(), i)
@@ -313,7 +314,8 @@ Foam::fv::massDiffusionLimitedPhaseChange::mDot(const label mDoti) const
             s
            *(
                mDotSus_[i][phaseIcmSpeciei]
-             + mDotSps_[i][phaseIcmSpeciei]*phaseIcm.thermo().Y()[speciei]
+             + mDotSps_[i][phaseIcmSpeciei]
+              *phaseIcm.thermo().Y()[speciei]()
             );
     }
 
@@ -392,7 +394,8 @@ void Foam::fv::massDiffusionLimitedPhaseChange::addSup
             {
                 eqn -=
                     mDotSus_[i][phaseIcmSpeciei]
-                  + mDotSps_[i][phaseIcmSpeciei]*phaseIcm.thermo().Y()[speciei];
+                  + mDotSps_[i][phaseIcmSpeciei]
+                   *phaseIcm.thermo().Y()[speciei]();
             }
         }
 
@@ -408,14 +411,14 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
 {
     Info<< type() << ": " << name() << endl << incrIndent;
 
-    const volScalarField::Internal& T1 = phase1_.thermo().T();
-    const volScalarField::Internal& T2 = phase2_.thermo().T();
+    const volInternalScalarField& T1 = phase1_.thermo().T();
+    const volInternalScalarField& T2 = phase2_.thermo().T();
 
     // Heat transfer coefficients
     const Pair<tmp<volScalarField>> Hs =
         solver_.heatTransfer.Hs(phase1_, phase2_, scalar(0));
-    const volScalarField::Internal& H1 = Hs.first();
-    const volScalarField::Internal& H2 = Hs.second();
+    const volInternalScalarField& H1 = Hs.first();
+    const volInternalScalarField& H2 = Hs.second();
 
     // Stabilisation heat transfer coefficient
     static const dimensionedScalar HSmall
@@ -426,7 +429,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
     );
 
     // Mass transfer coefficients
-    Pair<autoPtr<volScalarField::Internal>> KPtrs;
+    Pair<autoPtr<volInternalScalarField>> KPtrs;
     forAll(phaseNames(), i)
     {
         const phaseModel& phase = i ? phase2_ : phase1_;
@@ -437,7 +440,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
     }
 
     // Mass diffusivities
-    Pair<PtrList<volScalarField::Internal>> Ds;
+    Pair<PtrList<volInternalScalarField>> Ds;
     forAll(phaseNames(), i)
     {
         const phaseModel& phase = i ? phase2_ : phase1_;
@@ -464,19 +467,23 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
     // Iterative solution of the interface heat-mass transfer balance
     for (label iteri = 0; iteri < nIter_; ++ iteri)
     {
-        tmp<volScalarField::Internal> mDotL =
-            volScalarField::Internal::New
+        tmp<volInternalScalarField> mDotL =
+            volInternalScalarField::New
             (
                 name() + ":mDotL",
                 this->mesh(),
-                dimensionedScalar(dimEnergy/dimVolume/dimTime, 0)
+                dimensionedScalar(dimensions::powerDensity, 0)
             );
-        tmp<volScalarField::Internal> mDotLPrime =
-            volScalarField::Internal::New
+        tmp<volInternalScalarField> mDotLPrime =
+            volInternalScalarField::New
             (
                 name() + ":mDotLPrime",
                 this->mesh(),
-                dimensionedScalar(mDotL().dimensions()/dimTemperature, 0)
+                dimensionedScalar
+                (
+                    mDotL().dimensions()/dimensions::temperature,
+                    0
+                )
             );
 
         // Add latent heats from forward and backward models
@@ -496,16 +503,16 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
                 const label speciei = phaseIcm.thermo().species()[specieName];
                 const label mDoti = species()[specieName];
 
-                const volScalarField::Internal Yf
+                const volInternalScalarField Yf
                 (
                     phaseIcm.Yf(specieName, vifToVf(Ts_))
                 );
-                const volScalarField::Internal YfPrime
+                const volInternalScalarField YfPrime
                 (
                     phaseIcm.YfPrime(specieName, vifToVf(Ts_))
                 );
 
-                const volScalarField::Internal rhoKDL
+                const volInternalScalarField rhoKDL
                 (
                     phase.rho()()
                    *KPtrs[i]()
@@ -513,7 +520,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
                    *s*L(Ts_, mDoti)
                 );
 
-                mDotL.ref() += rhoKDL*(Yf - phaseIcm.thermo().Y()[speciei]);
+                mDotL.ref() += rhoKDL*(Yf - phaseIcm.thermo().Y()[speciei]());
                 mDotLPrime.ref() += rhoKDL*YfPrime;
             }
         }
@@ -553,12 +560,12 @@ void Foam::fv::massDiffusionLimitedPhaseChange::correct()
         {
             const word& specieName = phaseIcm.species()[phaseIcmSpeciei];
 
-            const volScalarField::Internal KD
+            const volInternalScalarField KD
             (
                 KPtrs[i]()*Ds[i][phaseIcmSpeciei]
             );
 
-            const volScalarField::Internal Yf
+            const volInternalScalarField Yf
             (
                 phaseIcm.Yf(specieName, vifToVf(Ts_))
             );

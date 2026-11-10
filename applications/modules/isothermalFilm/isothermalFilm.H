@@ -115,7 +115,7 @@ protected:
         volVectorField nHat_;
 
         //- Film cell cross-sectional area magnitude
-        volScalarField::Internal magSf_;
+        volInternalScalarField magSf_;
 
         //- Film cell volume/wall face area
         volScalarField VbyA_;
@@ -162,7 +162,7 @@ protected:
         tmp<fvVectorMatrix> tUEqn;
 
         //- Continuity error
-        tmp<volScalarField::Internal> contErr;
+        tmp<volInternalScalarField> contErr;
 
 
 private:
@@ -185,14 +185,20 @@ private:
         //- Constrain a field such that the flow
         //  is in the plane of the film.
         //  This involves setting the flux on the top and bottom patches to 0
-        template<class FieldType>
-        tmp<FieldType> constrainedField(const FieldType& field) const;
+        // template<class FieldType>
+        // tmp<FieldType> constrainedField(const FieldType& field) const;
 
         //- Constrain a field such that the flow
         //  is in the plane of the film.
         //  This involves setting the flux on the top and bottom patches to 0
         template<class FieldType>
         tmp<FieldType> constrainedField(const tmp<FieldType>& tfield) const;
+
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        inline auto constrainedField(const Expression& e) const
+        {
+            return constrainedField(eval(e));
+        }
 
         //- Constrain buoyancy and surface tension fluxes
         //  for fixed flux boundary conditions
@@ -242,7 +248,7 @@ private:
 
         //- Contact force obtained from the given surface tension coefficient
         //  and the contact angle distribution from the wall delta patch field
-        tmp<volVectorField::Internal> contactForce
+        tmp<volInternalVectorField> contactForce
         (
             const volScalarField& sigma
         ) const;
@@ -270,7 +276,7 @@ public:
         const volVectorField& nHat;
 
         //- Film cell cross-sectional area magnitude
-        const volScalarField::Internal& magSf;
+        const volInternalScalarField& magSf;
 
         //- Film cell volume/wall face area
         const volScalarField& VbyA;

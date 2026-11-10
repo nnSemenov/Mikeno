@@ -84,8 +84,8 @@ swirlFlowRateInletVelocityFvPatchVectorField
         dict.lookupOrDefault
         (
             "origin",
-            dimLength,
-            returnReduce(patch().size(), sumOp<label>())
+            dimensions::length,
+            returnReduce(patch().size(), sumOp())
           ? gSum(patch().Cf()*patch().magSf())/gSum(patch().magSf())
           : Zero
         )
@@ -96,7 +96,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
         (
             "axis",
             dimless,
-            returnReduce(patch().size(), sumOp<label>())
+            returnReduce(patch().size(), sumOp())
           ? -gSum(patch().Sf())/gSum(patch().magSf())
           : Zero
         )
@@ -104,15 +104,18 @@ swirlFlowRateInletVelocityFvPatchVectorField
     flowRate_(),
     volumetric_(),
     rhoName_("rho"),
-    rhoInlet_(dict.lookupOrDefault<scalar>("rhoInlet", dimDensity, -vGreat)),
+    rhoInlet_
+    (
+        dict.lookupOrDefault<scalar>("rhoInlet", dimensions::density, -vGreat)
+    ),
     radialVelocity_
     (
         Function2<scalar>::New
         (
             "radialVelocity",
             time().userUnits(),
-            dimLength,
-            dimVelocity,
+            dimensions::length,
+            dimensions::velocity,
             dict
         )
     ),
@@ -126,7 +129,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
             (
                 "volumetricFlowRate",
                 time().userUnits(),
-                dimVolumetricFlux,
+                dimensions::volumetricFlux,
                 dict
             );
         volumetric_ = true;
@@ -138,7 +141,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
             (
                 "massFlowRate",
                 time().userUnits(),
-                dimMassFlux,
+                dimensions::massFlux,
                 dict
             );
         volumetric_ = false;
@@ -162,8 +165,8 @@ swirlFlowRateInletVelocityFvPatchVectorField
             (
                 "tangentialVelocity",
                 time().userUnits(),
-                dimLength,
-                dimVelocity,
+                dimensions::length,
+                dimensions::velocity,
                 dict
             );
     }
@@ -290,8 +293,8 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::write
     (
         os,
         time().userUnits(),
-        dimLength,
-        dimVelocity,
+        dimensions::length,
+        dimensions::velocity,
         radialVelocity_()
     );
     if (omega_.valid())
@@ -304,8 +307,8 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::write
         (
             os,
             time().userUnits(),
-            dimLength,
-            dimVelocity,
+            dimensions::length,
+            dimensions::velocity,
             tangentialVelocity_()
         );
     }

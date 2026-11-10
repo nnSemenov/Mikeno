@@ -260,7 +260,7 @@ public:
         typedef
             HashPtrTable
             <
-                volScalarField::Internal,
+                volInternalScalarField,
                 phaseInterfaceKey,
                 phaseInterfaceKey::hash
             >
@@ -295,20 +295,20 @@ private:
         //- A minimal list of the diameter models in this population balance
         UPtrList<const diameterModels::populationBalance> uniqueDiameters_;
 
-        //- The group fractions
-        PtrList<volScalarField> fs_;
-
         //- The representative spherical diameters of the groups
         PtrList<dimensionedScalar> dSphs_;
 
         //- The representative volumes of the groups
         PtrList<dimensionedScalar> vs_;
 
+        //- The group fractions
+        PtrList<volScalarField> fs_;
+
         //- Explicit coalescence and breakup source terms
-        PtrList<volScalarField::Internal> Su_;
+        PtrList<volInternalScalarField> Su_;
 
         //- Implicit coalescence and breakup source terms
-        PtrList<volScalarField::Internal> Sp_;
+        PtrList<volInternalScalarField> Sp_;
 
         //- Coalescence and breakup mass transfer rates
         dmdtfTable dmdtfs_;
@@ -320,10 +320,10 @@ private:
         dmdtfTable modelSourceDmdtfs_;
 
         //- Rates of change of volume per unit volume
-        PtrList<volScalarField::Internal> expansionRates_;
+        PtrList<volInternalScalarField> expansionRates_;
 
         //- Dilatation errors
-        PtrList<volScalarField::Internal> dilatationErrors_;
+        PtrList<volInternalScalarField> dilatationErrors_;
 
         //- The shape model
         autoPtr<populationBalance::shapeModel> shapeModel_;
@@ -376,7 +376,7 @@ private:
         (
             const label j,
             const label k,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Calculate particle destruction by coalescence
@@ -384,21 +384,21 @@ private:
         (
             const label i,
             const label j,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Calculate particle creation by daughter-size-distribution-breakup
         void birthByDaughterSizeDistributionBreakup
         (
             const label k,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Calculate particle destruction by daughter-size-distribution-breakup
         void deathByDaughterSizeDistributionBreakup
         (
             const label i,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Calculate particle creation by binary-breakup
@@ -406,7 +406,7 @@ private:
         (
             const label i,
             const label j,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Calculate particle destruction by binary-breakup
@@ -414,7 +414,7 @@ private:
         (
             const label j,
             const label i,
-            const volScalarField::Internal& rate
+            const volInternalScalarField& rate
         );
 
         //- Do calculations relating to coalescence and breakup
@@ -425,7 +425,7 @@ private:
 
         //- Return the expansion sources for a group fraction, or (if flds is
         //  valid) a secondary property
-        Pair<tmp<volScalarField::Internal>> expansionSus
+        Pair<tmp<volInternalScalarField>> expansionSus
         (
             const label i,
             const UPtrList<volScalarField>& flds = UPtrList<volScalarField>()
@@ -439,7 +439,7 @@ private:
 
         //- Return the model sources for a group fraction, or (if flds is
         //  valid) a secondary property
-        Pair<tmp<volScalarField::Internal>> modelSourceRhoSus
+        Pair<tmp<volInternalScalarField>> modelSourceRhoSus
         (
             const label i,
             const UPtrList<volScalarField>& flds = UPtrList<volScalarField>()
@@ -549,18 +549,6 @@ public:
         inline const UPtrList<const diameterModels::populationBalance>&
             uniqueDiameters() const;
 
-        //- Access the group fractions
-        inline const PtrList<volScalarField>& fs() const;
-
-        //- Modify the group fractions
-        inline PtrList<volScalarField>& fs();
-
-        //- Access a group fraction
-        inline const volScalarField& f(const label i) const;
-
-        //- Modify a group fraction
-        inline volScalarField& f(const label i);
-
         //- Access the representative spherical diameters of the groups
         inline const PtrList<dimensionedScalar>& dSphs() const;
 
@@ -572,6 +560,18 @@ public:
 
         //- Access the representative volumes diameters of a group
         inline const dimensionedScalar& v(const label i) const;
+
+        //- Access the group fractions
+        inline const PtrList<volScalarField>& fs() const;
+
+        //- Modify the group fractions
+        inline PtrList<volScalarField>& fs();
+
+        //- Access a group fraction
+        inline const volScalarField& f(const label i) const;
+
+        //- Modify a group fraction
+        inline volScalarField& f(const label i);
 
         //- Access the shape model
         const populationBalance::shapeModel& shape() const;
@@ -614,20 +614,20 @@ public:
         dimensionedScalar eta(const label i, const dimensionedScalar& v) const;
 
         //- Return the number allocation coefficient for a field of volumes
-        tmp<volScalarField::Internal> eta
+        tmp<volInternalScalarField> eta
         (
             const label i,
-            const volScalarField::Internal& v
+            const volInternalScalarField& v
         ) const;
 
         //- Return the volume allocation coefficient for a single volume
         dimensionedScalar etaV(const label i, const dimensionedScalar& v) const;
 
         //- Return the volume allocation coefficient for a field of volumes
-        tmp<volScalarField::Internal> etaV
+        tmp<volInternalScalarField> etaV
         (
             const label i,
-            const volScalarField::Internal& v
+            const volInternalScalarField& v
         ) const;
 
         //- Return the volume allocation coefficient for a given distribution
@@ -657,20 +657,20 @@ public:
             continuousTurbulence() const;
 
         //- Return the implicit coalescence and breakup source term
-        tmp<volScalarField::Internal> Sp(const label i) const;
+        tmp<volInternalScalarField> Sp(const label i) const;
 
         //- Return the explicit expansion source term
-        tmp<volScalarField::Internal> expansionSu
+        tmp<volInternalScalarField> expansionSu
         (
             const label i,
             const UPtrList<volScalarField>& flds = UPtrList<volScalarField>()
         ) const;
 
         //- Return the implicit expansion source term
-        tmp<volScalarField::Internal> expansionSp(const label i) const;
+        tmp<volInternalScalarField> expansionSp(const label i) const;
 
         //- Return the explicit model source source term
-        tmp<volScalarField::Internal> modelSourceSu
+        tmp<volInternalScalarField> modelSourceSu
         (
             const label i,
             const UPtrList<volScalarField>& flds = UPtrList<volScalarField>()
@@ -682,8 +682,11 @@ public:
         //- Correct derived quantities
         void correct();
 
+        //- Print distribution
+        void info() const;
+
         //- Dummy write for regIOobject
-        bool writeData(Ostream&) const;
+        virtual bool writeData(Ostream&) const;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

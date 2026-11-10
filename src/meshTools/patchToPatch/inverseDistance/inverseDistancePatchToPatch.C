@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -241,7 +241,8 @@ Foam::label Foam::patchToPatches::inverseDistance::finalise
     const vectorField& srcPointNormals,
     const vectorField& srcPointNormals0,
     const primitiveOldTimePatch& tgtPatch,
-    const transformer& tgtToSrc
+    const transformer& tgtToSrc,
+    const unsigned char report
 )
 {
     const label nCouples =
@@ -251,7 +252,8 @@ Foam::label Foam::patchToPatches::inverseDistance::finalise
             srcPointNormals,
             srcPointNormals0,
             tgtPatch,
-            tgtToSrc
+            tgtToSrc,
+            report
         );
 
     // Transfer weight addressing into actual addressing (if not done in the
@@ -279,7 +281,7 @@ Foam::label Foam::patchToPatches::inverseDistance::finalise
         }
     }
 
-    if (debug)
+    if (nCouples != 0 && (report & patchToPatch::report::extent))
     {
         auto histogram = [](const List<DynamicList<label>>& ll)
         {
@@ -290,19 +292,17 @@ Foam::label Foam::patchToPatches::inverseDistance::finalise
                 result[ll[i].size()] ++;
             }
 
-            result.resize(returnReduce(result.size(), maxOp<label>()), 0);
+            result.resize(returnReduce(result.size(), maxOp()), 0);
 
-            Pstream::listCombineGather(result, plusEqOp<label>());
+            Pstream::listCombineGather(result, addEqOp());
             Pstream::listCombineScatter(result);
 
             return result;
         };
 
-        Info<< indent
-            << "Number of source faces by number of target connections = "
+        Info<< indent << "Source stencil size count = "
             << histogram(srcLocalTgtFaces_) << nl
-            << indent
-            << "Number of target faces by number of source connections = "
+            << indent << "Target stencil size count = "
             << histogram(tgtLocalSrcFaces_) << endl;
     }
 

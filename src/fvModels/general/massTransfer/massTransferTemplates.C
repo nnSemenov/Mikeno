@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -104,9 +104,9 @@ void Foam::fv::massTransfer::addSupType
         // If a corresponding field exists then transfer its value
         if (!isNull(otherField))
         {
-            const volScalarField::Internal S(this->S(field.name())/rho(i));
+            const volInternalScalarField S(this->S(field.name())/rho(i));
 
-            eqn += posPart(S)*otherField;
+            eqn += posPart(S)*otherField();
 
             if (&field == &eqn.psi())
             {
@@ -114,14 +114,18 @@ void Foam::fv::massTransfer::addSupType
             }
             else
             {
-                eqn += negPart(S)*field;
+                eqn += negPart(S)*field();
             }
         }
         // Otherwise, get the base class to create the source. This will
         // require a field source specification.
         else
         {
-            fvMatrix<Type> rhoEqn(eqn.psi(), dimDensity*eqn.dimensions());
+            fvMatrix<Type> rhoEqn
+            (
+                eqn.psi(),
+                dimensions::density*eqn.dimensions()
+            );
 
             fvSpecificSource::addSupType(alphaOrRho, field, rhoEqn);
 
@@ -132,7 +136,7 @@ void Foam::fv::massTransfer::addSupType
     else if
     (
         alphaOrRho.group() == word::null
-     && alphaOrRho.dimensions() == dimDensity
+     && alphaOrRho.dimensions() == dimensions::density
      && field.group() == word::null
     )
     {
@@ -180,9 +184,9 @@ void Foam::fv::massTransfer::addSupType
         // If a corresponding field exists then transfer its value
         if (!isNull(otherField))
         {
-            const volScalarField::Internal S(this->S(field.name()));
+            const volInternalScalarField S(this->S(field.name()));
 
-            eqn += posPart(S)*otherField;
+            eqn += posPart(S)*otherField();
 
             if (&field == &eqn.psi())
             {
@@ -190,7 +194,7 @@ void Foam::fv::massTransfer::addSupType
             }
             else
             {
-                eqn += negPart(S)*field;
+                eqn += negPart(S)*field();
             }
         }
         // Otherwise, get the base class to create the source. This will

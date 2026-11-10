@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,6 +27,7 @@ License
 #include "subCycle.H"
 #include "CMULES.H"
 #include "CrankNicolsonDdtScheme.H"
+#include "fviDiv.H"
 #include "fvcFlux.H"
 #include "fvmSup.H"
 
@@ -114,20 +115,20 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
         );
     }
 
-    tmp<volScalarField> divU;
+    tmp<volInternalScalarField> divU;
 
     if (divergent())
     {
         divU =
         (
             mesh.moving()
-          ? fvc::div(phiCN() + mesh.phi())
-          : fvc::div(phiCN())
+          ? fvi::div(phiCN() + mesh.phi())
+          : fvi::div(phiCN())
         );
     }
 
-    tmp<volScalarField::Internal> Su;
-    tmp<volScalarField::Internal> Sp;
+    tmp<volInternalScalarField> Su;
+    tmp<volInternalScalarField> Sp;
 
     alphaSuSp(Su, Sp);
 
@@ -156,7 +157,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
         alpha1Eqn.solve();
 
         Info<< "Phase-1 volume fraction = "
-            << alpha1.weightedAverage(mesh.Vsc()).value()
+            << weightedAverage(alpha1(), mesh.Vsc()()).value()
             << "  Min(" << alpha1.name() << ") = " << min(alpha1).value()
             << "  Max(" << alpha1.name() << ") = " << max(alpha1).value()
             << endl;
@@ -199,7 +200,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
             // Preserve the BCs of alpha1 in alpha1CN for interpolation
             talpha1CN = alpha1.clone();
             talpha1CN.ref() ==
-                (cnCoeff*alpha1 + (1.0 - cnCoeff)*alpha1.oldTime())();
+                (cnCoeff*alpha1 + (1.0 - cnCoeff)*alpha1.oldTime());
         }
 
         // Split operator
@@ -219,7 +220,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
                     alpha1,
                     talphaPhi1Un(),
                     talphaPhi1Corr.ref(),
-                    (Sp() + divU())(),
+                    eval(Sp() + divU())(),
                     oneField(),
                     zeroField()
                 );
@@ -263,7 +264,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
                     phiCN,
                     alphaPhi1,
                     Sp(),
-                    (Su() + divU()*min(alpha1(), scalar(1)))(),
+                    eval(Su() + divU()*min(alpha1(), scalar(1)))(),
                     oneField(),
                     zeroField()
                 );
@@ -324,7 +325,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
     }
 
     Info<< "Phase-1 volume fraction = "
-        << alpha1.weightedAverage(mesh.Vsc()).value()
+        << weightedAverage(alpha1(), mesh.Vsc()()).value()
         << "  Min(" << alpha1.name() << ") = " << min(alpha1).value()
         << "  Max(" << alpha1.name() << ") = " << max(alpha1).value()
         << endl;

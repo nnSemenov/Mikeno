@@ -58,7 +58,7 @@ Foam::populationBalance::shapeModels::fractal::dColl(const label i) const
         (
             "dColl",
             popBal_.mesh(),
-            dimensionedScalar(dimLength, Zero)
+            dimensionedScalar(dimensions::length, Zero)
         )
     );
 
@@ -81,8 +81,11 @@ Foam::populationBalance::shapeModels::fractal::fractal
 )
 :
     SecondaryPropertyModel<shapeModel>(popBal),
-    Df_(Function1<scalar>::New("Df", {dimLength, dimless}, dict)),
-    alphaC_(Function1<scalar>::New("alphaC", {dimLength, dimless}, dict)),
+    Df_(Function1<scalar>::New("Df", {dimensions::length, dimless}, dict)),
+    alphaC_
+    (
+        Function1<scalar>::New("alphaC", {dimensions::length, dimless}, dict)
+    ),
     kappas_(popBal.nGroups()),
     dColls_(popBal.nGroups()),
     Sus_(popBal.nGroups())
@@ -129,7 +132,7 @@ Foam::populationBalance::shapeModels::fractal::fractal
         Sus_.set
         (
             i,
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 populationBalanceModel::groupFieldIo
                 (
@@ -138,7 +141,11 @@ Foam::populationBalance::shapeModels::fractal::fractal
                     popBal_.phases()[i]
                 ),
                 popBal_.mesh(),
-                dimensionedScalar(kappas_[i].dimensions()/dimTime, Zero)
+                dimensionedScalar
+                (
+                    kappas_[i].dimensions()/dimensions::time,
+                    Zero
+                )
             )
         );
     }
@@ -179,6 +186,13 @@ Foam::populationBalance::shapeModels::fractal::alphaC(const label i) const
 }
 
 
+const Foam::PtrList<Foam::volScalarField>&
+Foam::populationBalance::shapeModels::fractal::kappas() const
+{
+    return kappas_;
+}
+
+
 const Foam::volScalarField&
 Foam::populationBalance::shapeModels::fractal::fld(const label i) const
 {
@@ -186,7 +200,7 @@ Foam::populationBalance::shapeModels::fractal::fld(const label i) const
 }
 
 
-Foam::volScalarField::Internal&
+Foam::volInternalScalarField&
 Foam::populationBalance::shapeModels::fractal::src(const label i)
 {
     return Sus_[i];
@@ -216,7 +230,7 @@ void Foam::populationBalance::shapeModels::fractal::solve()
         (
             IOobject::groupName
             (
-                alpha.member() + fi.member().capitalise() + "Phi",
+                word(alpha.member(), fi.member().capitalise(), "Phi"),
                 alpha.group()
             ),
             max(fvc::interpolate(fi, "fi"), small)*phase.alphaPhi()
@@ -227,16 +241,16 @@ void Foam::populationBalance::shapeModels::fractal::solve()
             fvm::ddt(alpha, fi, kappas_[i])
           + fvm::div(alphaFiPhi, kappas_[i])
          ==
-            Sus_[i] + fvm::Sp(popBal_.Sp(i)*fi, kappas_[i])
+            Sus_[i] + fvm::Sp(popBal_.Sp(i)*fi(), kappas_[i])
           + popBal_.expansionSu(i, kappas_)
-          + fvm::Sp(popBal_.expansionSp(i)*fi, kappas_[i])
+          + fvm::Sp(popBal_.expansionSp(i)*fi(), kappas_[i])
           + popBal_.modelSourceSu(i, kappas_)
           + popBal_.fluid().fvModels().source(alphaFi, rho, kappas_[i])/rho
           - correction
             (
                 fvm::Sp
                 (
-                    max(phase.residualAlpha() - alpha*fi, scalar(0))
+                    max(phase.residualAlpha() - alpha()*fi(), scalar(0))
                    /kappas_[i].mesh().time().deltaT(),
                     kappas_[i]
                 )
@@ -250,11 +264,6 @@ void Foam::populationBalance::shapeModels::fractal::solve()
         kappaiEqn.solve();
 
         popBal_.fluid().fvConstraints().constrain(kappas_[i]);
-
-        // Bound kappa so that the surface-area-volume ratio is greater than
-        // that of spherical particles of this group, but less than that of the
-        // particles represented by the first group
-        kappas_[i] = min(max(kappas_[i], 6/popBal_.dSph(i)), 6/popBal_.dSph(0));
 
         kappas_[i].correctBoundaryConditions();
     }

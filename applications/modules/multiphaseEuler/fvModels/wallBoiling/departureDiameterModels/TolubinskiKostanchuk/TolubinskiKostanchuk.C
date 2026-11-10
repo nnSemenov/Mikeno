@@ -62,7 +62,7 @@ calculate
     auto dMax = coefficient<ScalarFieldType>::value(dMax_);
     auto dMin = coefficient<ScalarFieldType>::value(dMin_);
 
-    const dimensionedScalar T45_(dimTemperature, 45);
+    const dimensionedScalar T45_(dimensions::temperature, 45);
 
     auto T45 = coefficient<ScalarFieldType>::value(T45_);
 
@@ -79,9 +79,9 @@ TolubinskiKostanchuk
 )
 :
     departureDiameterModel(),
-    dRef_("dRef", dimLength, dict, 6e-4),
-    dMax_("dMax", dimLength, dict, 0.0014),
-    dMin_("dMin", dimLength, dict, 1e-6)
+    dRef_("dRef", dimensions::length, dict, 6e-4),
+    dMax_("dMax", dimensions::length, dict, 0.0014),
+    dMin_("dMin", dimensions::length, dict, 1e-6)
 {}
 
 
@@ -123,16 +123,16 @@ dDeparture
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::wallBoilingModels::departureDiameterModels::
 TolubinskiKostanchuk::dDeparture
 (
     const phaseModel& liquid,
     const phaseModel& vapour,
     const phaseModel& solid,
-    const volScalarField::Internal& Tf,
-    const volScalarField::Internal& Tsatw,
-    const volScalarField::Internal& L
+    const volInternalScalarField& Tf,
+    const volInternalScalarField& Tsatw,
+    const volInternalScalarField& L
 ) const
 {
     return calculate(liquid.thermo().T()(), Tsatw);

@@ -56,12 +56,12 @@ bool Foam::SuModels::uniformConstant::readCoeffs(const dictionary& dict)
 Foam::SuModels::uniformConstant::uniformConstant
 (
     const dictionary& dict,
-    const uRhoMulticomponentThermo& thermo,
+    const ubRhoThermo& thermo,
     const compressibleMomentumTransportModel& turbulence
 )
 :
     SuModel(thermo, turbulence),
-    Su_("Su", dimVelocity, dict)
+    Su_("Su", dimensions::velocity, dict)
 {
     SuModel::Su_ == Su_;
 }

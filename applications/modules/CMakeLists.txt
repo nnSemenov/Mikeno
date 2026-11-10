@@ -6,7 +6,7 @@ add_subdirectory(incompressibleFluid)
 add_subdirectory(isothermalFluid)
 add_subdirectory(fluid)
 add_subdirectory(multicomponentFluid)
-add_subdirectory(porousMediaFluid)
+#add_subdirectory(porousMediaFluid)
 add_subdirectory(XiFluid)
 add_subdirectory(shockFluid)
 

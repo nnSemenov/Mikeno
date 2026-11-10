@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,9 +24,10 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "incompressibleDenseParticleFluid.H"
-#include "fvcDdt.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "fvcSnGrad.H"
-#include "fvcReconstruct.H"
+#include "fviReconstruct.H"
 #include "fvmDiv.H"
 #include "fvmDdt.H"
 
@@ -39,7 +40,7 @@ void Foam::solvers::incompressibleDenseParticleFluid::momentumPredictor()
     tUcEqn =
     (
         fvm::ddt(alphac, Uc) + fvm::div(alphaPhic, Uc)
-      - fvm::Sp(fvc::ddt(alphac) + fvc::div(alphaPhic), Uc)
+      - fvm::Sp(fvi::ddt(alphac) + fvi::div(alphaPhic), Uc)
       + momentumTransport->divDevSigma(Uc)
      ==
         fvModels().source(alphac, Uc)
@@ -59,13 +60,13 @@ void Foam::solvers::incompressibleDenseParticleFluid::momentumPredictor()
         (
             UcEqn
          ==
-            fvc::reconstruct
+            fvi::reconstruct
             (
                 Fgf - fvc::snGrad(p)*mesh.magSf()
               - Dcf()*(phic - phid())
             )
-          + Dc()*fvc::reconstruct(phic - phid())
-          + Fd() - fvm::Sp(Dc(), Uc)
+          + Dc()()*fvi::reconstruct(phic - phid())
+          + Fd()() - fvm::Sp(Dc()(), Uc)
         );
 
         fvConstraints().constrain(Uc);

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -130,7 +130,7 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return word("SquareMatrix<") + pTraits<Type>::typeName + '>';
+            return word("SquareMatrix<", pTraits<Type>::typeName, '>');
         }
 
         // Edit
@@ -150,6 +150,16 @@ public:
         //- Assignment elements to the
         void operator=(const Identity<Type>);
 };
+
+
+namespace expression
+{
+    template<class Type>
+    struct Expressionable<SquareMatrix<Type>>
+    :
+        public notExpressionable
+    {};
+}
 
 
 // Global functions and operators

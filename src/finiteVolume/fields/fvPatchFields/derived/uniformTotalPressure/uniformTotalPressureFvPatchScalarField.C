@@ -89,7 +89,7 @@ uniformTotalPressureFvPatchScalarField
 {
     // Set the patch pressure to the current total pressure
     // This is not ideal but avoids problems with the creation of patch faces
-    fvPatchScalarField::operator==(p0_->value(this->time().value()));
+    fvPatchScalarField::operator==(p0_->value(time().value()));
 }
 
 
@@ -122,12 +122,12 @@ void Foam::uniformTotalPressureFvPatchScalarField::updateCoeffs
         return;
     }
 
-    scalar p0 = p0_->value(this->time().value());
+    scalar p0 = p0_->value(time().value());
 
     const fvsPatchField<scalar>& phip =
         patch().lookupPatchField<surfaceScalarField, scalar>(phiName_);
 
-    if (internalField().dimensions() == dimPressure)
+    if (internalField().dimensions() == dimensions::pressure)
     {
         if (psiName_ == "none")
         {
@@ -154,35 +154,35 @@ void Foam::uniformTotalPressureFvPatchScalarField::updateCoeffs
                     p0
                    /pow
                     (
-                        (1.0 + 0.5*psip*gM1ByG*neg(phip)*magSqr(Up)),
-                        1.0/gM1ByG
+                        (1 + scalar{0.5}*psip*gM1ByG*neg(phip)*magSqr(Up)),
+                        1/gM1ByG
                     )
                 );
             }
             else
             {
-                operator==(p0/(1.0 + 0.5*psip*neg(phip)*magSqr(Up)));
+                operator==(p0/(1 + scalar{0.5}*psip*neg(phip)*magSqr(Up)));
             }
         }
 
     }
-    else if (internalField().dimensions() == dimPressure/dimDensity)
+    else if (internalField().dimensions() == dimensions::kinematicPressure)
     {
         // Incompressible flow
-        operator==(p0 - 0.5*neg(phip)*magSqr(Up));
+        operator==(p0 - scalar{0.5}*neg(phip)*magSqr(Up));
     }
     else
     {
         FatalErrorInFunction
             << " Incorrect pressure dimensions " << internalField().dimensions()
             << nl
-            << "    Should be " << dimPressure
+            << "    Should be " << dimensions::pressure
             << " for compressible/variable density flow" << nl
-            << "    or " << dimPressure/dimDensity
+            << "    or " << dimensions::kinematicPressure
             << " for incompressible flow," << nl
-            << "    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
 

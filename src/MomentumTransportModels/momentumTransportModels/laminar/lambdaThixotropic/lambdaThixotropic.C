@@ -39,8 +39,8 @@ namespace laminarModels
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template<class BasicMomentumTransportModel>
-lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
+lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::lambdaThixotropic
 (
     const alphaField& alpha,
     const rhoField& rho,
@@ -51,7 +51,7 @@ lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
     const word& type
 )
 :
-    linearViscousStress<laminarModel<BasicMomentumTransportModel>>
+    ViscousStress<laminarModel<BasicMomentumTransportModel>>
     (
         typeName,
         alpha,
@@ -62,12 +62,17 @@ lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
         viscosity
     ),
 
-    a_("a", dimless/dimTime, this->typeDict(type)),
+    a_("a", dimensions::rate, this->typeDict(type)),
     b_("b", dimless, this->typeDict(type)),
     d_("d", dimless, this->typeDict(type)),
-    c_("c", pow(dimTime, d_.value() - scalar(1)), this->typeDict(type)),
-    nu0_("nu0", dimKinematicViscosity, this->typeDict(type)),
-    nuInf_("nuInf", dimKinematicViscosity, this->typeDict(type)),
+    c_
+    (
+        "c",
+        pow(dimensions::time, d_.value() - scalar(1)),
+        this->typeDict(type)
+    ),
+    nu0_("nu0", dimensions::kinematicViscosity, this->typeDict(type)),
+    nuInf_("nuInf", dimensions::kinematicViscosity, this->typeDict(type)),
     K_(1 - sqrt(nuInf_/nu0_)),
     BinghamPlastic_(this->typeDict(type).found("sigmay")),
     sigmay_
@@ -76,13 +81,13 @@ lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
       ? dimensionedScalar
         (
             "sigmay",
-            dimPressure/dimDensity,
+            dimensions::kinematicPressure,
             this->typeDict(type)
         )
       : dimensionedScalar
         (
             "sigmay",
-            dimPressure/dimDensity,
+            dimensions::kinematicPressure,
             0
         )
     ),
@@ -97,7 +102,8 @@ lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimless
     ),
 
     nu_
@@ -117,9 +123,9 @@ lambdaThixotropic<BasicMomentumTransportModel>::lambdaThixotropic
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-template<class BasicMomentumTransportModel>
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
 tmp<volScalarField>
-lambdaThixotropic<BasicMomentumTransportModel>::calcNu
+lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::calcNu
 (
     const volScalarField& strainRate
 ) const
@@ -154,9 +160,10 @@ lambdaThixotropic<BasicMomentumTransportModel>::calcNu
 }
 
 
-template<class BasicMomentumTransportModel>
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
 tmp<volScalarField>
-lambdaThixotropic<BasicMomentumTransportModel>::strainRate() const
+lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::
+strainRate() const
 {
     return sqrt(2.0)*mag(symm(fvc::grad(this->U())));
 }
@@ -164,8 +171,8 @@ lambdaThixotropic<BasicMomentumTransportModel>::strainRate() const
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-template<class BasicMomentumTransportModel>
-bool lambdaThixotropic<BasicMomentumTransportModel>::read()
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
+bool lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::read()
 {
     if (laminarModel<BasicMomentumTransportModel>::read())
     {
@@ -176,7 +183,7 @@ bool lambdaThixotropic<BasicMomentumTransportModel>::read()
         c_ = dimensionedScalar
         (
             "c",
-            pow(dimTime, d_.value() - scalar(1)),
+            pow(dimensions::time, d_.value() - scalar(1)),
             this->typeDict()
         );
 
@@ -194,9 +201,9 @@ bool lambdaThixotropic<BasicMomentumTransportModel>::read()
 }
 
 
-template<class BasicMomentumTransportModel>
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
 tmp<volScalarField>
-lambdaThixotropic<BasicMomentumTransportModel>::nuEff() const
+lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::nuEff() const
 {
     return volScalarField::New
     (
@@ -206,9 +213,9 @@ lambdaThixotropic<BasicMomentumTransportModel>::nuEff() const
 }
 
 
-template<class BasicMomentumTransportModel>
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
 tmp<scalarField>
-lambdaThixotropic<BasicMomentumTransportModel>::nuEff
+lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::nuEff
 (
     const label patchi
 ) const
@@ -217,8 +224,8 @@ lambdaThixotropic<BasicMomentumTransportModel>::nuEff
 }
 
 
-template<class BasicMomentumTransportModel>
-void lambdaThixotropic<BasicMomentumTransportModel>::correct()
+template<class BasicMomentumTransportModel, template<class> class ViscousStress>
+void lambdaThixotropic<BasicMomentumTransportModel, ViscousStress>::correct()
 {
     // Local references
     const alphaField& alpha = this->alpha_;
@@ -255,7 +262,7 @@ void lambdaThixotropic<BasicMomentumTransportModel>::correct()
     solve(lambdaEqn);
     fvConstraints.constrain(lambda_);
 
-    lambda_.maxMin(scalar(0), scalar(1));
+    lambda_.bound(0, 1);
 
     nu_ = calcNu(strainRate);
 

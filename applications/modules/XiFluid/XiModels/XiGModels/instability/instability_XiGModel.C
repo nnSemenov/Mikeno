@@ -61,7 +61,7 @@ Foam::XiGModels::instability::instability
 )
 :
     XiGModel(thermo, thermoTransport, Su),
-    Gin_("Gin", dimless/dimTime, dict),
+    Gin_("Gin", dimless/dimensions::time, dict),
     XiGModel_(XiGModel::New(dict, thermo, thermoTransport, Su))
 {}
 
@@ -74,10 +74,10 @@ Foam::XiGModels::instability::~instability()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::XiGModels::instability::G() const
 {
-    const volScalarField::Internal turbXiG(XiGModel_->G());
+    const volInternalScalarField turbXiG(XiGModel_->G());
     return (Gin_*Gin_/(Gin_ + turbXiG) + turbXiG);
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,7 @@ License
 #include "VoFSolver.H"
 #include "localEulerDdtScheme.H"
 #include "linear.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 #include "fvcMeshPhi.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -54,11 +54,11 @@ void Foam::solvers::VoFSolver::setrAU(const fvVectorMatrix& UEqn)
 {
     if (rAU.valid())
     {
-        rAU() = 1.0/UEqn.A();
+        rAU() = 1/UEqn.A();
     }
     else
     {
-        rAU = (1.0/UEqn.A()).ptr();
+        rAU = eval(1/UEqn.A()).ptr();
     }
 }
 
@@ -103,7 +103,8 @@ Foam::solvers::VoFSolver::VoFSolver
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     phi_
@@ -138,7 +139,7 @@ Foam::solvers::VoFSolver::VoFSolver
         fvc::interpolate(rho)*phi_
     ),
 
-    MRF(mesh),
+    MRF(MRFZones::New(mesh)),
 
     mixture(mixture_),
     p_rgh(p_rgh_),
@@ -164,7 +165,7 @@ Foam::solvers::VoFSolver::VoFSolver
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimless/dimTime, 1),
+                dimensionedScalar(dimless/dimensions::time, 1),
                 extrapolatedCalculatedFvPatchScalarField::typeName
             )
         );
@@ -236,10 +237,10 @@ void Foam::solvers::VoFSolver::preSolve()
     if (correctPhi && divergent())
     {
         // Construct and register divU for mapping
-        divU = new volScalarField
+        divU = new volInternalScalarField
         (
             "divU0",
-            fvc::div(fvc::absolute(phi, U))
+            fvi::div(fvc::absolute(phi, U))
         );
     }
 

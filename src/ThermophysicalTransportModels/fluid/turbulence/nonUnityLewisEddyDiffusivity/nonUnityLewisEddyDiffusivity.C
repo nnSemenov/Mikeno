@@ -24,8 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "nonUnityLewisEddyDiffusivity.H"
-#include "fvcDiv.H"
-#include "fvcLaplacian.H"
+#include "fviDiv.H"
+#include "fviLaplacian.H"
 #include "fvcSnGrad.H"
 #include "fvmSup.H"
 #include "surfaceInterpolate.H"
@@ -113,7 +113,11 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::q() const
             (
                 "hGradY",
                 Y[0].mesh(),
-                dimensionedScalar(dimEnergy/dimMass/dimLength, 0)
+                dimensionedScalar
+                (
+                    dimensions::specificEnergy/dimensions::length,
+                    0
+                )
             )
         );
 
@@ -196,7 +200,7 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::divq
     (
         fvm::Su
         (
-            -fvc::laplacian(this->alpha()*this->kappaEff(), this->thermo().T()),
+            -fvi::laplacian(this->alpha()*this->kappaEff(), this->thermo().T()),
             he
         )
     );
@@ -212,7 +216,7 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::divq
         (
             "hGradY",
             he.mesh(),
-            dimensionedScalar(he.dimensions()/dimLength, 0)
+            dimensionedScalar(he.dimensions()/dimensions::length, 0)
         )
     );
 
@@ -227,7 +231,7 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::divq
     }
 
     tmpDivq.ref() -=
-        fvc::div
+        fvi::div
         (
             fvc::interpolate
             (

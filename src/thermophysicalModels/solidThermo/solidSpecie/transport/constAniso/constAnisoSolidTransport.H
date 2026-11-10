@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,6 +37,7 @@ SourceFiles
 
 #ifndef constAnisoSolidTransport_H
 #define constAnisoSolidTransport_H
+
 #include "vector.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -102,7 +103,7 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return "constAnisoSolid<" + Thermo::typeName() + '>';
+            return word("constAnisoSolid<", Thermo::typeName(), '>');
         }
 
         //- Is the thermal conductivity isotropic

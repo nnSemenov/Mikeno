@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -125,7 +125,7 @@ tmp<fvMatrix<Type>> ddtScheme<Type>::fvmDdt
         (
             vf,
             alpha.dimensions()*rho.dimensions()
-            *vf.dimensions()*dimVolume/dimTime
+            *vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 }
@@ -177,7 +177,8 @@ tmp<surfaceScalarField> ddtScheme<Type>::fvcDdtPhiCoeff
 
     surfaceScalarField& ddtCouplingCoeff = tddtCouplingCoeff.ref();
 
-    surfaceScalarField::Boundary& ccbf = ddtCouplingCoeff.boundaryFieldRef();
+    surfaceScalarField::BoundaryField& ccbf =
+        ddtCouplingCoeff.boundaryFieldRef();
 
     forAll(U.boundaryField(), patchi)
     {
@@ -221,7 +222,12 @@ tmp<surfaceScalarField> ddtScheme<Type>::fvcDdtPhiCoeff
     const fluxFieldType& phi
 )
 {
-    return fvcDdtPhiCoeff(U, phi, phi - fvc::dotInterpolate(mesh().Sf(), U));
+    return fvcDdtPhiCoeff
+    (
+        U,
+        phi,
+        eval(phi - fvc::dotInterpolate(mesh().Sf(), U))
+    );
 }
 
 
@@ -237,7 +243,7 @@ tmp<surfaceScalarField> ddtScheme<Type>::fvcDdtPhiCoeff
     (
         U,
         phi,
-        (phi - fvc::dotInterpolate(mesh().Sf(), U))
+        eval(phi - fvc::dotInterpolate(mesh().Sf(), U))
     );
 }
 

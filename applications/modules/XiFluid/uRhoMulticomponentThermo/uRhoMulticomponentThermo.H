@@ -171,7 +171,7 @@ public:
                 mixture.species(),
                 mesh,
                 phaseName,
-                false
+                MixtureType::normal
             )
         {}
 };

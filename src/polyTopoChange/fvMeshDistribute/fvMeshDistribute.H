@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,7 +53,6 @@ SourceFiles
 #define fvMeshDistribute_H
 
 #include "fvMeshSubset.H"
-#include "FieldField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -115,18 +114,18 @@ class fvMeshDistribute
             label findNonEmptyPatch() const;
 
             //- Save boundary fields
-            template<class Type, class Mesh>
+            template<class GeoField>
             void saveBoundaryFields
             (
-                PtrList<FieldField<surfaceMesh::PatchField, Type>>&
+                PtrList<typename GeoField::BoundaryField>&
             ) const;
 
             //- Map boundary fields
-            template<class Type, class Mesh>
+            template<class GeoField>
             void mapBoundaryFields
             (
                 const polyTopoChangeMap& map,
-                const PtrList<FieldField<surfaceMesh::PatchField, Type>>&
+                const PtrList<typename GeoField::BoundaryField>&
             );
 
             //- Set value of exposed patch faces
@@ -141,9 +140,9 @@ class fvMeshDistribute
                 const PtrList<Field<Type>>& oldFlds
             );
 
-            //- Correct coupled patch fields
+            //- Correct processor patch fields
             template<class GeoField>
-            void correctCoupledPatchFields();
+            void correctProcessorPatchFields();
 
             //- Delete all processor patches. Move any processor faces into
             //  destinationPatch

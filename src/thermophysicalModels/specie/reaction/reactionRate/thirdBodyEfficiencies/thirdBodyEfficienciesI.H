@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,19 +31,34 @@ License
 inline Foam::thirdBodyEfficiencies::thirdBodyEfficiencies
 (
     const speciesTable& species,
-    const scalarList& efficiencies
+    const scalar defaultEfficiency,
+    const List<Tuple2<word, scalar>>& efficiencies
 )
 :
-    scalarField(efficiencies),
-    species_(species)
+    species_(species),
+    defaultEfficiency_(defaultEfficiency),
+    efficiencies_(species.size(), defaultEfficiency_)
 {
-    if (size() != species_.size())
+    thirdBodySpecies_.setSize(efficiencies.size());
+    efficienciesMdefault_.setSize(efficiencies.size());
+    label n = 0;
+
+    forAll(efficiencies, i)
     {
-        FatalErrorInFunction
-            << "number of efficiencies = " << size()
-            << " is not equal to the number of species " << species_.size()
-            << exit(FatalError);
+        if (efficiencies[i].second() != defaultEfficiency_)
+        {
+            efficiencies_[species[efficiencies[i].first()]] =
+                efficiencies[i].second();
+
+            thirdBodySpecies_[n] = species[efficiencies[i].first()];
+            efficienciesMdefault_[n] =
+                efficiencies[i].second() - defaultEfficiency_;
+            n++;
+        }
     }
+
+    thirdBodySpecies_.setSize(n);
+    efficienciesMdefault_.setSize(n);
 }
 
 
@@ -53,64 +68,79 @@ inline Foam::thirdBodyEfficiencies::thirdBodyEfficiencies
     const dictionary& dict
 )
 :
-    scalarField(species.size()),
-    species_(species)
-{
-    if (dict.found("coeffs"))
-    {
-        List<Tuple2<word, scalar>> coeffs(dict.lookup("coeffs"));
-        if (coeffs.size() != species_.size())
-        {
-            FatalIOErrorInFunction(dict)
-                << "number of efficiencies = " << coeffs.size()
-                << " is not equal to the number of species " << species_.size()
-                << exit(FatalIOError);
-        }
-
-        forAll(coeffs, i)
-        {
-            operator[](species[coeffs[i].first()]) = coeffs[i].second();
-        }
-    }
-    else
-    {
-        scalar defaultEff = dict.lookup<scalar>("defaultEfficiency");
-        scalarField::operator=(defaultEff);
-    }
-}
+    thirdBodyEfficiencies
+    (
+        species,
+        dict.lookup<scalar>("defaultEfficiency"),
+        dict.found("efficiency")
+      ? List<Tuple2<word, scalar>>
+        (
+            1,
+            dict.lookup<Tuple2<word, scalar>>("efficiency")
+        )
+      : dict.lookupOrDefault<List<Tuple2<word, scalar>>>
+        (
+            "efficiencies",
+            List<Tuple2<word, scalar>>()
+        )
+    )
+{}
 
 
 // * * * * * * * * * * * * * * * Member functions  * * * * * * * * * * * * * //
 
-inline Foam::scalar Foam::thirdBodyEfficiencies::M(const scalarField& c) const
+inline Foam::scalar Foam::thirdBodyEfficiencies::M
+(
+    const reaction::state& s
+) const
 {
-    scalar M = 0;
-    forAll(*this, i)
+    scalar M = defaultEfficiency_*s.C;
+    forAll(thirdBodySpecies_, i)
     {
-        M += operator[](i)*c[i];
+        M += efficienciesMdefault_[i]*s.c[thirdBodySpecies_[i]];
     }
 
     return M;
 }
 
 
-inline Foam::tmp<Foam::scalarField>
-Foam::thirdBodyEfficiencies::dMdc(const scalarField& c) const
+inline const Foam::scalarField&
+Foam::thirdBodyEfficiencies::dMdc() const
 {
-    return *this;
+    return efficiencies_;
 }
 
 
 inline void Foam::thirdBodyEfficiencies::write(Ostream& os) const
 {
-    List<Tuple2<word, scalar>> coeffs(species_.size());
-    forAll(coeffs, i)
-    {
-        coeffs[i].first() = species_[i];
-        coeffs[i].second() = operator[](i);
-    }
+    writeEntry(os, "defaultEfficiency", defaultEfficiency_);
 
-    writeEntry(os, "coeffs", coeffs);
+    if (thirdBodySpecies_.size() == 1)
+    {
+        writeEntry
+        (
+            os,
+            "efficiency",
+            Tuple2<word, scalar>
+            (
+                species_[thirdBodySpecies_[0]],
+                efficienciesMdefault_[0] + defaultEfficiency_
+            )
+        );
+    }
+    else if (thirdBodySpecies_.size())
+    {
+        List<Tuple2<word, scalar>> efficiencies(thirdBodySpecies_.size());
+
+        forAll(thirdBodySpecies_, i)
+        {
+            efficiencies[i].first() = species_[thirdBodySpecies_[i]];
+            efficiencies[i].second() =
+                efficienciesMdefault_[i] + defaultEfficiency_;
+        }
+
+        writeEntry(os, "efficiencies", efficiencies);
+    }
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -102,7 +102,8 @@ Foam::OppositeFaceCellWave<Type, TrackingData>::OppositeFaceCellWave
     UList<Type>& allFaceInfo,
     UList<Type>& allCellInfo,
     const label maxIter,
-    TrackingData& td
+    TrackingData& td,
+    const bool global
 )
 :
     FaceCellWave<Type, TrackingData>
@@ -113,12 +114,13 @@ Foam::OppositeFaceCellWave<Type, TrackingData>::OppositeFaceCellWave
         allFaceInfo,
         allCellInfo,
         0,              // maxIter,
-        td
+        td,
+        global
     ),
     changedOppositeFaces_(this->mesh_.nCells())
 {
     // Iterate until nothing changes
-    label iter = this->iterate(maxIter);
+    label iter = this->iterate(global, maxIter);
 
     if ((maxIter > 0) && (iter >= maxIter))
     {
@@ -246,14 +248,17 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
     // Sum changedCells over all procs
     label totNChanged = this->changedCells_.size();
 
-    reduce(totNChanged, sumOp<label>());
+    reduce(totNChanged, sumOp());
 
     return totNChanged;
 }
 
 
 template<class Type, class TrackingData>
-Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::cellToFace()
+Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::cellToFace
+(
+    const bool global
+)
 {
     forAll(this->changedCells_, changedCelli)
     {
@@ -302,7 +307,7 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::cellToFace()
         this->handleCyclicPatches();
     }
 
-    if (Pstream::parRun())
+    if (global && Pstream::parRun())
     {
         // Transfer changed faces from neighbouring processors.
         this->handleProcPatches();
@@ -317,7 +322,7 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::cellToFace()
     // Sum nChangedFaces over all procs
     label totNChanged = this->changedFaces_.size();
 
-    reduce(totNChanged, sumOp<label>());
+    reduce(totNChanged, sumOp());
 
     return totNChanged;
 }

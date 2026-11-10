@@ -63,7 +63,7 @@ Foam::fanPressureJumpFvPatchScalarField::fanPressureJumpFvPatchScalarField
                 Function1<scalar>::New
                 (
                     "jumpTable",
-                    dimVelocity,
+                    dimensions::velocity,
                     iF.dimensions(),
                     dict
                 );
@@ -75,7 +75,7 @@ Foam::fanPressureJumpFvPatchScalarField::fanPressureJumpFvPatchScalarField
                 Function1<scalar>::New
                 (
                     "fanCurve",
-                    dimVolumetricFlux,
+                    dimensions::volumetricFlux,
                     iF.dimensions(),
                     dict
                 );
@@ -138,13 +138,13 @@ void Foam::fanPressureJumpFvPatchScalarField::updateCoeffs()
 
             scalar volFlowRate = 0;
 
-            if (phip.internalField().dimensions() == dimVolumetricFlux)
+            if (phip.internalField().dimensions() == dimensions::volumetricFlux)
             {
-                volFlowRate = gSum(phip);
+                volFlowRate = gSum(phip.field());
             }
             else if
             (
-                phip.internalField().dimensions() == dimMassFlux
+                phip.internalField().dimensions() == dimensions::massFlux
             )
             {
                 const scalarField& rhop =
@@ -168,15 +168,15 @@ void Foam::fanPressureJumpFvPatchScalarField::updateCoeffs()
         {
             // Backwards compatibility fallback
 
-            scalarField Un(max(sign*phip/patch().magSf(), scalar(0)));
+            scalarField Un(max(sign*phip/patch().magSf(), 0));
 
-            if (phip.internalField().dimensions() == dimVolumetricFlux)
+            if (phip.internalField().dimensions() == dimensions::volumetricFlux)
             {
                 // Do nothing
             }
             else if
             (
-                phip.internalField().dimensions() == dimMassFlux
+                phip.internalField().dimensions() == dimensions::massFlux
             )
             {
                 const fvPatchField<scalar>& rhop =
@@ -194,7 +194,7 @@ void Foam::fanPressureJumpFvPatchScalarField::updateCoeffs()
                     << exit(FatalError);
             }
 
-            jumpRef() = sign*max(jumpTable_->value(Un), scalar(0));
+            jumpRef() = sign*max(jumpTable_->value(Un), 0);
         }
     }
 

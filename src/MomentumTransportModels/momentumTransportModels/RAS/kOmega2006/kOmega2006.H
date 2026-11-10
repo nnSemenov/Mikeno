@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -83,9 +83,12 @@ class kOmega2006
 
         void correctNut(const volTensorField& gradU);
 
-        tmp<volScalarField::Internal> beta(const volTensorField& gradU) const;
+        tmp<volInternalScalarField> beta
+        (
+            const volInternalTensorField& gradU
+        ) const;
 
-        tmp<volScalarField::Internal> CDkOmega() const;
+        tmp<volInternalScalarField> CDkOmega() const;
 
 
 protected:

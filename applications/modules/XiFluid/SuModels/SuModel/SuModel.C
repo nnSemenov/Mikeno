@@ -46,11 +46,12 @@ bool Foam::SuModel::readCoeffs(const dictionary&)
 
 Foam::SuModel::SuModel
 (
-    const uRhoMulticomponentThermo& thermo,
+    const ubRhoThermo& thermo,
     const compressibleMomentumTransportModel& momentumTransport
 )
 :
     thermo_(thermo),
+    uThermo_(thermo.uThermo()),
     momentumTransport_(momentumTransport),
     Su_
     (
@@ -62,8 +63,8 @@ Foam::SuModel::SuModel
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        thermo_.mesh(),
-        dimensionedScalar(dimVelocity, 0)
+        uThermo_.mesh(),
+        dimensionedScalar(dimensions::velocity, 0)
     )
 {}
 

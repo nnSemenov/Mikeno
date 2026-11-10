@@ -57,8 +57,13 @@ Foam::contactAngleFvPatchScalarField::contactAngleFvPatchScalarField
 {
     if (dict.found("gradient"))
     {
-        gradient() =
-            scalarField("gradient", iF.dimensions()/dimLength, dict, p.size());
+        gradient() = scalarField
+        (
+            "gradient",
+            iF.dimensions()/dimensions::length,
+            dict,
+            p.size()
+        );
         fixedGradientFvPatchScalarField::updateCoeffs();
         fixedGradientFvPatchScalarField::evaluate();
     }
@@ -120,9 +125,9 @@ void Foam::contactAngleFvPatchScalarField::evaluate
        *(
            max(min
            (
-               *this + gradient()/patch().deltaCoeffs(),
+               field() + gradient()/patch().deltaCoeffs(),
                scalar(1)), scalar(0)
-           ) - *this
+           ) - field()
        );
     }
     else if (limit_ == lcZeroGradient)
@@ -134,7 +139,7 @@ void Foam::contactAngleFvPatchScalarField::evaluate
 
     if (limit_ == lcAlpha)
     {
-        scalarField::operator=(max(min(*this, scalar(1)), scalar(0)));
+        scalarField::operator=(max(min(field(), scalar(1)), scalar(0)));
     }
 }
 

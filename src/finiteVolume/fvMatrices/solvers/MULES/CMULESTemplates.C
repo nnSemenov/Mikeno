@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "CMULES.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "localEulerDdtScheme.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -42,7 +42,7 @@ void Foam::MULES::correct
     Info<< "MULES: Correcting " << psi.name() << endl;
 
     scalarField psiIf(psi.size(), 0);
-    fvc::surfaceIntegrate(psiIf, phiCorr);
+    fvi::surfaceIntegrate(psiIf, phiCorr);
 
     psi.primitiveFieldRef() =
     (
@@ -80,7 +80,7 @@ void Foam::MULES::correct
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
         correct(rDeltaT, rho, psi, phiCorr, Sp);
     }
     else
@@ -140,7 +140,7 @@ void Foam::MULES::correct
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
 
         limitCorr
         (
@@ -208,7 +208,7 @@ void Foam::MULES::correct
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
 
         limitCorr
         (
@@ -409,7 +409,7 @@ void Foam::MULES::limitCorr
 
     if (fv::localEulerDdt::enabled(mesh))
     {
-        const volScalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
+        const scalarField& rDeltaT = fv::localEulerDdt::localRDeltaT(mesh);
 
         limitCorr
         (

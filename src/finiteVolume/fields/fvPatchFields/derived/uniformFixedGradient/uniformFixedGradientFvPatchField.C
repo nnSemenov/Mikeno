@@ -42,8 +42,8 @@ Foam::uniformFixedGradientFvPatchField<Type>::uniformFixedGradientFvPatchField
         Function1<Type>::New
         (
             "uniformGradient",
-            this->time().userUnits(),
-            iF.dimensions()/dimLength,
+            time().userUnits(),
+            iF.dimensions()/dimensions::length,
             dict
         )
     )
@@ -100,7 +100,7 @@ void Foam::uniformFixedGradientFvPatchField<Type>::map
     fixedGradientFvPatchField<Type>::map
     (
         ptf,
-        setSizeFieldMapper(this->patch().size())
+        setSizeFieldMapper(patch().size())
     );
 
     // Evaluate since value not mapped
@@ -116,7 +116,7 @@ void Foam::uniformFixedGradientFvPatchField<Type>::updateCoeffs()
         return;
     }
 
-    this->gradient() = uniformGradient_->value(this->time().value());
+    this->gradient() = uniformGradient_->value(time().value());
 
     fixedGradientFvPatchField<Type>::updateCoeffs();
 }
@@ -129,8 +129,8 @@ void Foam::uniformFixedGradientFvPatchField<Type>::write(Ostream& os) const
     writeEntry
     (
         os,
-        this->time().userUnits(),
-        this->internalField().dimensions()/dimLength,
+        time().userUnits(),
+        internalField().dimensions()/dimensions::length,
         uniformGradient_()
     );
     writeEntry(os, "value", *this);

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -71,23 +71,6 @@ class Reaction
     public reaction,
     public ThermoType::thermoType
 {
-
-public:
-
-    // Static data
-
-        //- Default temperature limits of applicability of reaction rates
-        static scalar TlowDefault, ThighDefault;
-
-
-private:
-
-    // Private Data
-
-        //- Temperature limits of applicability of reaction rates
-        scalar Tlow_, Thigh_;
-
-
     // Private Member Functions
 
         //- Construct reaction thermo
@@ -98,6 +81,8 @@ public:
 
     //- Runtime type information
     TypeName("Reaction");
+
+    using typename reaction::state;
 
 
     // Declare run-time constructor selection tables
@@ -199,12 +184,6 @@ public:
             //- Return the name of the reaction
             using reaction::name;
 
-            //- Return the lower temperature limit for the reaction
-            inline scalar Tlow() const;
-
-            //- Return the upper temperature limit for the reaction
-            inline scalar Thigh() const;
-
 
         // Hooks
 
@@ -227,90 +206,50 @@ public:
         // Reaction rate coefficients
 
             //- Concentration powers
-            void C
-            (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
-                scalar& Cf,
-                scalar& Cr
-            ) const;
+            inline void C(const state& s, scalar& Cf, scalar& Cr) const;
 
             //- Net reaction rate
-            scalar omega
+            inline scalar omega
             (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
+                const state& s,
                 scalar& omegaf,
                 scalar& omegar
             ) const;
 
+            //- Net reaction rate
+            inline scalar omega(const state& s) const;
+
             //- The net reaction rate for each species involved
             void dNdtByV
             (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
+                const state& s,
                 scalarField& dNdtByV,
                 const bool reduced,
-                const List<label>& c2s,
-                const label Nsi0
+                const List<label>& c2s
             ) const;
 
 
         // Reaction rate coefficients
 
             //- Forward rate constant
-            virtual scalar kf
-            (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li
-            ) const = 0;
+            virtual scalar kf(const state& s) const = 0;
 
             //- Reverse rate constant from the given forward rate constant
-            virtual scalar kr
-            (
-                const scalar kf,
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li
-            ) const = 0;
+            virtual scalar kr(const scalar kf, const state& s) const = 0;
 
             //- Reverse rate constant
-            virtual scalar kr
-            (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li
-            ) const = 0;
+            virtual scalar kr(const state& s) const = 0;
 
 
         // Jacobian coefficients
 
             //- Temperature derivative of forward rate
-            virtual scalar dkfdT
-            (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li
-            ) const = 0;
+            virtual scalar dkfdT(const state& s) const = 0;
 
             //- Temperature derivative of reverse rate
             virtual scalar dkrdT
             (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
+                const state& s,
                 const scalar dkfdT,
                 const scalar kr
             ) const = 0;
@@ -319,22 +258,12 @@ public:
             virtual bool hasDkdc() const = 0;
 
             //- Concentration derivative of forward rate
-            virtual void dkfdc
-            (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
-                scalarField& dkfdc
-            ) const = 0;
+            virtual void dkfdc(const state& s, scalarField& dkfdc) const = 0;
 
             //- Concentration derivative of reverse rate
             virtual void dkrdc
             (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
+                const state& s,
                 const scalarField& dkfdc,
                 const scalar kr,
                 scalarField& dkrdc
@@ -342,20 +271,16 @@ public:
 
             //- Derivative of the net reaction rate for each species involved
             //  w.r.t. the concentration and temperature
-            void ddNdtByVdcTp
+            void ddNdtByVdcT
             (
-                const scalar p,
-                const scalar T,
-                const scalarField& c,
-                const label li,
+                const state& s,
                 scalarField& dNdtByV,
-                scalarSquareMatrix& ddNdtByVdcTp,
+                scalarSquareMatrix& ddNdtByVdcT,
                 const bool reduced,
                 const List<label>& c2s,
-                const label csi0,
                 const label Tsi,
-                scalarField& cTpWork0,
-                scalarField& cTpWork1
+                scalarField& cTWork0,
+                scalarField& cTWork1
             ) const;
 
 

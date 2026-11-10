@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -174,12 +174,15 @@ void Foam::functionObjects::LagrangianFieldValue::writeName
             writeTabbed
             (
                 file(),
-                word(operationTypeNames_[operation_])
-              + "("
-              + name
-              + (word(componentNames[d]).empty() ? "" : "_")
-              + word(componentNames[d])
-              + ")"
+                word
+                (
+                    operationTypeNames_[operation_],
+                    '(',
+                    name,
+                    (word(componentNames[d]).empty() ? "" : "_"),
+                    componentNames[d],
+                    ')'
+                )
             );
         }
     }
@@ -208,16 +211,19 @@ void Foam::functionObjects::LagrangianFieldValue::writeLocationName
                 writeTabbed
                 (
                     file(),
-                    word(operationTypeNames_[operation_])
-                  + "("
-                  + name
-                  + (word(componentNames[d]).empty() ? "" : "_")
-                  + word(componentNames[d])
-                  + ")"
-                  + ":"
-                  + locationName
-                  + (word(lcomponentNames[ld]).empty() ? "" : "_")
-                  + word(lcomponentNames[ld])
+                    word
+                    (
+                        operationTypeNames_[operation_],
+                        '(',
+                        name,
+                        (word(componentNames[d]).empty() ? "" : "_"),
+                        componentNames[d],
+                        ')',
+                        ':',
+                        locationName,
+                        (word(lcomponentNames[ld]).empty() ? "" : "_"),
+                        lcomponentNames[ld]
+                    )
                 );
             }
         }
@@ -371,7 +377,7 @@ bool Foam::functionObjects::LagrangianFieldValue::multiplyWeight
     const GeoField<scalar>& w =
         mesh().lookupObject<GeoField<scalar>>(weightFieldName);
 
-    weight *= w;
+    weight *= w.primitiveField();
 
     return true;
 }
@@ -428,33 +434,33 @@ bool Foam::functionObjects::LagrangianFieldValue::writeFieldValue
         case operationType::min:
             writeValueAndLocationValues
             (
-                weight*field,
+                eval(weight*field),
                 vGreat,
-                lessOp<scalar>()
+                lessOp()
             );
             break;
         case operationType::max:
             writeValueAndLocationValues
             (
-                weight*field,
+                eval(weight*field),
                 -vGreat,
-                greaterOp<scalar>()
+                greaterOp()
             );
             break;
         case operationType::minMag:
             writeValueAndLocationValues
             (
-                mag(weight*field),
+                eval(mag(weight*field)),
                 vGreat,
-                lessOp<scalar>()
+                lessOp()
             );
             break;
         case operationType::maxMag:
             writeValueAndLocationValues
             (
-                mag(weight*field),
+                eval(mag(weight*field)),
                 -vGreat,
-                greaterOp<scalar>()
+                greaterOp()
             );
             break;
     }
@@ -465,7 +471,6 @@ bool Foam::functionObjects::LagrangianFieldValue::writeFieldValue
 
 void Foam::functionObjects::LagrangianFieldValue::writeFileHeader(const label)
 {
-    writeHeader(file(), "Lagrangian Sum");
     writeCommented(file(), "Time");
 
     forAll(fields_, fieldi)
@@ -552,7 +557,7 @@ bool Foam::functionObjects::LagrangianFieldValue::write()
     logFiles::write();
 
     // Filter out operations that don't make sense if there are no elements
-    if (returnReduce(mesh().size(), sumOp<label>()) == 0)
+    if (returnReduce(mesh().size(), sumOp()) == 0)
     {
         switch (operation_)
         {

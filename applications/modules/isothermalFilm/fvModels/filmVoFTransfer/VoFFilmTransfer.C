@@ -89,11 +89,11 @@ Foam::fv::VoFFilmTransfer::VoFFilmTransfer
     ),
     transferRate_
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "transferRate",
             mesh,
-            dimensionedScalar(dimless/dimTime, 0)
+            dimensionedScalar(dimless/dimensions::time, 0)
         )
     )
 {}
@@ -221,7 +221,7 @@ inline Foam::fv::VoFFilmTransfer::filmVoFTransferRate
         (
             "Su",
             mesh(),
-            dimensioned<Type>(dimProp/dimTime, Zero)
+            dimensioned<Type>(dimProp/dimensions::time, Zero)
         )
     );
 
@@ -254,7 +254,7 @@ void Foam::fv::VoFFilmTransfer::addSup
             filmVoFTransferRate<scalar>
             (
                 &filmVoFTransfer::rhoTransferRate,
-                dimMass
+                dimensions::mass
             );
 
         // Potentially implicit transfer out of the VoF
@@ -300,7 +300,7 @@ void Foam::fv::VoFFilmTransfer::addSup
             filmVoFTransferRate<scalar>
             (
                 &filmVoFTransfer::heTransferRate,
-                dimEnergy
+                dimensions::energy
             );
 
         // Potentially implicit transfer out of the VoF
@@ -310,7 +310,7 @@ void Foam::fv::VoFFilmTransfer::addSup
         }
         else
         {
-            eqn -= alpha()*rho()*he*transferRate_;
+            eqn -= alpha()*rho()*he()*transferRate_;
         }
     }
     else
@@ -341,7 +341,7 @@ void Foam::fv::VoFFilmTransfer::addSup
             filmVoFTransferRate<vector>
             (
                 &filmVoFTransfer::UTransferRate,
-                dimMass*dimVelocity
+                dimensions::momentum
             );
 
         // Potentially implicit transfer out of the VoF
@@ -351,7 +351,7 @@ void Foam::fv::VoFFilmTransfer::addSup
         }
         else
         {
-            eqn -= alpha_()*rho()*U*transferRate_;
+            eqn -= alpha_()*rho()*U()*transferRate_;
         }
     }
     else
@@ -380,7 +380,7 @@ inline Foam::tmp<Foam::Field<Type>> Foam::fv::VoFFilmTransfer::TransferRate
         (
             UIndirectList<Type>
             (
-                alpha_()*transferRate_*mesh().V()*f,
+                eval(alpha_()*transferRate_*mesh().V()*f),
                 faceCells
             )
         )
@@ -391,21 +391,21 @@ inline Foam::tmp<Foam::Field<Type>> Foam::fv::VoFFilmTransfer::TransferRate
 Foam::tmp<Foam::scalarField>
 Foam::fv::VoFFilmTransfer::rhoTransferRate() const
 {
-    return TransferRate<scalar>(thermo_.rho()());
+    return TransferRate<scalar>(thermo_.rho()()());
 }
 
 
 Foam::tmp<Foam::scalarField>
 Foam::fv::VoFFilmTransfer::heTransferRate() const
 {
-    return TransferRate<scalar>(thermo_.rho()()*thermo_.he()());
+    return TransferRate<scalar>(thermo_.rho()()()*thermo_.he()());
 }
 
 
 Foam::tmp<Foam::vectorField>
 Foam::fv::VoFFilmTransfer::UTransferRate() const
 {
-    return TransferRate<vector>(thermo_.rho()()*VoF_.U());
+    return TransferRate<vector>(thermo_.rho()()()*VoF_.U());
 }
 
 

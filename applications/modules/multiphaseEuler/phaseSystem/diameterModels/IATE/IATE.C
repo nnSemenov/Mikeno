@@ -28,9 +28,9 @@ License
 #include "fvmDdt.H"
 #include "fvmDiv.H"
 #include "fvmSup.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
-#include "fvcAverage.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
+#include "fviAverage.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 #include "mathematicalConstants.H"
@@ -76,10 +76,11 @@ Foam::diameterModels::IATE::IATE
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        phase.mesh()
+        phase.mesh(),
+        inv(dimensions::length)
     ),
-    dMax_("dMax", dimLength, diameterProperties),
-    dMin_("dMin", dimLength, diameterProperties),
+    dMax_("dMax", dimensions::length, diameterProperties),
+    dMin_("dMin", dimensions::length, diameterProperties),
     residualAlpha_("residualAlpha", dimless, diameterProperties),
     d_
     (
@@ -113,7 +114,7 @@ Foam::tmp<Foam::volScalarField> Foam::diameterModels::IATE::d() const
 
 Foam::tmp<Foam::volScalarField> Foam::diameterModels::IATE::Av() const
 {
-    return phase()*kappai_;
+    return phase().alpha()*kappai_;
 }
 
 
@@ -122,11 +123,11 @@ void Foam::diameterModels::IATE::correct()
     const volScalarField& alpha = phase();
     const volScalarField& rho = phase().rho();
 
-    volScalarField alphaAv
+    volInternalScalarField alphaAv
     (
         max
         (
-            0.5*fvc::average(alpha + alpha.oldTime()),
+            0.5*fvi::average(alpha + alpha.oldTime()),
             residualAlpha_
         )
     );
@@ -138,8 +139,8 @@ void Foam::diameterModels::IATE::correct()
         (
             ((1.0/3.0)/alphaAv)
            *(
-                (fvc::ddt(alpha) + fvc::div(phase().alphaPhi()))
-              - (fvc::ddt(alpha, rho) + fvc::div(phase().alphaRhoPhi()))/rho
+                (fvi::ddt(alpha) + fvi::div(phase().alphaPhi()))
+              - (fvi::ddt(alpha, rho) + fvi::div(phase().alphaRhoPhi()))/rho()
             ),
             kappai_
         )
@@ -160,10 +161,10 @@ void Foam::diameterModels::IATE::correct()
     fvScalarMatrix kappaiEqn
     (
         fvm::ddt(kappai_) + fvm::div(phase().phi(), kappai_)
-      - fvm::Sp(fvc::div(phase().phi()), kappai_)
+      - fvm::Sp(fvi::div(phase().phi()), kappai_)
      ==
         R
-      + fvModels.source(alpha, rho, kappai_)/(alphaAv*rho)
+      + fvModels.source(alpha, rho, kappai_)/(alphaAv*rho())
     );
 
     kappaiEqn.relax();

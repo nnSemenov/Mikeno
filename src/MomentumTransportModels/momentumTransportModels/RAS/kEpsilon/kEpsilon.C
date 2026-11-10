@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "kEpsilon.H"
+#include "fviGrad.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 #include "bound.H"
@@ -63,8 +64,8 @@ tmp<fvScalarMatrix> kEpsilon<BasicMomentumTransportModel>::kSource() const
         new fvScalarMatrix
         (
             k_,
-            dimVolume*this->rho_.dimensions()*k_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*k_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -78,8 +79,8 @@ tmp<fvScalarMatrix> kEpsilon<BasicMomentumTransportModel>::epsilonSource() const
         new fvScalarMatrix
         (
             epsilon_,
-            dimVolume*this->rho_.dimensions()*epsilon_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*epsilon_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -127,7 +128,8 @@ kEpsilon<BasicMomentumTransportModel>::kEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
     epsilon_
     (
@@ -139,7 +141,8 @@ kEpsilon<BasicMomentumTransportModel>::kEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, this->kMin_);
@@ -192,21 +195,18 @@ void kEpsilon<BasicMomentumTransportModel>::correct()
 
     eddyViscosity<RASModel<BasicMomentumTransportModel>>::correct();
 
-    volScalarField::Internal divU
-    (
-        fvc::div(fvc::absolute(this->phi(), U))()
-    );
+    volInternalScalarField divU(fvi::div(fvc::absolute(this->phi(), U)));
 
-    tmp<volTensorField> tgradU = fvc::grad(U);
-    volScalarField::Internal G
+    tmp<volInternalTensorField> tgradU = fvi::grad(U);
+    volInternalScalarField G
     (
         this->GName(),
-        nut()*(dev(twoSymm(tgradU().v())) && tgradU().v())
+        nut()*(dev(twoSymm(tgradU())) && tgradU())
     );
     tgradU.clear();
 
     // Update epsilon and G at the wall
-    epsilon_.boundaryFieldRef().updateCoeffs();
+    epsilon_.boundaryRef().updateCoeffs();
 
     // Dissipation equation
     tmp<fvScalarMatrix> epsEqn
@@ -224,7 +224,7 @@ void kEpsilon<BasicMomentumTransportModel>::correct()
 
     epsEqn.ref().relax();
     fvConstraints.constrain(epsEqn.ref());
-    epsEqn.ref().boundaryManipulate(epsilon_.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilon_.boundaryRef());
     solve(epsEqn);
     fvConstraints.constrain(epsilon_);
     boundEpsilon();

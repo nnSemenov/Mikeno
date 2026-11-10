@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -95,7 +95,8 @@ incompressibleDenseParticleFluid
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::kinematicPressure
     ),
 
     pressureReference(p_, pimple.dict()),
@@ -109,7 +110,8 @@ incompressibleDenseParticleFluid
             mesh,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
-        )
+        ),
+        dimensions::acceleration
     ),
 
     Uc_
@@ -122,7 +124,8 @@ incompressibleDenseParticleFluid
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     phic_
@@ -152,7 +155,7 @@ incompressibleDenseParticleFluid
         dimensionedScalar
         (
             IOobject::groupName("rho", continuousPhaseName),
-            dimDensity,
+            dimensions::density,
             viscosity->lookup
             (
                 IOobject::groupName("rho", continuousPhaseName)
@@ -307,7 +310,7 @@ void Foam::solvers::incompressibleDenseParticleFluid::prePredictor()
                 mesh
             ),
             mesh,
-            dimensionedVector(dimAcceleration, Zero),
+            dimensionedVector(dimensions::acceleration, Zero),
             zeroGradientFvPatchVectorField::typeName
         );
 
@@ -320,21 +323,23 @@ void Foam::solvers::incompressibleDenseParticleFluid::prePredictor()
                 mesh
             ),
             mesh,
-            dimensionedScalar(dimless/dimTime, Zero),
+            dimensionedScalar(dimless/dimensions::time, Zero),
             zeroGradientFvPatchVectorField::typeName
         );
 
         const fvVectorMatrix cloudSU(clouds.SU(Uc));
 
-        Fd().primitiveFieldRef() = -cloudSU.source()/mesh.V()/rhoc;
+        Fd().primitiveFieldRef() =
+            -cloudSU.source()/mesh.V().primitiveField()/rhoc.primitiveField();
         Fd().correctBoundaryConditions();
 
-        Dc().primitiveFieldRef() = -cloudSU.diag()/mesh.V()/rhoc;
+        Dc().primitiveFieldRef() =
+            -cloudSU.diag()/mesh.V().primitiveField()/rhoc.primitiveField();
         Dc().correctBoundaryConditions();
 
         Dcf = fvc::interpolate(Dc()).ptr();
 
-        phid =
+        phid = eval
         (
             fvc::flux(Fd())
            /(Dcf() + dimensionedScalar(Dc().dimensions(), small))

@@ -61,18 +61,19 @@ Foam::heatTransferModels::PowerLawNu::PowerLawNu(
 Foam::tmp<Foam::volScalarField> Foam::heatTransferModels::PowerLawNu::K(
     const scalar residualAlpha) const
 {
-    auto Re = max(interface_.Re(), residual_Re_);
+    volScalarField Re(max(interface_.Re(), residual_Re_));
 
-    volScalarField alpha_bounded(max(interface_.dispersed(), residualAlpha));
+    volScalarField alpha_bounded(
+        max(interface_.dispersed().alpha(), residualAlpha));
     if (superficial_Re_) {
-        Re.ref() *= alpha_bounded;
+        Re *= alpha_bounded;
     }
 
     volScalarField Nu(IOobject("Nu_" + interface_.name(), interface_.mesh(),
                                IOobject::NO_READ, IOobject::AUTO_WRITE, true),
                       coeff_a_ * pow(Re, coeff_b_) *
                           pow(interface_.Pr(), coeff_c_));
-    if (interface_.mesh().time().writeTime()) {
+    if (this->writeNu_ and interface_.mesh().time().writeTime()) {
         Nu.write();
     }
     assert(min(Nu).value() > 0);

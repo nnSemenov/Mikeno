@@ -51,6 +51,37 @@ inline const Foam::speciesTable& Foam::reaction::species() const
 }
 
 
+inline void Foam::reaction::state::reset
+(
+    const scalar p_,
+    const scalar T_,
+    const label li_
+)
+{
+    p = p_;
+    T = T_;
+    li = li_;
+
+    lnp = log(p);
+    rT = 1/T;
+    lnT = log(T);
+    C = sum(c);
+}
+
+
+inline void Foam::reaction::state::reset
+(
+    const scalar p_,
+    const scalar T_,
+    const scalarField& c_,
+    const label li_
+)
+{
+    c = c_;
+    reset(p_, T_, li_);
+}
+
+
 // * * * * * * * * * * * * * * * Ostream Operator  * * * * * * * * * * * * * //
 
 inline Foam::Ostream& Foam::operator<<(Foam::Ostream& os, const reaction& r)

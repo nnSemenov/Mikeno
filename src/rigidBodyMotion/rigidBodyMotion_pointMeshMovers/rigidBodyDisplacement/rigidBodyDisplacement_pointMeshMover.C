@@ -133,7 +133,7 @@ Foam::pointMeshMovers::rigidBodyDisplacement::rigidBodyDisplacement
 
     if (dict.found("ramp"))
     {
-        ramp_ = Function1<scalar>::New("ramp", dimTime, dimless, dict);
+        ramp_ = Function1<scalar>::New("ramp", dimensions::time, dimless, dict);
     }
     else
     {
@@ -282,9 +282,9 @@ Foam::pointMeshMovers::rigidBodyDisplacement::newPoints()
                .patchInternalField(meshSolver_.points0())
             );
 
-            meshSolver_.pointDisplacement().boundaryFieldRef()[patchi] ==
+            meshSolver_.pointDisplacement().boundaryFieldRef()[patchi] == eval
             (
-                Foam::transformPoints
+                Foam::pointTransform
                 (
                     transform0(bodyMeshes_[bi].bodyIndex_),
                     patchPoints0
@@ -333,7 +333,10 @@ void Foam::pointMeshMovers::rigidBodyDisplacement::distribute
 }
 
 
-bool Foam::pointMeshMovers::rigidBodyDisplacement::write() const
+bool Foam::pointMeshMovers::rigidBodyDisplacement::write
+(
+    const bool updateInstance
+) const
 {
     timeIOdictionary dict
     (
@@ -352,13 +355,13 @@ bool Foam::pointMeshMovers::rigidBodyDisplacement::write() const
     state().write(dict);
 
     return
-        pointMeshMover::write()
+        pointMeshMover::write(updateInstance)
      && dict.regIOobject::writeObject
         (
             IOstream::ASCII,
             IOstream::currentVersion,
             poly().time().writeCompression(),
-            true
+            updateInstance
         );
 }
 

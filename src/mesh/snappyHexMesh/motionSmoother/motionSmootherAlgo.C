@@ -56,7 +56,7 @@ void Foam::motionSmootherAlgo::testSyncPositions
     (
         mesh_,
         syncedFld,
-        minEqOp<point>(),           // combine op
+        minEqOp(),           // combine op
         point(great,great,great)    // null
     );
 
@@ -429,7 +429,7 @@ void Foam::motionSmootherAlgo::setDisplacementPatchFields
     pointVectorField& displacement
 )
 {
-    pointVectorField::Boundary& displacementBf =
+    pointVectorField::BoundaryField& displacementBf =
         displacement.boundaryFieldRef();
 
     // Adapt the fixedValue bc's (i.e. copy internal point data to
@@ -585,7 +585,7 @@ void Foam::motionSmootherAlgo::correctBoundaryConditions
 
     const lduSchedule& patchSchedule = mesh_.globalData().patchSchedule();
 
-    pointVectorField::Boundary& displacementBf =
+    pointVectorField::BoundaryField& displacementBf =
         displacement.boundaryFieldRef();
 
     // 1. evaluate on adaptPatches
@@ -758,68 +758,10 @@ bool Foam::motionSmootherAlgo::scaleMesh
 Foam::tmp<Foam::pointField> Foam::motionSmootherAlgo::curPoints() const
 {
     // Set newPoints as old + scale*displacement
-
-    // Create overall displacement with same b.c.s as displacement_
-    wordList actualPatchTypes;
-    {
-        const pointBoundaryMesh& pbm = displacement_.mesh().boundary();
-        actualPatchTypes.setSize(pbm.size());
-        forAll(pbm, patchi)
-        {
-            actualPatchTypes[patchi] = pbm[patchi].type();
-        }
-    }
-
-    wordList actualPatchFieldTypes;
-    {
-        const pointVectorField::Boundary& pfld =
-            displacement_.boundaryField();
-        actualPatchFieldTypes.setSize(pfld.size());
-        forAll(pfld, patchi)
-        {
-            if (isA<fixedValuePointPatchField<vector>>(pfld[patchi]))
-            {
-                // Get rid of funny
-                actualPatchFieldTypes[patchi] =
-                    fixedValuePointPatchField<vector>::typeName;
-            }
-            else
-            {
-                actualPatchFieldTypes[patchi] = pfld[patchi].type();
-            }
-        }
-    }
-
-    pointVectorField totalDisplacement
+    tmp<pointField> tnewPoints
     (
-        IOobject
-        (
-            "totalDisplacement",
-            mesh_.time().name(),
-            mesh_,
-            IOobject::NO_READ,
-            IOobject::NO_WRITE,
-            false
-        ),
-        scale_*displacement_,
-        actualPatchFieldTypes,
-        actualPatchTypes
+        oldPoints_ + scale_.primitiveField()*displacement_.primitiveField()
     );
-    correctBoundaryConditions(totalDisplacement);
-
-    if (debug)
-    {
-        Pout<< "scaleMesh : testing sync of totalDisplacement" << endl;
-        testSyncField
-        (
-            totalDisplacement,
-            maxMagEqOp(),
-            vector::zero,   // null value
-            1e-6*mesh_.bounds().mag()
-        );
-    }
-
-    tmp<pointField> tnewPoints(oldPoints_ + totalDisplacement.primitiveField());
 
     // Correct for 2-D motion
     modifyMotionPoints(tnewPoints.ref());
@@ -910,7 +852,7 @@ bool Foam::motionSmootherAlgo::scaleMesh
         wrongFaces
     );
 
-    if (returnReduce(wrongFaces.size(), sumOp<label>()) <= nAllowableErrors)
+    if (returnReduce(wrongFaces.size(), sumOp()) <= nAllowableErrors)
     {
         return true;
     }
@@ -1024,7 +966,7 @@ bool Foam::motionSmootherAlgo::scaleMesh
         (
             mesh_,
             scale_,
-            maxEqOp<scalar>(),
+            maxEqOp(),
             -great              // null value
         );
 
@@ -1032,8 +974,8 @@ bool Foam::motionSmootherAlgo::scaleMesh
         if (debug)
         {
             Pout<< "scale_ after smoothing :"
-                << " min:" << Foam::gMin(scale_)
-                << " max:" << Foam::gMax(scale_)
+                << " min:" << Foam::gMin(scale_())
+                << " max:" << Foam::gMax(scale_())
                 << endl;
         }
 

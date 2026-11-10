@@ -92,30 +92,30 @@ void Foam::fluxCorrectedVelocityFvPatchVectorField::evaluate
     const surfaceScalarField& phi =
         db().lookupObject<surfaceScalarField>(phiName_);
 
-    const fvsPatchField<scalar>& phip =
+    const scalarField& phip =
         patch().patchField<surfaceScalarField, scalar>(phi);
 
     const vectorField n(patch().nf());
     const Field<scalar>& magS = patch().magSf();
 
-    if (phi.dimensions() == dimVolumetricFlux)
+    if (phi.dimensions() == dimensions::volumetricFlux)
     {
-        operator==(*this - n*(n & *this) + n*phip/magS);
+        operator==(field() - n*(n & field()) + n*phip/magS);
     }
-    else if (phi.dimensions() == dimMassFlux)
+    else if (phi.dimensions() == dimensions::massFlux)
     {
-        const fvPatchField<scalar>& rhop =
+        const scalarField& rhop =
             patch().lookupPatchField<volScalarField, scalar>(rhoName_);
 
-        operator==(*this - n*(n & *this) + n*phip/(rhop*magS));
+        operator==(field() - n*(n & field()) + n*phip/(rhop*magS));
     }
     else
     {
         FatalErrorInFunction
             << "dimensions of phi are incorrect\n"
-            << "    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
 }

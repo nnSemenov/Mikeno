@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -74,33 +74,33 @@ Foam::fv::zeroDimensionalFixedPressureConstraint::model() const
 
 
 template<class AlphaFieldType>
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::zeroDimensionalFixedPressureConstraint::massSource
 (
     const AlphaFieldType& alpha,
-    const volScalarField::Internal& rho
+    const volInternalScalarField& rho
 ) const
 {
     // Source does not exist yet. Return zero.
     if (!sourcePtr_.valid())
     {
         return
-            volScalarField::Internal::New
+            volInternalScalarField::New
             (
                 typedName("source"),
                 mesh(),
-                dimensionedScalar(dimMass/dimVolume/dimTime, 0)
+                dimensionedScalar(dimensions::density/dimensions::time, 0)
             );
     }
 
     // Source for mass-based pressure equations
-    if (sourcePtr_->dimensions() == dimMass/dimVolume/dimTime)
+    if (sourcePtr_->dimensions() == dimensions::density/dimensions::time)
     {
         return alpha*sourcePtr_();
     }
 
     // Source for volume-based pressure equations
-    if (sourcePtr_->dimensions() == dimless/dimTime)
+    if (sourcePtr_->dimensions() == dimensions::rate)
     {
         return alpha*rho*sourcePtr_();
     }
@@ -109,7 +109,7 @@ Foam::fv::zeroDimensionalFixedPressureConstraint::massSource
         << "Pressure equation dimensions not recognised"
         << exit(FatalError);
 
-    return tmp<volScalarField::Internal>(nullptr);
+    return tmp<volInternalScalarField>(nullptr);
 }
 
 
@@ -128,7 +128,7 @@ void Foam::fv::zeroDimensionalFixedPressureConstraint::readCoeffs
         (
             "pressure",
             mesh().time().userUnits(),
-            dimPressure,
+            dimensions::pressure,
             dict
         ).ptr()
     );
@@ -180,7 +180,7 @@ Foam::fv::zeroDimensionalFixedPressureConstraint::constrainedFields() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::zeroDimensionalFixedPressureConstraint::pEqnSource
 (
     const volScalarField& rho,
@@ -194,20 +194,20 @@ Foam::fv::zeroDimensionalFixedPressureConstraint::pEqnSource
     if (!sourcePtr_.valid())
     {
         return
-            volScalarField::Internal::New
+            volInternalScalarField::New
             (
                 typedName("source"),
                 mesh(),
-                dimensionedScalar(pEqn.dimensions()/dimVolume, 0)
+                dimensionedScalar(pEqn.dimensions()/dimensions::volume, 0)
             );
     }
 
     // Return the source, multiplying by density if needed
-    if (sourcePtr_->dimensions() == pEqn.dimensions()/dimVolume)
+    if (sourcePtr_->dimensions() == pEqn.dimensions()/dimensions::volume)
     {
         return sourcePtr_();
     }
-    else if (sourcePtr_->dimensions() == pEqn.dimensions()/dimMass)
+    else if (sourcePtr_->dimensions() == pEqn.dimensions()/dimensions::mass)
     {
         return rho()*sourcePtr_();
     }
@@ -218,29 +218,29 @@ Foam::fv::zeroDimensionalFixedPressureConstraint::pEqnSource
             << pEqn.psi().name() << " not recognised"
             << exit(FatalError);
 
-        return tmp<volScalarField::Internal>(nullptr);
+        return tmp<volInternalScalarField>(nullptr);
     }
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::zeroDimensionalFixedPressureConstraint::massSource
 (
-    const volScalarField::Internal& rho
+    const volInternalScalarField& rho
 ) const
 {
     return massSource<geometricOneField>(geometricOneField(), rho);
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::zeroDimensionalFixedPressureConstraint::massSource
 (
-    const volScalarField::Internal& alpha,
-    const volScalarField::Internal& rho
+    const volInternalScalarField& alpha,
+    const volInternalScalarField& rho
 ) const
 {
-    return massSource<volScalarField::Internal>(alpha, rho);
+    return massSource<volInternalScalarField>(alpha, rho);
 }
 
 
@@ -255,7 +255,7 @@ bool Foam::fv::zeroDimensionalFixedPressureConstraint::constrain
     {
         sourcePtr_.set
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -266,7 +266,7 @@ bool Foam::fv::zeroDimensionalFixedPressureConstraint::constrain
                     IOobject::AUTO_WRITE
                 ),
                 mesh(),
-                dimensionedScalar(pEqn.dimensions()/dimVolume, 0)
+                dimensionedScalar(pEqn.dimensions()/dimensions::volume, 0)
             )
         );
     }
@@ -278,13 +278,13 @@ bool Foam::fv::zeroDimensionalFixedPressureConstraint::constrain
     // at the desired pressure
     sourcePtr_() =
         pEqn
-      & volScalarField::Internal::New
+      & volInternalScalarField::New
         (
             "p",
             mesh(),
             dimensionedScalar
             (
-                dimPressure,
+                dimensions::pressure,
                 p_->value(mesh().time().value())
             )
         );

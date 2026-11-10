@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,7 +28,7 @@ License
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::PsiThermo<BaseThermo>::calculate()
+void Foam::PsiThermo<BaseThermo>::calculate(const bool correctBCs)
 {
     const scalarField& hCells = this->he_;
     const scalarField& pCells = this->p_;
@@ -69,28 +69,28 @@ void Foam::PsiThermo<BaseThermo>::calculate()
             transportMixture.kappa(pCells[celli], TCells[celli]);
     }
 
-    volScalarField::Boundary& pBf =
+    volScalarField::BoundaryField& pBf =
         this->p_.boundaryFieldRef();
 
-    volScalarField::Boundary& TBf =
+    volScalarField::BoundaryField& TBf =
         this->T_.boundaryFieldRef();
 
-    volScalarField::Boundary& CpBf =
+    volScalarField::BoundaryField& CpBf =
         this->Cp_.boundaryFieldRef();
 
-    volScalarField::Boundary& CvBf =
+    volScalarField::BoundaryField& CvBf =
         this->Cv_.boundaryFieldRef();
 
-    volScalarField::Boundary& psiBf =
+    volScalarField::BoundaryField& psiBf =
         this->psi_.boundaryFieldRef();
 
-    volScalarField::Boundary& heBf =
+    volScalarField::BoundaryField& heBf =
         this->he().boundaryFieldRef();
 
-    volScalarField::Boundary& muBf =
+    volScalarField::BoundaryField& muBf =
         this->mu_.boundaryFieldRef();
 
-    volScalarField::Boundary& kappaBf =
+    volScalarField::BoundaryField& kappaBf =
         this->kappa_.boundaryFieldRef();
 
     forAll(this->T_.boundaryField(), patchi)
@@ -106,6 +106,13 @@ void Foam::PsiThermo<BaseThermo>::calculate()
 
         if (pT.fixesValue())
         {
+            if (correctBCs)
+            {
+                // Update temperature boundary condition
+                // for consistency with updated internal temperature
+                pT.evaluate();
+            }
+
             forAll(pT, facei)
             {
                 auto composition =
@@ -167,7 +174,7 @@ Foam::PsiThermo<BaseThermo>::PsiThermo
 :
     BaseThermo(mesh, phaseName)
 {
-    calculate();
+    calculate(false);
 
     // Switch on saving old time
     this->psi_.oldTime();
@@ -184,7 +191,7 @@ Foam::PsiThermo<BaseThermo>::~PsiThermo()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::PsiThermo<BaseThermo>::correct()
+void Foam::PsiThermo<BaseThermo>::correct(const bool correctBCs)
 {
     if (BaseThermo::debug)
     {
@@ -194,7 +201,7 @@ void Foam::PsiThermo<BaseThermo>::correct()
     // force the saving of the old-time values
     this->psi_.oldTime();
 
-    calculate();
+    calculate(correctBCs);
 
     if (BaseThermo::debug)
     {

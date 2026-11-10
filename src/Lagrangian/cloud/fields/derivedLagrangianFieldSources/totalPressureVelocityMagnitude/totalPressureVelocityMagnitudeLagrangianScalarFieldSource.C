@@ -134,7 +134,7 @@ Foam::totalPressureVelocityMagnitudeLagrangianScalarFieldSource::Umag
 
     // Return the direction multiplied by the velocity magnitude associated
     // with the dynamic head
-    if (pcVf.dimensions() == dimKinematicPressure)
+    if (pcVf.dimensions() == dimensions::kinematicPressure)
     {
         const clouds::coupledToConstantDensityFluid& ctcdfCloud =
             cloudField_.cloud<clouds::coupledToConstantDensityFluid>
@@ -144,7 +144,7 @@ Foam::totalPressureVelocityMagnitudeLagrangianScalarFieldSource::Umag
 
         return sqrt(2*deltaP/ctcdfCloud.rhoByRhoc);
     }
-    else if (pcVf.dimensions() == dimPressure)
+    else if (pcVf.dimensions() == dimensions::pressure)
     {
         cloudField_.assertCloud
         <

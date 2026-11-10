@@ -164,6 +164,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "volFields.H"
+#include "fvsPatchField.H"
 
 namespace Foam
 {
@@ -171,7 +172,7 @@ namespace Foam
     inline void setSnGrad
     (
         volScalarField::Boundary& bf,
-        const FieldField<surfaceMesh::PatchField, scalar>& snGrad
+        const SurfaceBoundaryField<scalar>& snGrad
     )
     {
         forAll(bf, patchi)
@@ -187,10 +188,25 @@ namespace Foam
     inline void setSnGrad
     (
         volScalarField::Boundary& bf,
-        const tmp<FieldField<surfaceMesh::PatchField, scalar>>& tsnGrad
+        const tmp<SurfaceBoundaryField<scalar>>& tsnGrad
     )
     {
         setSnGrad<GradBC>(bf, tsnGrad());
+    }
+
+    template
+    <
+        class GradBC,
+        class Expression,
+        class = EnableIfExpression<Expression>
+    >
+    inline void setSnGrad
+    (
+        volScalarField::Boundary& bf,
+        const Expression& snGrad
+    )
+    {
+        setSnGrad<GradBC>(bf, SurfaceBoundaryField<scalar>(snGrad));
     }
 }
 

@@ -34,7 +34,7 @@ License
 template<class Type>
 void Foam::fvMeshToFvMesh::evaluateConstraintTypes(VolField<Type>& fld)
 {
-    typename VolField<Type>::Boundary& fldBf = fld.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& fldBf = fld.boundaryFieldRef();
 
     if
     (
@@ -122,7 +122,7 @@ Foam::tmp<Foam::VolField<Type>> Foam::fvMeshToFvMesh::srcToTgt
 {
     // Construct target patch fields as copies of source patch fields, but do
     // not map values yet
-    PtrList<fvPatchField<Type>> tgtPatchFields(tgtMesh_.boundary().size());
+    PtrField<fvPatchField<Type>> tgtPatchFields(tgtMesh_.boundary().size());
     forAll(patchIndices(), i)
     {
         const label srcPatchi = patchIndices()[i].first();
@@ -174,9 +174,10 @@ Foam::tmp<Foam::VolField<Type>> Foam::fvMeshToFvMesh::srcToTgt
         (
             typedName("interpolate(" + srcFld.name() + ")"),
             srcToTgt<Type>(srcFld.internalField())(),
-            tgtPatchFields
+            tgtPatchFields,
+            srcFld.sources().table()
         );
-    typename VolField<Type>::Boundary& tgtBfld =
+    typename VolField<Type>::BoundaryField& tgtBfld =
         ttgtFld.ref().boundaryFieldRef();
 
     // Mapped patches
@@ -191,7 +192,7 @@ Foam::tmp<Foam::VolField<Type>> Foam::fvMeshToFvMesh::srcToTgt
             patchToPatchNormalisedFieldMapper
             (
                 patchInterpolation(i),
-                tgtPatchStabilisation(i)
+                tgtPatchExtrapolation(i)
             )
         );
     }
@@ -226,10 +227,11 @@ Foam::tmp<Foam::VolField<Type>> Foam::fvMeshToFvMesh::srcToTgt
         VolField<Type>::New
         (
             typedName("interpolate(" + srcFld.name() + ")"),
-            srcToTgt<Type>(srcFld.v(), leftOverTgtFld.v())(),
-            leftOverTgtFld.boundaryField()
+            srcToTgt<Type>(srcFld(), leftOverTgtFld())(),
+            leftOverTgtFld.boundaryField(),
+            leftOverTgtFld.sources().table()
         );
-    typename VolField<Type>::Boundary& tgtBfld =
+    typename VolField<Type>::BoundaryField& tgtBfld =
         ttgtFld.ref().boundaryFieldRef();
 
     // Mapped patches
@@ -280,7 +282,7 @@ Foam::tmp<Foam::VolInternalField<Type>> Foam::fvMeshToFvMesh::srcToTgt
             cellsInterpolation().srcToTgt(srcFld)
         );
 
-    tgtCellsStabilisation().stabilise(ttgtFld.ref());
+    tgtCellsExtrapolation().extrapolate(ttgtFld.ref());
 
     return ttgtFld;
 }
@@ -312,7 +314,7 @@ Foam::fvMeshToFvMesh::srcToTgt
 ) const
 {
     // Map all patch fields
-    PtrList<fvsPatchField<Type>> tgtPatchFields(tgtMesh_.boundary().size());
+    PtrField<fvsPatchField<Type>> tgtPatchFields(tgtMesh_.boundary().size());
     forAll(patchIndices(), i)
     {
         const label srcPatchi = patchIndices()[i].first();
@@ -331,7 +333,7 @@ Foam::fvMeshToFvMesh::srcToTgt
                     patchToPatchNormalisedFieldMapper
                     (
                         patchInterpolation(i),
-                        tgtPatchStabilisation(i)
+                        tgtPatchExtrapolation(i)
                     )
                 )
             );

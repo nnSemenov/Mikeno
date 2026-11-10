@@ -40,7 +40,6 @@ Description
 #include "fvMesh.H"
 #include "MeshedSurfaces.H"
 #include "globalIndex.H"
-#include "cellSet.H"
 #include "systemDict.H"
 
 #include "extrudedMesh.H"
@@ -197,25 +196,6 @@ void updateFaceLabels(const polyTopoChangeMap& map, labelList& faceLabels)
 }
 
 
-void updateCellSet(const polyTopoChangeMap& map, labelHashSet& cellLabels)
-{
-    const labelList& reverseMap = map.reverseCellMap();
-
-    labelHashSet newCellLabels(2*cellLabels.size());
-
-    forAll(cellLabels, i)
-    {
-        label oldCelli = cellLabels[i];
-
-        if (reverseMap[oldCelli] >= 0)
-        {
-            newCellLabels.insert(reverseMap[oldCelli]);
-        }
-    }
-    cellLabels.transfer(newCellLabels);
-}
-
-
 template<class PatchType>
 void changeFrontBackPatches
 (
@@ -266,9 +246,11 @@ int main(int argc, char *argv[])
     #include "addRegionOption.H"
     #include "addMeshOption.H"
     #include "addDictOption.H"
+    #include "addNoOverwriteOption.H"
 
     #include "setRootCase.H"
     #include "createTimeExtruded.H"
+    #include "setNoOverwrite.H"
 
     const dictionary dict(systemDict("extrudeMeshDict", args, runTimeExtruded));
 
@@ -314,9 +296,6 @@ int main(int argc, char *argv[])
     word backPatchName;
     labelList backPatchFaces;
 
-    // Optional added cells (get written to cellSet)
-    labelHashSet addedCellsSet;
-
     if (mode == extrudeSurfaceType::patch || mode == extrudeSurfaceType::mesh)
     {
         if (flipNormals && mode == extrudeSurfaceType::mesh)
@@ -343,7 +322,7 @@ int main(int argc, char *argv[])
             frontPatchName = sourcePatches[0];
         }
 
-        wordList zoneNames(dict.lookupOrDefault("zoneNames", wordList::null()));
+        wordList zoneNames(dict.lookupOrDefault("zoneNames", wordList{}));
         if (zoneNames.size() == 1)
         {
             if (zoneNames[0] == "patchNames")
@@ -511,7 +490,7 @@ int main(int argc, char *argv[])
         // Add any patches
 
         label nAdded = nPatches - mesh.poly().boundary().size();
-        reduce(nAdded, sumOp<label>());
+        reduce(nAdded, sumOp());
 
         Info<< "Adding overall " << nAdded << " processor patches." << endl;
 
@@ -732,27 +711,6 @@ int main(int argc, char *argv[])
             map().reverseFaceMap(),
             backPatchFaces
         );
-
-        // Store added cells
-        if (mode == extrudeSurfaceType::mesh)
-        {
-            const labelListList addedCells
-            (
-                layerExtrude.addedCells
-                (
-                    meshFromMesh,
-                    layerExtrude.layerFaces()
-                )
-            );
-            forAll(addedCells, facei)
-            {
-                const labelList& aCells = addedCells[facei];
-                forAll(aCells, i)
-                {
-                    addedCellsSet.insert(aCells[i]);
-                }
-            }
-        }
     }
     else
     {
@@ -882,7 +840,7 @@ int main(int argc, char *argv[])
 
         // Put all modifications into meshMod
         bool anyChange = collapser.setRefinement(allPointInfo, meshMod);
-        reduce(anyChange, orOp<bool>());
+        reduce(anyChange, orOp());
 
         if (anyChange)
         {
@@ -895,7 +853,6 @@ int main(int argc, char *argv[])
             // Update stored data
             updateFaceLabels(map(), frontPatchFaces);
             updateFaceLabels(map(), backPatchFaces);
-            updateCellSet(map(), addedCellsSet);
         }
     }
 
@@ -993,33 +950,46 @@ int main(int argc, char *argv[])
 
         // Update fields
         mesh.topoChange(map);
-
-        // Update local data
-        updateCellSet(map(), addedCellsSet);
     }
 
-    mesh.setInstance(runTimeExtruded.constant());
+    // Set the write instance based on the overwrite flag and whether or not a
+    // mesh is already present
+    const fileName meshInstanceExtruded =
+        polyMesh::meshDirInstance
+        (
+            IOobject
+            (
+                Foam::polyMesh::defaultRegion,
+                runTimeExtruded.name(),
+                runTimeExtruded,
+                Foam::IOobject::MUST_READ
+            )
+        );
+    if (meshInstanceExtruded != fileName::null)
+    {
+        if (!overwrite)
+        {
+            runTimeExtruded ++;
+
+            mesh.setInstance(runTimeExtruded.name());
+        }
+        else
+        {
+            mesh.setInstance(meshInstanceExtruded);
+        }
+    }
+    else
+    {
+        mesh.setInstance(runTimeExtruded.constant());
+    }
+
     Info<< "Writing mesh to " << mesh.relativeObjectPath() << nl << endl;
 
     if (!mesh.write())
     {
         FatalErrorInFunction
+            << "Failed writing " << mesh.name()
             << exit(FatalError);
-    }
-
-    // Need writing cellSet
-    label nAdded = returnReduce(addedCellsSet.size(), sumOp<label>());
-    if (nAdded > 0)
-    {
-        cellSet addedCells(mesh, "addedCells", addedCellsSet);
-        Info<< "Writing added cells to cellSet " << addedCells.name()
-            << nl << endl;
-        if (!addedCells.write())
-        {
-            FatalErrorInFunction
-                << addedCells.name()
-                << exit(FatalError);
-        }
     }
 
     Info<< "End\n" << endl;

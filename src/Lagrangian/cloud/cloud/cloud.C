@@ -272,7 +272,7 @@ bool Foam::cloud::storeStates()
         if (!patchMesh.empty()) needStates = true;
     }
 
-    reduce(needStates, orOp<bool>());
+    reduce(needStates, orOp());
 
     // Create the state labels field as appropriate
     if (needStates && !statePtr_.valid())
@@ -294,7 +294,7 @@ bool Foam::cloud::storeStates()
                     mesh().boundary().size(),
                     calculatedLagrangianPatchLabelField::typeName
                 ),
-                wordList::null(),
+                wordList{},
                 LagrangianModels().modelTypeFieldSourceTypes
                 <
                     LagrangianInjection,
@@ -341,7 +341,7 @@ Foam::tmp<Foam::LagrangianSubScalarField> Foam::cloud::cellLengthScale
         (
             "cellLengthScale",
             subMesh,
-            dimLength,
+            dimensions::length,
             scalarField(cellLengthScaleVf_, subMesh.sub(mesh_.celli()))
         );
 }
@@ -389,7 +389,7 @@ void Foam::cloud::track
            /max
             (
                 mag(displacement),
-                dimensionedScalar(dimLength, rootVSmall)
+                dimensionedScalar(dimensions::length, rootVSmall)
             )
         );
 
@@ -668,7 +668,7 @@ void Foam::cloud::solve(const bool initial, const bool final)
         (
             IOobject("zeroDeltaT", mesh().time().name(), mesh()),
             modifiedMesh,
-            dimensionedScalar(dimTime, scalar(0))
+            dimensionedScalar(dimensions::time, scalar(0))
         );
 
         addToAverageFields(modifiedMesh, false);
@@ -737,7 +737,7 @@ void Foam::cloud::solve(const bool initial, const bool final)
         returnReduce
         (
             mesh_.sub(LagrangianGroup::complete).size() != mesh_.size(),
-            orOp<bool>()
+            orOp()
         )
     )
     {

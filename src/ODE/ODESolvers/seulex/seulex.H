@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2019 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -73,6 +73,17 @@ class seulex
                 stepFactor4_, stepFactor5_,
                 kFactor1_, kFactor2_;
 
+        // Controls
+
+           //- Optional LU decomposition pivoting switch
+           //  Defaults to false
+           Switch pivot_;
+
+           //- Optional LU decomposition row filtering tolerance
+           //  Defaults to min(absTol_)
+           scalar rowTol_;
+
+
         // Evaluated constants
 
             scalar jacRedo_;
@@ -92,6 +103,7 @@ class seulex
             mutable scalarSquareMatrix dfdy_;
             mutable scalarSquareMatrix a_;
             mutable labelList pivotIndices_;
+            mutable scalarList pivotScale_;
 
             // Fields space for "solve" function
             mutable scalarField dxOpt_, temp_;

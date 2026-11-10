@@ -53,7 +53,8 @@ void Foam::functionObjects::cloudFlux::crossPatchFaces
 
     const LagrangianSubScalarField dqdt(q(fraction)/time_.deltaT());
 
-    const surfaceScalarField::Boundary& magSfb = mesh().magSf().boundaryField();
+    const surfaceScalarField::BoundaryField& magSfb =
+        mesh().magSf().boundaryField();
 
     forAll(fraction, subi)
     {
@@ -105,7 +106,7 @@ Foam::functionObjects::cloudFlux::cloudFlux
             IOobject::AUTO_WRITE
         ),
         mesh(),
-        dimensionedScalar(qDims/dimTime, scalar(0))
+        dimensionedScalar(qDims/dimensions::time, scalar(0))
     )
 {}
 
@@ -120,7 +121,7 @@ Foam::functionObjects::cloudFlux::~cloudFlux()
 
 Foam::wordList Foam::functionObjects::cloudFlux::fields() const
 {
-    return wordList::null();
+    return {};
 }
 
 

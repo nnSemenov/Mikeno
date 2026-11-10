@@ -39,9 +39,10 @@ Description
 #include "fixedValueFvPatchFields.H"
 #include "zeroGradientFvPatchFields.H"
 #include "findRefCell.H"
-#include "IOMRFZoneList.H"
+#include "MRFZones.H"
 #include "adjustPhi.H"
 
+#include "fviDiv.H"
 #include "fvcFlux.H"
 #include "fvcReconstruct.H"
 
@@ -78,7 +79,7 @@ int main(int argc, char *argv[])
         "Calculate and write the pressure field"
     );
 
-    #include "setRootCaseFunctionObjects.H"
+    #include "setRootCaseNoFunctionObjects.H"
     #include "createTime.H"
     #include "createMesh.H"
 
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
         (
             fvm::laplacian(dimensionedScalar(dimless, 1), Phi)
          ==
-            fvc::div(phi)
+            fvi::div(phi)
         );
 
         PhiEqn.setReference(PhiRefCell, PhiRefValue);
@@ -117,17 +118,15 @@ int main(int argc, char *argv[])
     }
 
     Info<< "Continuity error = "
-        << mag(fvc::div(phi))().weightedAverage(mesh.V()).value()
+        << weightedAverage(mag(fvi::div(phi)), mesh.V()).value()
         << endl;
 
     U = fvc::reconstruct(MRF.absolute(phi));
     U.correctBoundaryConditions();
 
     Info<< "Interpolated velocity error = "
-        << (
-                sqrt(sum(sqr(fvc::flux(U) - MRF.absolute(phi))))
-               /sum(mesh.magSf())
-           ).value()
+        <<  (sqrt(sum(sqr(fvc::flux(U) - MRF.absolute(phi))))/sum(mesh.magSf()))
+           .value()
         << endl;
 
     // Write U and phi
@@ -157,15 +156,15 @@ int main(int argc, char *argv[])
 
         // Calculate the flow-direction filter tensor
         volScalarField magSqrU(magSqr(U));
-        volSymmTensorField F(sqr(U)/(magSqrU + small*average(magSqrU)));
+        volSymmTensorField F(sqr(U)/(magSqrU + small*average(magSqrU())));
 
         // Calculate the divergence of the flow-direction filtered div(U*U)
         // Filtering with the flow-direction generates a more reasonable
         // pressure distribution in regions of high velocity gradient in the
         // direction of the flow
-        volScalarField divDivUU
+        volInternalScalarField divDivUU
         (
-            fvc::div
+            fvi::div
             (
                 F & fvc::div(phi, U),
                 "div(div(phi,U))"

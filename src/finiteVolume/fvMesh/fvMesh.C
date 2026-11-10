@@ -646,7 +646,8 @@ void Foam::fvMesh::postConstruct
                     IOobject::NO_WRITE,
                     true
                 ),
-                *this
+                *this,
+                dimensions::volume
             );
 
             V00();
@@ -666,7 +667,8 @@ void Foam::fvMesh::postConstruct
                     IOobject::NO_WRITE,
                     true
                 ),
-                *this
+                *this,
+                dimensions::volumetricFlux
             );
         }
     }
@@ -840,7 +842,7 @@ Foam::fvMesh::readUpdateState Foam::fvMesh::readUpdate
     // Determine if this update moves forward in time. If so, searching back in
     // time for data files will only go back as far as the previous instance.
     const fileName instance0 = instance();
-    const bool forward = readUpdateIsForward();
+    const bool forward [[maybe_unused]] = readUpdateIsForward();
 
     // Update the polyMesh and the mesh instance
     const polyMesh::readUpdateState state = polyMesh::readUpdate();
@@ -1260,7 +1262,7 @@ Foam::tmp<Foam::scalarField> Foam::fvMesh::movePoints(const pointField& p)
         }
         else
         {
-            V0Ptr_->scalarField::operator=(V());
+            V0Ptr_->scalarField::operator=(V().primitiveField());
         }
     }
 
@@ -1279,7 +1281,8 @@ Foam::tmp<Foam::scalarField> Foam::fvMesh::movePoints(const pointField& p)
                 true
             ),
             *this,
-            dimVolume/dimTime
+            dimensions::volumetricFlux,
+            fvsPatchField<scalar>::calculatedType()
         );
     }
     else
@@ -1303,7 +1306,7 @@ Foam::tmp<Foam::scalarField> Foam::fvMesh::movePoints(const pointField& p)
 
     const fvPatchList& patches = boundary();
 
-    surfaceScalarField::Boundary& phibf = phi.boundaryFieldRef();
+    surfaceScalarField::BoundaryField& phibf = phi.boundaryFieldRef();
 
     forAll(patches, patchi)
     {
@@ -1534,8 +1537,8 @@ void Foam::fvMesh::unconform
 
     // Set the face geometry
     SfRef() == Sf;
-    magSfRef() == max(mag(Sf), dimensionedScalar(dimArea, rootVSmall));
-    CRef().boundaryFieldRef() == Cf.boundaryField();
+    magSfRef() == max(mag(Sf), dimensionedScalar(dimensions::area, rootVSmall));
+    CRef().boundaryRef() == Cf.boundary();
     CfRef() == Cf;
 
     // Communicate processor-coupled cell geometry. Cell-centre processor patch
@@ -1558,7 +1561,7 @@ void Foam::fvMesh::unconform
     // sufficient for now.
     if (sync && time().completeCase())
     {
-        volVectorField::Boundary& CBf = CRef().boundaryFieldRef();
+        volVectorField::BoundaryField& CBf = CRef().boundaryFieldRef();
 
         const label nReq = Pstream::nRequests();
 
@@ -1676,7 +1679,7 @@ void Foam::fvMesh::reorderPatches
     #define ReorderPatchFieldsType(Type, FieldType)                            \
         ReorderPatchFields<FieldType<Type>>                                    \
         (                                                                      \
-            const_cast<objectRegistry&>(db()),                             \
+            const_cast<objectRegistry&>(db()),                                 \
             newToOld                                                           \
         );
     FOR_ALL_FIELD_TYPES(ReorderPatchFieldsType, VolField);
@@ -1690,7 +1693,7 @@ bool Foam::fvMesh::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     bool ok = true;
@@ -1709,7 +1712,7 @@ bool Foam::fvMesh::writeObject
             *polyFacesBfPtr_
         );
 
-        ok = ok & polyFaces.write(write);
+        ok = ok & polyFaces.write(updateInstance);
     }
 
     // Write geometry out at a higher precision
@@ -1719,13 +1722,13 @@ bool Foam::fvMesh::writeObject
     // Write the mesh flux if old-old-time volumes exist
     if (phiPtr_ && V00Ptr_)
     {
-        ok = ok && phiPtr_->write(write);
+        ok = ok && phiPtr_->write(updateInstance);
     }
 
     // Write old-time volumes if old-old-time volumes exist
     if (V0Ptr_ && V00Ptr_)
     {
-        ok = ok && V0Ptr_->write(write);
+        ok = ok && V0Ptr_->write(updateInstance);
     }
 
     // Restore the default precision
@@ -1733,25 +1736,25 @@ bool Foam::fvMesh::writeObject
 
     if (stitcher_.valid())
     {
-        stitcher_->write(write);
+        stitcher_->write(updateInstance);
     }
 
     if (topoChanger_.valid())
     {
-        topoChanger_->write(write);
+        topoChanger_->write(updateInstance);
     }
 
     if (distributor_.valid())
     {
-        distributor_->write(write);
+        distributor_->write(updateInstance);
     }
 
     if (mover_.valid())
     {
-        mover_->write(write);
+        mover_->write(updateInstance);
     }
 
-    return ok && polyMesh::writeObject(fmt, ver, cmp, write);
+    return ok && polyMesh::writeObject(fmt, ver, cmp, updateInstance);
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -109,7 +109,7 @@ inline Foam::fv::filmCloudTransfer::CloudToFilmTransferRate
         (
             "Su",
             mesh(),
-            dimensioned<Type>(dimProp/dimVolume/dimTime, Zero)
+            dimensioned<Type>(dimProp/dimensions::volume/dimensions::time, Zero)
         )
     );
 
@@ -121,10 +121,10 @@ inline Foam::fv::filmCloudTransfer::CloudToFilmTransferRate
         UIndirectList<Type>(tSu.ref(), film_.surfacePatch().faceCells()) =
             film_.surfacePatchMap().fromNeighbour
             (
-                prop/cloudMesh.boundary()[cloudPatchi].magSf()
+                eval(prop/cloudMesh.boundary()[cloudPatchi].magSf())
             );
 
-        tSu.ref().primitiveFieldRef() /= film_.VbyA;
+        tSu.ref().primitiveFieldRef() /= film_.VbyA.primitiveField();
         tSu.ref().primitiveFieldRef() /= mesh().time().deltaTValue();
     }
 
@@ -146,7 +146,11 @@ void Foam::fv::filmCloudTransfer::addSup
 
     if (&alpha == &film_.alpha && &eqn.psi() == &film_.alpha)
     {
-        eqn += CloudToFilmTransferRate<scalar>(massFromCloud_, dimMass);
+        eqn += CloudToFilmTransferRate<scalar>
+        (
+            massFromCloud_,
+            dimensions::mass
+        );
 
         if (ejection_.valid())
         {
@@ -177,7 +181,11 @@ void Foam::fv::filmCloudTransfer::addSup
 
     if (&he == &film_.thermo.he() && &eqn.psi() == &film_.thermo.he())
     {
-        eqn += CloudToFilmTransferRate<scalar>(energyFromCloud_, dimEnergy);
+        eqn += CloudToFilmTransferRate<scalar>
+        (
+            energyFromCloud_,
+            dimensions::energy
+        );
 
         if (ejection_.valid())
         {
@@ -208,7 +216,11 @@ void Foam::fv::filmCloudTransfer::addSup
 
     if (&U == &film_.U && &U == &film_.U)
     {
-        eqn += CloudToFilmTransferRate<vector>(momentumFromCloud_, dimMomentum);
+        eqn += CloudToFilmTransferRate<vector>
+        (
+            momentumFromCloud_,
+            dimensions::momentum
+        );
 
         if (ejection_.valid())
         {
@@ -287,11 +299,9 @@ Foam::fv::filmCloudTransfer::ejectedMassToCloud() const
 {
     return filmToCloudTransfer<scalar>
     (
-        (
-            mesh().V()
-           *mesh().time().deltaTValue()
-           *film_.alpha()*film_.rho()*ejection_->rate()
-        )()
+        mesh().V()
+       *mesh().time().deltaTValue()
+       *film_.alpha()*film_.rho()*ejection_->rate()
     );
 }
 

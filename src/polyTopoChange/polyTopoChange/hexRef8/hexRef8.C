@@ -48,9 +48,8 @@ namespace Foam
 
     //- Reduction class. If x and y are not equal assign value.
     template<label value>
-    class ifEqEqOp
+    struct ifEqEqOp
     {
-        public:
         void operator()(label& x, const label y) const
         {
             x = (x == y) ? x : value;
@@ -319,7 +318,7 @@ Foam::scalar Foam::hexRef8::getLevel0EdgeLength() const
 
     // Get the minimum per level over all processors. Note minimum so if
     // cells are not cubic we use the smallest edge side.
-    Pstream::listCombineGather(typEdgeLenSqr, minEqOp<scalar>());
+    Pstream::listCombineGather(typEdgeLenSqr, minEqOp());
     Pstream::listCombineScatter(typEdgeLenSqr);
 
     if (debug)
@@ -354,7 +353,7 @@ Foam::scalar Foam::hexRef8::getLevel0EdgeLength() const
         }
     }
 
-    Pstream::listCombineGather(maxEdgeLenSqr, maxEqOp<scalar>());
+    Pstream::listCombineGather(maxEdgeLenSqr, maxEqOp());
     Pstream::listCombineScatter(maxEdgeLenSqr);
 
     if (debug)
@@ -1600,6 +1599,8 @@ void Foam::hexRef8::setInstance(const fileName& inst)
             << "Resetting file instance to " << inst << endl;
     }
 
+    writeOpt() = IOobject::AUTO_WRITE;
+
     cellLevel_.instance() = inst;
     pointLevel_.instance() = inst;
     level0Edge_.instance() = inst;
@@ -1832,7 +1833,7 @@ Foam::hexRef8::hexRef8(const polyMesh& mesh, const bool readHistory)
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        dimensionedScalar(dimLength, getLevel0EdgeLength())
+        dimensionedScalar(dimensions::length, getLevel0EdgeLength())
     ),
     history_
     (
@@ -1848,9 +1849,7 @@ Foam::hexRef8::hexRef8(const polyMesh& mesh, const bool readHistory)
         // All cells visible if not read or readHistory = false
         (readHistory ? mesh_.nCells() : 0)
     ),
-    faceRemover_(mesh_, great),     // merge boundary faces wherever possible
-    savedPointLevel_(0),
-    savedCellLevel_(0)
+    faceRemover_(mesh_, great)      // merge boundary faces wherever possible
 {
     if (readHistory)
     {
@@ -1907,8 +1906,6 @@ Foam::hexRef8::hexRef8(const polyMesh& mesh, const bool readHistory)
     {
         checkMesh();
     }
-
-    writeOpt() = IOobject::AUTO_WRITE;
 }
 
 
@@ -1967,7 +1964,7 @@ Foam::hexRef8::hexRef8
         ),
         dimensionedScalar
         (
-            dimLength,
+            dimensions::length,
             (level0Edge >= 0 ? level0Edge : getLevel0EdgeLength())
         )
     ),
@@ -1984,9 +1981,7 @@ Foam::hexRef8::hexRef8
         ),
         history
     ),
-    faceRemover_(mesh_, great),     // merge boundary faces wherever possible
-    savedPointLevel_(0),
-    savedCellLevel_(0)
+    faceRemover_(mesh_, great)      // merge boundary faces wherever possible
 {
     if (history_.active() && history_.visibleCells().size() != mesh_.nCells())
     {
@@ -2022,8 +2017,6 @@ Foam::hexRef8::hexRef8
     {
         checkMesh();
     }
-
-    writeOpt() = IOobject::AUTO_WRITE;
 }
 
 
@@ -2081,7 +2074,7 @@ Foam::hexRef8::hexRef8
         ),
         dimensionedScalar
         (
-            dimLength,
+            dimensions::length,
             (level0Edge >= 0 ? level0Edge : getLevel0EdgeLength())
         )
     ),
@@ -2100,9 +2093,7 @@ Foam::hexRef8::hexRef8
         labelList(0),
         false
     ),
-    faceRemover_(mesh_, great),     // merge boundary faces wherever possible
-    savedPointLevel_(0),
-    savedCellLevel_(0)
+    faceRemover_(mesh_, great)      // merge boundary faces wherever possible
 {
     if
     (
@@ -2155,7 +2146,7 @@ Foam::labelList Foam::hexRef8::consistentRefinement
     {
         label nChanged = faceConsistentRefinement(maxSet, refineCell);
 
-        reduce(nChanged, sumOp<label>());
+        reduce(nChanged, sumOp());
 
         if (debug)
         {
@@ -2467,7 +2458,7 @@ Foam::labelList Foam::hexRef8::consistentSlowRefinement
         (
             mesh_,
             maxPointCount,
-            maxEqOp<label>(),
+            maxEqOp(),
             labelMin            // null value
         );
 
@@ -2532,7 +2523,7 @@ Foam::labelList Foam::hexRef8::consistentSlowRefinement
         }
 
         label nChanged = changedFacesInfo.size();
-        reduce(nChanged, sumOp<label>());
+        reduce(nChanged, sumOp());
 
         if (nChanged == 0)
         {
@@ -2998,7 +2989,7 @@ Foam::labelList Foam::hexRef8::consistentSlowRefinement2
     {
         label nChanged = faceConsistentRefinement(true, refineCell);
 
-        reduce(nChanged, sumOp<label>());
+        reduce(nChanged, sumOp());
 
         if (debug)
         {
@@ -3125,10 +3116,6 @@ Foam::labelListList Foam::hexRef8::setRefinement
         // checkRefinementLevels(-1, labelList(0));
     }
 
-    // Clear any saved point/cell data.
-    savedPointLevel_.clear();
-    savedCellLevel_.clear();
-
 
     // New point/cell level. Copy of pointLevel for existing points.
     DynamicList<label> newCellLevel(cellLevel_.size());
@@ -3242,7 +3229,7 @@ Foam::labelListList Foam::hexRef8::setRefinement
     (
         mesh_,
         edgeMidPoint,
-        maxEqOp<label>(),
+        maxEqOp(),
         labelMin
     );
 
@@ -3269,7 +3256,7 @@ Foam::labelListList Foam::hexRef8::setRefinement
         (
             mesh_,
             edgeMids,
-            maxEqOp<vector>(),
+            maxEqOp(),
             point(-great, -great, -great)
         );
 
@@ -3426,7 +3413,7 @@ Foam::labelListList Foam::hexRef8::setRefinement
     (
         mesh_,
         faceMidPoint,
-        maxEqOp<label>()
+        maxEqOp()
     );
 
 
@@ -3456,7 +3443,7 @@ Foam::labelListList Foam::hexRef8::setRefinement
         (
             mesh_,
             bFaceMids,
-            maxEqOp<vector>()
+            maxEqOp()
         );
 
         forAll(faceMidPoint, facei)
@@ -4107,44 +4094,7 @@ Foam::labelListList Foam::hexRef8::setRefinement
 }
 
 
-void Foam::hexRef8::storeData
-(
-    const labelList& pointsToStore,
-    const labelList& facesToStore,
-    const labelList& cellsToStore
-)
-{
-    savedPointLevel_.resize(2*pointsToStore.size());
-    forAll(pointsToStore, i)
-    {
-        label pointi = pointsToStore[i];
-        savedPointLevel_.insert(pointi, pointLevel_[pointi]);
-    }
-
-    savedCellLevel_.resize(2*cellsToStore.size());
-    forAll(cellsToStore, i)
-    {
-        label celli = cellsToStore[i];
-        savedCellLevel_.insert(celli, cellLevel_[celli]);
-    }
-}
-
-
 void Foam::hexRef8::topoChange(const polyTopoChangeMap& map)
-{
-    Map<label> dummyMap(0);
-
-    topoChange(map, dummyMap, dummyMap, dummyMap);
-}
-
-
-void Foam::hexRef8::topoChange
-(
-    const polyTopoChangeMap& map,
-    const Map<label>& pointsToRestore,
-    const Map<label>& facesToRestore,
-    const Map<label>& cellsToRestore
-)
 {
     // Update celllevel
     if (debug)
@@ -4202,26 +4152,6 @@ void Foam::hexRef8::topoChange
             }
             cellLevel_.transfer(newCellLevel);
         }
-
-        // See if any cells to restore. This will be for some new cells
-        // the corresponding old cell.
-        forAllConstIter(Map<label>, cellsToRestore, iter)
-        {
-            label newCelli = iter.key();
-            label storedCelli = iter();
-
-            Map<label>::iterator fnd = savedCellLevel_.find(storedCelli);
-
-            if (fnd == savedCellLevel_.end())
-            {
-                FatalErrorInFunction
-                    << "Problem : trying to restore old value for new cell "
-                    << newCelli << " but cannot find old cell " << storedCelli
-                    << " in map of stored values " << savedCellLevel_
-                    << abort(FatalError);
-            }
-            cellLevel_[newCelli] = fnd();
-        }
     }
 
 
@@ -4255,27 +4185,6 @@ void Foam::hexRef8::topoChange
                 }
             }
             pointLevel_.transfer(newPointLevel);
-        }
-
-        // See if any points to restore. This will be for some new points
-        // the corresponding old point (the one from the call to storeData)
-        forAllConstIter(Map<label>, pointsToRestore, iter)
-        {
-            label newPointi = iter.key();
-            label storedPointi = iter();
-
-            Map<label>::iterator fnd = savedPointLevel_.find(storedPointi);
-
-            if (fnd == savedPointLevel_.end())
-            {
-                FatalErrorInFunction
-                    << "Problem : trying to restore old value for new point "
-                    << newPointi << " but cannot find old point "
-                    << storedPointi
-                    << " in map of stored values " << savedPointLevel_
-                    << abort(FatalError);
-            }
-            pointLevel_[newPointi] = fnd();
         }
     }
 
@@ -4414,6 +4323,9 @@ void Foam::hexRef8::distribute(const polyDistributionMap& map)
     {
         history_.distribute(map);
     }
+
+    // Mark files as changed
+    setInstance(mesh_.facesInstance());
 
     // Update face removal engine
     faceRemover_.distribute(map);
@@ -4758,7 +4670,7 @@ void Foam::hexRef8::checkRefinementLevels
         (
             mesh_,
             syncPointLevel,
-            minEqOp<label>(),
+            minEqOp(),
             labelMax
         );
 
@@ -4803,7 +4715,7 @@ void Foam::hexRef8::checkRefinementLevels
         (
             mesh_,
             maxPointLevel,
-            maxEqOp<label>(),
+            maxEqOp(),
             labelMin            // null value
         );
 
@@ -4874,7 +4786,7 @@ void Foam::hexRef8::checkRefinementLevels
     //    (
     //        mesh_,
     //        isHangingPoint,
-    //        andEqOp<bool>(),        // only if all decide it is hanging point
+    //        andEqOp(),        // only if all decide it is hanging point
     //        true,                   // null
     //        false                   // no separation
     //    );
@@ -4896,7 +4808,7 @@ void Foam::hexRef8::checkRefinementLevels
     //        }
     //    }
     //
-    //    if (returnReduce(nHanging, sumOp<label>()) > 0)
+    //    if (returnReduce(nHanging, sumOp()) > 0)
     //    {
     //        FatalErrorInFunction
     //            << "Detected a point used by two edges only (hanging point)"
@@ -5277,7 +5189,7 @@ Foam::labelList Foam::hexRef8::consistentUnrefinement
             }
         }
 
-        reduce(nChanged, sumOp<label>());
+        reduce(nChanged, sumOp());
 
         if (debug)
         {
@@ -5536,7 +5448,7 @@ bool Foam::hexRef8::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     if (cellLevel_.size() != mesh_.nCells())
@@ -5556,14 +5468,17 @@ bool Foam::hexRef8::writeObject
     }
 
     bool writeOk =
-        cellLevel_.writeObject(fmt, ver, cmp, write)
-     && pointLevel_.writeObject(fmt, ver, cmp, write)
-     && level0Edge_.writeObject(fmt, ver, cmp, write);
+        cellLevel_.writeObject(fmt, ver, cmp, updateInstance)
+     && pointLevel_.writeObject(fmt, ver, cmp, updateInstance)
+     && level0Edge_.writeObject(fmt, ver, cmp, updateInstance);
 
     if (history_.active())
     {
-        writeOk = writeOk && history_.writeObject(fmt, ver, cmp, write);
+        writeOk =
+            writeOk && history_.writeObject(fmt, ver, cmp, updateInstance);
     }
+
+    writeOpt() = IOobject::NO_WRITE;
 
     return writeOk;
 }

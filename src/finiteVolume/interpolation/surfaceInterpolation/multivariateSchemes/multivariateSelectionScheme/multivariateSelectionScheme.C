@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,7 +28,7 @@ License
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "upwind.H"
-
+#include "fvcAverage.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -60,7 +60,8 @@ Foam::multivariateSelectionScheme<Type>::multivariateSelectionScheme
             mesh
         ),
         mesh,
-        dimless
+        dimless,
+        fvsPatchField<scalar>::calculatedType()
     )
 {
     typename multivariateSurfaceInterpolationScheme<Type>::
@@ -75,6 +76,7 @@ Foam::multivariateSelectionScheme<Type>::multivariateSelectionScheme
             schemes_.lookup(iter()->name())
         )().limiter(*iter())
     );
+    limiter.rename(word("Limiter(", schemes_.name().name(), ')'));
 
     for (++iter; iter != this->fields().end(); ++iter)
     {
@@ -88,6 +90,12 @@ Foam::multivariateSelectionScheme<Type>::multivariateSelectionScheme
                 schemes_.lookup(iter()->name())
             )().limiter(*iter())
         );
+    }
+
+    if (debug)
+    {
+        Info<< type() << " " << limiter.name()
+            << ": average limiter " << average(limiter) << endl;
     }
 
     weights_ =

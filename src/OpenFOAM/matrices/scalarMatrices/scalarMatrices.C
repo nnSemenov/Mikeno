@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -65,159 +65,154 @@ addCompoundToRunTimeSelectionTable
 
 void Foam::LUDecompose
 (
-    scalarSquareMatrix& matrix,
-    labelList& pivotIndices
+    scalarSquareMatrix& A,
+    labelList& pivotIndices,
+    scalarList& scale
 )
 {
     label sign;
-    LUDecompose(matrix, pivotIndices, sign);
+    LUDecompose(A, pivotIndices, scale, sign);
 }
 
 
 void Foam::LUDecompose
 (
-    scalarSquareMatrix& matrix,
+    scalarSquareMatrix& A,
     labelList& pivotIndices,
+    scalarList& scale,
     label& sign
 )
 {
-    const label m = matrix.m();
-    scalarList vv(m);
+    const label m = A.m();
     sign = 1;
 
+    // Calculate row scales
     for (label i=0; i<m; i++)
     {
-        scalar largestCoeff = 0.0;
-        scalar temp;
-        const scalar* __restrict__ matrixi = matrix[i];
-
+        scalar maxCoeff = 0.0;
         for (label j=0; j<m; j++)
         {
-            if ((temp = mag(matrixi[j])) > largestCoeff)
-            {
-                largestCoeff = temp;
-            }
+            maxCoeff = max(maxCoeff, mag(A(i, j)));
         }
 
-        if (largestCoeff == 0.0)
+        if (maxCoeff == 0)
         {
-            FatalErrorInFunction
-                << "Singular matrix" << exit(FatalError);
+            FatalErrorInFunction << "Singular A" << exit(FatalError);
         }
 
-        vv[i] = 1.0/largestCoeff;
+        scale[i] = maxCoeff;
     }
 
-    for (label j=0; j<m; j++)
+    // ikj loop with row-swapping
+    for (label i=0; i<m; i++)
     {
-        scalar* __restrict__ matrixj = matrix[j];
+        // Check in pivoting is required
+        label pivotRow = i;
+        scalar max_ratio = mag(A(i, i))/scale[i];
 
-        for (label i=0; i<j; i++)
+        for (label r=i+1; r<m; r++)
         {
-            scalar* __restrict__ matrixi = matrix[i];
-
-            scalar sum = matrixi[j];
-            for (label k=0; k<i; k++)
+            const scalar ratio = mag(A(r, i))/scale[r];
+            if (ratio > max_ratio)
             {
-                sum -= matrixi[k]*matrix(k, j);
-            }
-            matrixi[j] = sum;
-        }
-
-        label iMax = 0;
-
-        scalar largestCoeff = 0.0;
-        for (label i=j; i<m; i++)
-        {
-            scalar* __restrict__ matrixi = matrix[i];
-            scalar sum = matrixi[j];
-
-            for (label k=0; k<j; k++)
-            {
-                sum -= matrixi[k]*matrix(k, j);
-            }
-
-            matrixi[j] = sum;
-
-            scalar temp;
-            if ((temp = vv[i]*mag(sum)) >= largestCoeff)
-            {
-                largestCoeff = temp;
-                iMax = i;
+                max_ratio = ratio;
+                pivotRow = r;
             }
         }
 
-        pivotIndices[j] = iMax;
+        // Set the pivot row
+        pivotIndices[i] = pivotRow;
 
-        if (j != iMax)
+        // Swap rows if required
+        if (pivotRow != i)
         {
-            scalar* __restrict__ matrixiMax = matrix[iMax];
-
+            // Swap rows of A
             for (label k=0; k<m; k++)
             {
-                Swap(matrixj[k], matrixiMax[k]);
+                Swap(A(i, k), A(pivotRow, k));
             }
 
+            //  Swap the scale elements
+            Swap(scale[i], scale[pivotRow]);
+
             sign *= -1;
-            vv[iMax] = vv[j];
         }
 
-        if (matrixj[j] == 0.0)
+        // Check for singularity
+        if (mag(A(i, i)) < small)
         {
-            matrixj[j] = small;
+            FatalErrorInFunction << "Singular A" << exit(FatalError);
         }
 
-        if (j != m-1)
+        // kj loop
+        for (label k=i+1; k<m; k++)
         {
-            scalar rDiag = 1.0/matrixj[j];
+            A(k, i) /= A(i, i);
 
-            for (label i=j+1; i<m; i++)
+            for (label j=i+1; j<m; j++)
             {
-                matrix(i, j) *= rDiag;
+                A(k, j) -= A(k, i)*A(i, j);
             }
         }
     }
 }
 
 
-void Foam::LUDecompose(scalarSymmetricSquareMatrix& matrix)
+void Foam::LUDecompose(scalarSquareMatrix& A, const scalar rowTol)
 {
-    // Store result in upper triangular part of matrix
-    label size = matrix.m();
+    const label m = A.m();
 
-    // Set upper triangular parts to zero.
-    for (label j=0; j<size; j++)
+    for (label i=0; i<m; i++)
     {
-        for (label k=j + 1; k<size; k++)
+        for (label k=0; k<i; k++)
         {
-            matrix(j, k) = 0.0;
-        }
-    }
+            // Compute the row multiplier for the lower triangular matrix L
+            A(i, k) /= A(k, k);
 
-    for (label j=0; j<size; j++)
-    {
-        scalar d = 0.0;
-
-        for (label k=0; k<j; k++)
-        {
-            scalar s = 0.0;
-
-            for (label i=0; i<k; i++)
+            // If the row multiplier is 0 skip the inner j loop
+            if (mag(A(i, k)) <= rowTol)
             {
-                s += matrix(i, k)*matrix(i, j);
+                A(i, k) = 0;
+                continue;
             }
 
-            s = (matrix(j, k) - s)/matrix(k, k);
+            // Inner 'j' loop updates the remainder of row 'i'
+            for (label j=k+1; j<m; j++)
+            {
+                A(i, j) -= A(i, k)*A(k, j);
+            }
+        }
+    }
+}
 
-            matrix(k, j) = s;
-            matrix(j, k) = s;
 
-            d += sqr(s);
+void Foam::LUDecompose(scalarSymmetricSquareMatrix& A, const scalar rowTol)
+{
+    const label m = A.m();
+
+    for (label i=0; i<m; i++)
+    {
+        for (label k=0; k<i; k++)
+        {
+            // Compute the row multiplier for the lower triangular matrix L
+            A(i, k) /= A(k, k);
+
+            // If the row multiplier is 0 skip the inner j loop
+            if (mag(A(i, k)) <= rowTol)
+            {
+                A(i, k) = 0;
+                continue;
+            }
+
+            // Inner 'j' loop updates the remainder of row 'i'
+            // up to the and including the diagonal
+            for (label j=k+1; j<=i; j++)
+            {
+                A(i, j) -= A(i, k)*A(j, k);
+            }
         }
 
-        d = matrix(j, j) - d;
-
-        if (d < 0.0)
+        if (A(i, i) <= 0)
         {
             FatalErrorInFunction
                 << "Matrix is not symmetric positive-definite. Unable to "
@@ -225,7 +220,17 @@ void Foam::LUDecompose(scalarSymmetricSquareMatrix& matrix)
                 << abort(FatalError);
         }
 
-        matrix(j, j) = sqrt(d);
+        // Finalise the diagonal element
+        A(i, i) = sqrt(A(i, i));
+    }
+
+    // Copy the upper triangle to the lower for back-substitution
+    for (label i=0; i<m; ++i)
+    {
+        for (label j=i+1; j<m; ++j)
+        {
+            A(i, j) = A(j, i);
+        }
     }
 }
 

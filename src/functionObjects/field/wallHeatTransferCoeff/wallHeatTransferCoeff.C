@@ -79,8 +79,8 @@ Foam::functionObjects::wallHeatTransferCoeff::wallHeatTransferCoeff
     logFiles(obr_, name),
     writeLocalObjects(obr_, log),
     coeffModel_(wallHeatTransferCoeffModel::New(dict.name(), mesh_, dict)),
-    rho_("rho", dimDensity, Zero),
-    Cp_("Cp", dimArea/sqr(dimTime)/dimTemperature, Zero),
+    rho_("rho", dimensions::density, Zero),
+    Cp_("Cp", dimensions::specificHeatCapacity, Zero),
     runTime_(runTime),
     patchSet_()
 {
@@ -194,7 +194,7 @@ bool Foam::functionObjects::wallHeatTransferCoeff::write()
 
     const fvPatchList& patches = mesh_.boundary();
 
-    const surfaceScalarField::Boundary& magSf =
+    const surfaceScalarField::BoundaryField& magSf =
         mesh_.magSf().boundaryField();
 
     forAllConstIter(labelHashSet, patchSet_, iter)
@@ -202,13 +202,14 @@ bool Foam::functionObjects::wallHeatTransferCoeff::write()
         label patchi = iter.key();
         const fvPatch& pp = patches[patchi];
 
-        if (!returnReduce(pp.size(), orOp<bool>())) continue;
+        if (!returnReduce(pp.size(), orOp())) continue;
 
         const scalarField& hfp = htc.boundaryField()[patchi];
 
         const scalar minHtcp = gMin(hfp);
         const scalar maxHtcp = gMax(hfp);
-        const scalar averageHtcp = gSum(magSf[patchi]*hfp)/gSum(magSf[patchi]);
+        const scalar averageHtcp =
+            gSum(magSf[patchi]*hfp)/gSum(magSf[patchi].field());
 
         if (Pstream::master())
         {

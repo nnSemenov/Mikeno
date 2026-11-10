@@ -70,14 +70,14 @@ Foam::functionObjects::wallHeatFlux::calcWallHeatFlux
         (
             type(),
             mesh_,
-            dimensionedScalar(dimMass/pow3(dimTime), 0)
+            dimensionedScalar(dimensions::heatFluxDensity, 0)
         )
     );
 
-    volScalarField::Boundary& wallHeatFluxBf =
+    volScalarField::BoundaryField& wallHeatFluxBf =
         twallHeatFlux.ref().boundaryFieldRef();
 
-    const surfaceScalarField::Boundary& qBf = q.boundaryField();
+    const surfaceScalarField::BoundaryField& qBf = q.boundaryField();
 
     forAllConstIter(labelHashSet, patchSet_, iter)
     {
@@ -90,7 +90,7 @@ Foam::functionObjects::wallHeatFlux::calcWallHeatFlux
     {
         const volScalarField& qr = lookupObject<volScalarField>("qr");
 
-        const volScalarField::Boundary& radHeatFluxBf = qr.boundaryField();
+        const volScalarField::BoundaryField& radHeatFluxBf = qr.boundaryField();
 
         forAllConstIter(labelHashSet, patchSet_, iter)
         {
@@ -243,21 +243,22 @@ bool Foam::functionObjects::wallHeatFlux::write()
 
     const fvPatchList& patches = mesh_.boundary();
 
-    const surfaceScalarField::Boundary& magSf = mesh_.magSf().boundaryField();
+    const surfaceScalarField::BoundaryField& magSf =
+        mesh_.magSf().boundaryField();
 
     forAllConstIter(labelHashSet, patchSet_, iter)
     {
         label patchi = iter.key();
         const fvPatch& pp = patches[patchi];
 
-        if (!returnReduce(pp.size(), orOp<bool>())) continue;
+        if (!returnReduce(pp.size(), orOp())) continue;
 
         const scalarField& qp = wallHeatFlux.boundaryField()[patchi];
 
         const scalar minqp = gMin(qp);
         const scalar maxqp = gMax(qp);
         const scalar Q = gSum(magSf[patchi]*qp);
-        const scalar q = Q/gSum(magSf[patchi]);
+        const scalar q = Q/gSum(magSf[patchi].field());
 
         if (Pstream::master())
         {

@@ -29,16 +29,16 @@ License
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volVectorField::Internal>
+Foam::tmp<Foam::volInternalVectorField>
 Foam::solvers::isothermalFilm::contactForce(const volScalarField& sigma) const
 {
-    tmp<volVectorField::Internal> tForce
+    tmp<volInternalVectorField> tForce
     (
-        volVectorField::Internal::New
+        volInternalVectorField::New
         (
             typedName("contactForce"),
             mesh,
-            dimensionedVector(dimForce/dimVolume, Zero)
+            dimensionedVector(dimensions::forceDensity, Zero)
         )
     );
 
@@ -75,7 +75,7 @@ Foam::solvers::isothermalFilm::contactForce(const volScalarField& sigma) const
     labelHashSet wallAndSurfacePatches(wallPatchIDs);
     wallAndSurfacePatches.insert(surfacePatchID);
 
-    const volScalarField::Boundary& deltaBf = delta.boundaryField();
+    const volScalarField::BoundaryField& deltaBf = delta.boundaryField();
 
     forAll(mesh.boundary(), patchi)
     {

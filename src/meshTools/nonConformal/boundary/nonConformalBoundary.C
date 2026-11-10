@@ -202,13 +202,13 @@ Foam::nonConformalBoundary::ownerOrigBoundaryPointNormals() const
             mesh(),
             ownerOrigBoundary_.meshPoints(),
             pointNormals,
-            plusEqOp<vector>(),
+            addEqOp(),
             vector::zero
         );
 
         ownerOrigBoundaryPointNormalsPtr_.set
         (
-            (pointNormals/(mag(pointNormals) + vSmall)).ptr()
+            eval(pointNormals/(mag(pointNormals) + vSmall)).ptr()
         );
     }
 
@@ -239,13 +239,13 @@ Foam::nonConformalBoundary::ownerOrigBoundaryPointNormals0() const
             mesh(),
             ownerOrigBoundary_.meshPoints(),
             pointNormals,
-            plusEqOp<vector>(),
+            addEqOp(),
             vector::zero
         );
 
         ownerOrigBoundaryPointNormals0Ptr_.set
         (
-            (pointNormals/(mag(pointNormals) + vSmall)).ptr()
+            eval(pointNormals/(mag(pointNormals) + vSmall)).ptr()
         );
     }
 
@@ -479,7 +479,7 @@ Foam::nonConformalBoundary::ownerOrigBoundaryEdgeMeshEdge() const
             mesh(),
             ownerOrigAndProcBoundaryMeshEdges,
             rMap,
-            maxEqOp<label>(),
+            maxEqOp(),
             label(-1)
         );
 

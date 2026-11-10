@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -92,7 +92,7 @@ void Foam::fv::uniformGrowth::readCoeffs(const dictionary& dict)
         (
             "massFlowRate",
             mesh().time().userUnits(),
-            dimMass/dimTime,
+            dimensions::mass/dimensions::time,
             dict
         ).ptr()
     );
@@ -150,7 +150,7 @@ void Foam::fv::uniformGrowth::addSupType
     if
     (
         rho.group() == word::null
-     && rho.dimensions() == dimDensity
+     && rho.dimensions() == dimensions::density
      && field.group() == word::null
     )
     {
@@ -248,7 +248,7 @@ bool Foam::fv::uniformGrowth::addsSupToField(const word& fieldName) const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::fv::uniformGrowth::S
+Foam::tmp<Foam::volInternalScalarField> Foam::fv::uniformGrowth::S
 (
     const word& fieldName
 ) const
@@ -256,25 +256,25 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::uniformGrowth::S
     const label i = findIndex(phaseNames_, IOobject::group(fieldName));
     const phaseModel& phase = popBal_.fluid().phases()[phaseNames_[i]];
 
-    tmp<volScalarField::Internal> tSumNPhase =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tSumNPhase =
+        volInternalScalarField::New
         (
             IOobject::groupName(name() + ":sumN", phase.name()),
             mesh(),
-            dimensionedScalar(inv(dimVolume), scalar(0))
+            dimensionedScalar(inv(dimensions::volume), scalar(0))
         );
-    tmp<volScalarField::Internal> tSumN =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tSumN =
+        volInternalScalarField::New
         (
             name() + ":sumN",
             mesh(),
-            dimensionedScalar(inv(dimVolume), scalar(0))
+            dimensionedScalar(inv(dimensions::volume), scalar(0))
         );
 
     forAll(popBal_.fs(), i)
     {
-        tmp<volScalarField::Internal> tN =
-            popBal_.phases()[i]()*popBal_.f(i)/popBal_.v(i);
+        tmp<volInternalScalarField> tN =
+            popBal_.phases()[i]()*popBal_.f(i)()/popBal_.v(i);
 
         if (&popBal_.phases()[i] == &phase)
         {
@@ -286,10 +286,10 @@ Foam::tmp<Foam::volScalarField::Internal> Foam::fv::uniformGrowth::S
 
     return
         tSumNPhase
-       /max(tSumN, dimensionedScalar(inv(dimVolume), rootVSmall))
+       /max(tSumN, dimensionedScalar(inv(dimensions::volume), rootVSmall))
        *dimensionedScalar
         (
-            dimMass/dimTime,
+            dimensions::mass/dimensions::time,
             massFlowRate_->value(mesh().time().value())
         )
        /sum(mesh().V());

@@ -42,7 +42,7 @@ tmp<VolField<Type>> singleCellFvMesh::interpolate
 ) const
 {
     // 1. Create the complete field with dummy patch fields
-    PtrList<fvPatchField<Type>> patchFields(vf.boundaryField().size());
+    PtrField<fvPatchField<Type>> patchFields(vf.boundaryField().size());
 
     forAll(patchFields, patchi)
     {
@@ -73,7 +73,7 @@ tmp<VolField<Type>> singleCellFvMesh::interpolate
             ),
             *this,
             vf.dimensions(),
-            Field<Type>(1, gAverage(vf)),
+            Field<Type>(1, gAverage(vf.primitiveField())),
             patchFields
         )
     );
@@ -83,8 +83,7 @@ tmp<VolField<Type>> singleCellFvMesh::interpolate
     // 2. Change the fvPatchFields to the correct type using a mapper
     //  constructor (with reference to the now correct internal field)
 
-    typename VolField<Type>::
-        Boundary& bf = resF.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bf = resF.boundaryFieldRef();
 
     if (agglomerate())
     {

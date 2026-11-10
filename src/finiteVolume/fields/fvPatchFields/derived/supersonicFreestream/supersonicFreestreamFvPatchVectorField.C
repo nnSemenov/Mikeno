@@ -42,9 +42,9 @@ supersonicFreestreamFvPatchVectorField
     TName_(dict.lookupOrDefault<word>("T", "T")),
     pName_(dict.lookupOrDefault<word>("p", "p")),
     psiName_(dict.lookupOrDefault<word>("psi", "psi")),
-    UInf_(dict.lookup<vector>("UInf", dimVelocity)),
-    pInf_(dict.lookup<scalar>("pInf", dimPressure)),
-    TInf_(dict.lookup<scalar>("TInf", dimTemperature)),
+    UInf_(dict.lookup<vector>("UInf", dimensions::velocity)),
+    pInf_(dict.lookup<scalar>("pInf", dimensions::pressure)),
+    TInf_(dict.lookup<scalar>("TInf", dimensions::temperature)),
     gamma_(dict.lookup<scalar>("gamma"))
 {
     if (dict.found("value"))
@@ -69,9 +69,9 @@ supersonicFreestreamFvPatchVectorField
         (
             dict
         )   << "    unphysical pInf specified (pInf <= 0.0)"
-            << "\n    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "\n    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalIOError);
     }
 }
@@ -142,9 +142,9 @@ void Foam::supersonicFreestreamFvPatchVectorField::updateCoeffs()
     if (MachInf < 1.0)
     {
         FatalErrorInFunction
-            << "\n    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "\n    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
 
@@ -240,10 +240,10 @@ void Foam::supersonicFreestreamFvPatchVectorField::updateCoeffs()
             {
                 FatalErrorInFunction
                     << "unphysical subsonic inflow has been generated"
-                    << "\n    on patch " << this->patch().name()
-                    << " of field " << this->internalField().name()
+                    << "\n    on patch " << patch().name()
+                    << " of field " << internalField().name()
                     << " in file "
-                    << this->internalField().objectPath()
+                    << internalField().objectPath()
                     << exit(FatalError);
             }
         }

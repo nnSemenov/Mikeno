@@ -96,11 +96,23 @@ public:
 
     // Public Type Definitions
 
-        //- The patch type
-        typedef LagrangianPatch Patch;
+        //- Declare primitive type
+        using pType = typename FieldTraits<Type>::pType;
 
-        //- The calculated patch field type
-        typedef calculatedLagrangianPatchField<Type> Calculated;
+        //- Declare component type
+        using cmptType = typename FieldTraits<Type>::cmptType;
+
+        //- Declare component primitive type
+        using pCmptType = typename FieldTraits<Type>::pCmptType;
+
+        //- Declare patch type
+        using Patch = LagrangianPatch;
+
+        //- Declare calculated patch field type
+        using Calculated = calculatedLagrangianPatchField<Type>;
+
+        //- Declare component Field type
+        using cmptField = LagrangianPatchField<cmptType>;
 
 
     //- Runtime type information
@@ -229,11 +241,6 @@ public:
             const dictionary&
         );
 
-        //- Return a pointer to a new calculatedPointPatchField
-        template<class Type2>
-        static autoPtr<LagrangianPatchField<Type>>
-        NewCalculatedType(const LagrangianPatchField<Type2>&);
-
 
     //- Destructor
     virtual ~LagrangianPatchField();
@@ -273,6 +280,18 @@ public:
 
 
         // Evaluation
+
+            //- Initialise evaluation of the patch field. Doesn't actually do
+            //  anything other than insist that the patch is empty. This just
+            //  provides interface consistency with other patch field types.
+            //  Actual evaluation is handled by the overload below.
+            void initEvaluate(const Pstream::commsTypes);
+
+            //- Initialise evaluation of the patch field. Doesn't actually do
+            //  anything other than insist that the patch is empty. This just
+            //  provides interface consistency with other patch field types.
+            //  Actual evaluation is handled by the overload below.
+            void evaluate(const Pstream::commsTypes);
 
             //- Initialise evaluation of the patch field
             virtual void initEvaluate

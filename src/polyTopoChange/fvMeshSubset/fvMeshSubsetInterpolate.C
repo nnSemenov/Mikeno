@@ -45,7 +45,7 @@ Foam::fvMeshSubset::interpolate
 )
 {
     // 1. Create the complete field with dummy patch fields
-    PtrList<fvPatchField<Type>> patchFields(patchMap.size());
+    PtrField<fvPatchField<Type>> patchFields(patchMap.size());
 
     forAll(patchFields, patchi)
     {
@@ -104,8 +104,7 @@ Foam::fvMeshSubset::interpolate
     // 2. Change the fvPatchFields to the correct type using a mapper
     //  constructor (with reference to the now correct internal field)
 
-    typename VolField<Type>::
-        Boundary& bf = resF.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchi)
     {
@@ -185,7 +184,7 @@ Foam::fvMeshSubset::interpolate
     const bool negateIfFlipped = isFlux(sf);
 
     // 1. Create the complete field with dummy patch fields
-    PtrList<fvsPatchField<Type>> patchFields(patchMap.size());
+    PtrField<fvsPatchField<Type>> patchFields(patchMap.size());
 
     forAll(patchFields, patchi)
     {
@@ -252,8 +251,7 @@ Foam::fvMeshSubset::interpolate
     // 2. Change the fvsPatchFields to the correct type using a mapper
     //  constructor (with reference to the now correct internal field)
 
-    typename SurfaceField<Type>::
-        Boundary& bf = resF.boundaryFieldRef();
+    typename SurfaceField<Type>::BoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchi)
     {
@@ -365,7 +363,7 @@ Foam::fvMeshSubset::interpolate
 )
 {
     // 1. Create the complete field with dummy patch fields
-    PtrList<pointPatchField<Type>> patchFields(patchMap.size());
+    PtrField<pointPatchField<Type>> patchFields(patchMap.size());
 
     forAll(patchFields, patchi)
     {
@@ -425,8 +423,7 @@ Foam::fvMeshSubset::interpolate
     // 2. Change the pointPatchFields to the correct type using a mapper
     //  constructor (with reference to the now correct internal field)
 
-    typename PointField<Type>::
-        Boundary& bf = resF.boundaryFieldRef();
+    typename PointField<Type>::BoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchi)
     {

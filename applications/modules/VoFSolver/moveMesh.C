@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,7 @@ License
 #include "VoFSolver.H"
 #include "fvCorrectPhi.H"
 #include "fvcMeshPhi.H"
-#include "fvcDiv.H"
+#include "fviDiv.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
@@ -36,16 +36,16 @@ void Foam::solvers::VoFSolver::moveMesh()
     {
         if
         (
-            (correctPhi || mesh.topoChanged())
+            (correctPhi || mesh.poly().topoChanged())
          && divergent()
          && !divU.valid()
         )
         {
             // Construct and register divU for correctPhi
-            divU = new volScalarField
+            divU = new volInternalScalarField
             (
                 "divU0",
-                fvc::div(fvc::absolute(phi, U))
+                fvi::div(fvc::absolute(phi, U))
             );
         }
 
@@ -63,9 +63,7 @@ void Foam::solvers::VoFSolver::motionCorrector()
         {
             buoyancy.moveMesh();
 
-            MRF.update();
-
-            if (correctPhi || mesh.topoChanged())
+            if (correctPhi || mesh.poly().topoChanged())
             {
                 // Calculate absolute flux
                 // from the mapped surface velocity
@@ -104,7 +102,7 @@ void Foam::solvers::VoFSolver::motionCorrector()
                 fvc::makeRelative(phi_, U);
             }
 
-            meshCourantNo();
+            correctMeshCourantNo();
 
             correctInterface();
         }

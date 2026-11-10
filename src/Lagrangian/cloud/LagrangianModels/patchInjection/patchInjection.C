@@ -55,7 +55,7 @@ void Foam::Lagrangian::patchInjection::readCoeffs(const dictionary& modelDict)
         (
             "numberRate",
             mesh().time().userUnits(),
-            dimRate,
+            dimensions::rate,
             modelDict
         ).ptr()
     );
@@ -117,7 +117,7 @@ void Foam::Lagrangian::patchInjection::calcSumAreas()
     procSumArea_ = scalar(-vGreat);
     procSumArea_[Pstream::myProcNo()] =
         patch.size() ? patchFaceSumArea_.last() : scalar(0);
-    Pstream::listCombineGather(procSumArea_, maxEqOp<scalar>());
+    Pstream::listCombineGather(procSumArea_, maxEqOp());
     Pstream::listCombineScatter(procSumArea_);
     for (label proci = 1; proci < Pstream::nProcs(); proci ++)
     {

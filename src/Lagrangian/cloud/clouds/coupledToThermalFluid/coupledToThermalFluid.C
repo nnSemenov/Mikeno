@@ -23,12 +23,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include "LagrangianSubFieldsFwd.H"
 #include "coupledToThermalFluid.H"
-#include "basicThermo.H"
-#include "multicomponentThermo.H"
-#include "fluidThermo.H"
-#include "fluidMulticomponentThermo.H"
 #include "multicomponentLagrangianThermo.H"
+#include "multicomponentCarrierThermo.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -41,6 +39,18 @@ namespace clouds
 }
 
 
+const Foam::UPtrList<const Foam::CarrierField<Foam::scalar>>
+    Foam::clouds::coupledToThermalFluid::nullY_;
+
+
+// * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
+
+void Foam::clouds::coupledToThermalFluid::updateCarrier()
+{
+    coupledToFluid::updateCarrier();
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::clouds::coupledToThermalFluid::coupledToThermalFluid
@@ -50,94 +60,91 @@ Foam::clouds::coupledToThermalFluid::coupledToThermalFluid
     const thermal& thermalCloud
 )
 :
-    coupledToFluid(c, carriedCloud),
-    mesh_(c.mesh()),
-    thermoc_
+    autoPtr<fluidCarrierThermo>
     (
-        mesh_.poly().lookupObject<fluidThermo>
+        fluidCarrierThermo::New
         (
-            IOobject::groupName
-            (
-                physicalProperties::typeName,
-                carriedCloud.carrierPhaseName()
-            )
-        )
+            c,
+            carriedCloud,
+            carriedCloud.carrierPhaseName()
+        ).ptr()
     ),
-    multicomponentThermoc_
+    autoPtr<fluidSurfaceThermo>
     (
-        refCastNull<const fluidMulticomponentThermo>(thermoc_)
+        autoPtr<fluidCarrierThermo>::valid()
+      ? fluidSurfaceThermo::New(autoPtr<fluidCarrierThermo>::operator()()).ptr()
+      : nullptr
     ),
-    thermocPhase_
+    autoPtr<carrierThermo>
     (
         carriedCloud.hasPhase()
-      ? mesh_.poly().lookupObject<basicThermo>
+      ? carrierThermo::New
         (
-            IOobject::groupName
-            (
-                physicalProperties::typeName,
-                carriedCloud.phaseName()
-            )
-        )
-      : NullObjectRef<basicThermo>()
+            c,
+            carriedCloud,
+            carriedCloud.phaseName()
+        ).ptr()
+      : nullptr
     ),
-    multicomponentThermocPhase_
+    coupledToFluid
     (
-        refCastNull<const multicomponentThermo>(thermocPhase_)
+        c,
+        carriedCloud,
+        autoPtr<fluidCarrierThermo>::valid()
+      ? autoPtr<fluidCarrierThermo>::operator()()
+      : NullObjectRef<carrierDynamicViscosity>(),
+        autoPtr<fluidSurfaceThermo>::valid()
+      ? autoPtr<fluidSurfaceThermo>::operator()()
+      : NullObjectRef<fluidSurfaceThermo>(),
+        autoPtr<carrierThermo>::valid()
+      ? autoPtr<carrierThermo>::operator()()
+      : NullObjectRef<carrierDensity>()
     ),
-    pc(carriedCloud.carrierField<scalar>(thermoc_.p())),
-    Tc(carriedCloud.carrierField<scalar>(thermoc_.T())),
-    hec(carriedCloud.carrierField<scalar>(thermoc_.he())),
-    hecPhase
+    cloud_(c),
+    pc
     (
-        carriedCloud.hasPhase()
-      ? carriedCloud.carrierField<scalar>(thermocPhase_.he())
+        hasThermoc()
+      ? thermoc().p()
       : carriedCloud.carrierField<scalar>
         (
-            IOobject::groupName("hec", carriedCloud.phaseName()),
-            [&]()
-            {
-                FatalErrorInFunction
-                    << "Cloud " << c.name() << " does not have a corresponding "
-                    << "Eulerian phase enthalpy/energy" << exit(FatalError);
-                return tmp<volScalarField>(nullptr);
-            }
+            cloud_.mesh().poly().lookupObject<volScalarField>("p")
         )
     ),
-    Cpvc(carriedCloud.carrierField<scalar>(thermoc_.Cpv())),
-    Cpc
+    Tc
     (
-        &thermoc_.Cp() == &thermoc_.Cpv()
-      ? Cpvc
-      : carriedCloud.carrierField<scalar>(thermoc_.Cp())
-    ),
-    Cvc
-    (
-        &thermoc_.Cv() == &thermoc_.Cpv()
-      ? Cpvc
-      : carriedCloud.carrierField<scalar>(thermoc_.Cv())
-    ),
-    kappac(carriedCloud.carrierField<scalar>(thermoc_.kappa())),
-    Prc
-    (
-        c.derivedField<scalar>
+        hasThermoc()
+      ? thermoc().T()
+      : carriedCloud.carrierField<scalar>
         (
-            [&]
-            (
-                const LagrangianModelRef& model,
-                const LagrangianSubMesh& subMesh
-            )
-            {
-                return
-                    Cpc(model, subMesh)
-                   *muc(model, subMesh)
-                   /kappac(model, subMesh);
-            }
+            cloud_.mesh().poly().lookupObject<volScalarField>("T")
         )
+    ),
+    hec
+    (
+        hasThermoc()
+      ? thermoc().he()
+      : carriedCloud.noCarrierField<scalar>("he", "enthalpy/energy", false)
+    ),
+    hecPhase
+    (
+        hasThermocPhase()
+      ? thermocPhase().he()
+      : carriedCloud.noCarrierField<scalar>("he", "enthalpy/energy", true)
+    ),
+    Yc
+    (
+        isThermoc<multicomponentCarrierThermo>()
+      ? thermoc<multicomponentCarrierThermo>().Y()
+      : nullY_
+    ),
+    YcPhase
+    (
+        isThermocPhase<multicomponentCarrierThermo>()
+      ? thermocPhase<multicomponentCarrierThermo>().Y()
+      : nullY_
     ),
     iToic(),
-    iToicPhase(),
-    Yc(),
-    YcPhase()
+    iToicPhase()
 {
     // Create maps from cloud to Eulerian specie indices
     if (thermalCloud.isThermo<multicomponentLagrangianThermo>())
@@ -148,63 +155,36 @@ Foam::clouds::coupledToThermalFluid::coupledToThermalFluid
         iToic.resize(thermo.species().size(), -1);
         iToicPhase.resize(thermo.species().size(), -1);
 
-        if (notNull(multicomponentThermoc_))
+        if (isThermoc<multicomponentCarrierThermo>())
         {
+            const multicomponentCarrierThermo& thermoc =
+                this->thermoc<multicomponentCarrierThermo>();
+
             forAll(iToic, i)
             {
                 const word& specieName = thermo.species()[i];
 
                 iToic[i] =
-                    multicomponentThermoc_.containsSpecie(specieName)
-                  ? multicomponentThermoc_.species()[specieName]
+                    thermoc.containsSpecie(specieName)
+                  ? thermoc.species()[specieName]
                   : -1;
             }
         }
-        if (notNull(multicomponentThermocPhase_))
+
+        if (isThermocPhase<multicomponentCarrierThermo>())
         {
+            const multicomponentCarrierThermo& thermocPhase =
+                this->thermocPhase<multicomponentCarrierThermo>();
+
             forAll(iToicPhase, i)
             {
                 const word& specieName = thermo.species()[i];
 
                 iToicPhase[i] =
-                    multicomponentThermocPhase_.containsSpecie(specieName)
-                  ? multicomponentThermocPhase_.species()[specieName]
+                    thermocPhase.containsSpecie(specieName)
+                  ? thermocPhase.species()[specieName]
                   : -1;
             }
-        }
-    }
-
-    // Create carrier fields for the mass fractions
-    if (notNull(multicomponentThermoc_))
-    {
-        const PtrList<volScalarField>& YcVf =
-            multicomponentThermoc_.Y();
-
-        Yc.resize(YcVf.size());
-
-        forAll(Yc, ic)
-        {
-            Yc.set
-            (
-                ic,
-                &carriedCloud.carrierField<scalar>(YcVf[ic])
-            );
-        }
-    }
-    if (notNull(multicomponentThermocPhase_))
-    {
-        const PtrList<volScalarField>& YcPhaseVf =
-            multicomponentThermocPhase_.Y();
-
-        YcPhase.resize(YcPhaseVf.size());
-
-        forAll(YcPhase, icPhase)
-        {
-            YcPhase.set
-            (
-                icPhase,
-                &carriedCloud.carrierField<scalar>(YcPhaseVf[icPhase])
-            );
         }
     }
 }
@@ -214,6 +194,46 @@ Foam::clouds::coupledToThermalFluid::coupledToThermalFluid
 
 Foam::clouds::coupledToThermalFluid::~coupledToThermalFluid()
 {}
+
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+bool Foam::clouds::coupledToThermalFluid::hasThermoc() const
+{
+    return autoPtr<fluidCarrierThermo>::valid();
+}
+
+
+bool Foam::clouds::coupledToThermalFluid::hasThermocs() const
+{
+    return autoPtr<fluidSurfaceThermo>::valid();
+}
+
+
+bool Foam::clouds::coupledToThermalFluid::hasThermocPhase() const
+{
+    return autoPtr<carrierThermo>::valid();
+}
+
+
+Foam::tmp<Foam::LagrangianSubScalarSubField>
+Foam::clouds::coupledToThermalFluid::kappac
+(
+    const LagrangianSubMesh& subMesh
+) const
+{
+    return thermocs().kappaNear(subMesh);
+}
+
+
+Foam::tmp<Foam::LagrangianSubScalarField>
+Foam::clouds::coupledToThermalFluid::Prc
+(
+    const LagrangianSubMesh& subMesh
+) const
+{
+    return thermocs().PrNear(subMesh);
+}
 
 
 // ************************************************************************* //

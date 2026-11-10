@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,7 +55,7 @@ Foam::populationBalance::coalescenceModels::hydrodynamic::hydrodynamic
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::coalescenceModels::hydrodynamic::rate
 (
     const label i,
@@ -63,13 +63,13 @@ Foam::populationBalance::coalescenceModels::hydrodynamic::rate
 ) const
 {
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "coalescenceRate",
             popBal_.mesh(),
             dimensionedScalar
             (
-                dimVolume/dimTime,
+                dimensions::volume/dimensions::time,
                 pow3(cbrt(popBal_.v(i).value()) + cbrt(popBal_.v(j).value()))
             )
         );

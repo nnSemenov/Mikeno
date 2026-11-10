@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -143,19 +143,19 @@ public:
             virtual tmp<fvVectorMatrix> DUDt() const;
 
             //- Return the continuity error
-            virtual tmp<volScalarField> continuityError() const;
+            virtual tmp<volInternalScalarField> continuityError() const;
 
             //- Return the phase kinetic energy
-            virtual tmp<volScalarField> K() const;
+            virtual const volScalarField& K() const;
 
 
         // Compressibility (variable density)
 
             //- Return the phase dilatation rate (d(alpha)/dt + div(alpha*phi))
-            virtual const autoPtr<volScalarField>& divU() const;
+            virtual const autoPtr<volInternalScalarField>& divU() const;
 
             //- Set the phase dilatation rate (d(alpha)/dt + div(alpha*phi))
-            virtual void divU(tmp<volScalarField> divU);
+            virtual void divU(tmp<volInternalScalarField> divU);
 
 
         // Momentum transport

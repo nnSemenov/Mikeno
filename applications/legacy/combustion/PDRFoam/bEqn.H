@@ -38,11 +38,9 @@ if (ign.ignited())
     dimensionedScalar dMgb("dMgb", mgb.dimensions(), small);
 
     {
-        volScalarField bc(b*c);
-
-        dMgb += 1.0e-3*
-            (bc*mgb)().weightedAverage(mesh.V())
-           /(bc.weightedAverage(mesh.V()) + small);
+        const volInternalScalarField bc(b()*c());
+        dMgb += 1.0e-3*sum(bc*mgb()*mesh.V())
+       /(sum(bc*mesh.V()) + dimensionedScalar(dimVolume, rootVSmall));
     }
 
     mgb += dMgb;
@@ -71,7 +69,7 @@ if (ign.ignited())
         betav*fvm::ddt(rho, b)
       + mvConvection->fvmDiv(phi, b)
       + fvm::div(phiSt, b)
-      - fvm::Sp(fvc::div(phiSt), b)
+      - fvm::Sp(fvi::div(phiSt), b)
       - fvm::laplacian(Db, b)
      ==
         betav*fvModels.source(rho, b)

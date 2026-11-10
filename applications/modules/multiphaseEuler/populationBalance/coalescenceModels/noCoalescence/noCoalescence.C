@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,7 +50,7 @@ coalesces() const
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::coalescenceModels::noCoalescence::rate
 (
     const label i,
@@ -58,11 +58,11 @@ Foam::populationBalance::coalescenceModels::noCoalescence::rate
 ) const
 {
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "coalescenceRate",
             popBal_.mesh(),
-            dimensionedScalar(dimVolume/dimTime, scalar(0))
+            dimensionedScalar(dimensions::volume/dimensions::time, scalar(0))
         );
 }
 

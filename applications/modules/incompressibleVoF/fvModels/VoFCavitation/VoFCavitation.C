@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,8 +26,8 @@ License
 #include "VoFCavitation.H"
 #include "VoFSolver.H"
 #include "incompressibleTwoPhaseVoFMixture.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "fvmSup.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -113,12 +113,12 @@ void Foam::fv::VoFCavitation::addSup
         // Volume-fraction linearisation
         if (&alpha == &eqn.psi())
         {
-            const Pair<tmp<volScalarField::Internal>> mDot12Alpha
+            const Pair<tmp<volInternalScalarField>> mDot12Alpha
             (
                 cavitation_->mDot12Alpha()
             );
-            const volScalarField::Internal vDot1Alpha2(mDot12Alpha[0]/rho);
-            const volScalarField::Internal vDot2Alpha1(mDot12Alpha[1]/rho);
+            const volInternalScalarField vDot1Alpha2(mDot12Alpha[0]/rho);
+            const volInternalScalarField vDot2Alpha1(mDot12Alpha[1]/rho);
 
             eqn +=
                 (&alpha == &alpha1 ? vDot1Alpha2 : vDot2Alpha1)
@@ -128,16 +128,16 @@ void Foam::fv::VoFCavitation::addSup
         // Pressure linearisation
         else if (&eqn.psi() == &solver.p_rgh)
         {
-            const Pair<tmp<volScalarField::Internal>> mDot12P
+            const Pair<tmp<volInternalScalarField>> mDot12P
             (
                 cavitation_->mDot12P()
             );
-            const volScalarField::Internal vDot1P(mDot12P[0]/rho);
-            const volScalarField::Internal vDot2P(mDot12P[1]/rho);
+            const volInternalScalarField vDot1P(mDot12P[0]/rho);
+            const volInternalScalarField vDot2P(mDot12P[1]/rho);
 
-            const volScalarField::Internal& rho =
+            const volInternalScalarField& rho =
                 mesh().lookupObject<volScalarField>("rho");
-            const volScalarField::Internal& gh =
+            const volInternalScalarField& gh =
                 mesh().lookupObject<volScalarField>("gh");
 
             eqn +=
@@ -149,12 +149,12 @@ void Foam::fv::VoFCavitation::addSup
         // Explicit non-linearised value. Probably not used.
         else
         {
-            const Pair<tmp<volScalarField::Internal>> mDot12Alpha
+            const Pair<tmp<volInternalScalarField>> mDot12Alpha
             (
                 cavitation_->mDot12Alpha()
             );
-            const volScalarField::Internal vDot1(mDot12Alpha[0]*alpha2/rho);
-            const volScalarField::Internal vDot2(mDot12Alpha[1]*alpha1/rho);
+            const volInternalScalarField vDot1(mDot12Alpha[0]*alpha2()/rho);
+            const volInternalScalarField vDot2(mDot12Alpha[1]*alpha1()/rho);
 
             eqn += s*(vDot1 - vDot2);
         }
@@ -187,11 +187,11 @@ void Foam::fv::VoFCavitation::addSup
 
         if (&U == &eqn.psi())
         {
-            eqn += fvm::Sp(fvc::ddt(rho) + fvc::div(rhoPhi), eqn.psi());
+            eqn += fvm::Sp(fvi::ddt(rho) + fvi::div(rhoPhi), eqn.psi());
         }
         else
         {
-            eqn += (fvc::ddt(rho) + fvc::div(rhoPhi))*U;
+            eqn += (fvi::ddt(rho) + fvi::div(rhoPhi))*U();
         }
     }
     else

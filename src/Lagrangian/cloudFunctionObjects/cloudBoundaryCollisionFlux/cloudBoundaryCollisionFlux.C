@@ -77,7 +77,7 @@ Foam::functionObjects::cloudBoundaryCollisionFlux::~cloudBoundaryCollisionFlux()
 
 Foam::wordList Foam::functionObjects::cloudBoundaryCollisionFlux::fields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
@@ -148,7 +148,7 @@ void Foam::functionObjects::cloudBoundaryCollisionFlux::preCrossFaces
                 cloud().mesh()
             ),
             cloud().mesh(),
-            dimensionedScalar(phiDims_*dimTime, scalar(0))
+            dimensionedScalar(phiDims_*dimensions::time, scalar(0))
         )
     );
 }
@@ -215,7 +215,8 @@ void Foam::functionObjects::cloudBoundaryCollisionFlux::postCrossFaces
     LagrangianSubScalarSubField q(subMesh.sub(qPtr_()));
     q += this->q(fraction, -1);
 
-    const surfaceScalarField::Boundary& magSfb = mesh().magSf().boundaryField();
+    const surfaceScalarField::BoundaryField& magSfb =
+        mesh().magSf().boundaryField();
 
     forAll(subMesh, subi)
     {
@@ -258,7 +259,7 @@ bool Foam::functionObjects::cloudBoundaryCollisionFlux::write()
         (
             IOobject
             (
-                cloud().mesh().name() + ":" + phiName_ + "Coll",
+                word(cloud().mesh().name(), ':', phiName_, "Coll"),
                 time_.name(),
                 mesh(),
                 IOobject::NO_READ,

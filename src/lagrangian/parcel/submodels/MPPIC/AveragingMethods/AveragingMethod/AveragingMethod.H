@@ -38,7 +38,6 @@ SourceFiles
 
 #include "barycentric.H"
 #include "tetIndices.H"
-#include "FieldField.H"
 #include "fvMesh.H"
 #include "runTimeSelectionTables.H"
 
@@ -55,7 +54,7 @@ template<class Type>
 class AveragingMethod
 :
     public regIOobject,
-    public FieldField<Field, Type>
+    public Field<Field<Type>>
 {
 protected:
 
@@ -133,6 +132,18 @@ public:
 
     //- Member Functions
 
+        //- Return the field-field
+        const Field<Field<Type>>& field() const
+        {
+            return *this;
+        }
+
+        //- Return the field-field
+        Field<Field<Type>>& field()
+        {
+            return *this;
+        }
+
         //- Add point value to interpolation
         virtual void add
         (
@@ -157,13 +168,15 @@ public:
 
         //- Calculate the average
         virtual void average();
+
+        //- Calculate the weighted average
         virtual void average(const AveragingMethod<scalar>& weight);
 
         //- Dummy write
         virtual bool writeData(Ostream&) const;
 
         //- Write using setting from DB
-        virtual bool write(const bool write = true) const;
+        virtual bool write(const bool updateInstance = true) const;
 
         //- Return an internal field of the average
         virtual tmp<Field<Type>> primitiveField() const = 0;
@@ -175,16 +188,16 @@ public:
         inline void operator=(const Type& x);
 
         //- Assign to tmp
-        inline void operator=(tmp<FieldField<Field, Type>> x);
+        inline void operator=(const tmp<Field<Field<Type>>>& x);
 
         //- Add-equal tmp
-        inline void operator+=(tmp<FieldField<Field, Type>> x);
+        inline void operator+=(const tmp<Field<Field<Type>>>& x);
 
         //- Multiply-equal tmp
-        inline void operator*=(tmp<FieldField<Field, Type>> x);
+        inline void operator*=(const tmp<Field<Field<Type>>>& x);
 
         //- Divide-equal tmp
-        inline void operator/=(tmp<FieldField<Field, scalar>> x);
+        inline void operator/=(const tmp<Field<Field<scalar>>>& x);
 };
 
 

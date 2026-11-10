@@ -135,8 +135,8 @@ void Foam::LagrangianMesh::printGroups(const bool header) const
             hasProcPatches = true;
         }
     }
-    reduce(hasProcPatches, orOp<bool>());
-    Pstream::listCombineGather(patchIsReferred, orEqOp<bool>());
+    reduce(hasProcPatches, orOp());
+    Pstream::listCombineGather(patchIsReferred, orEqOp());
     Pstream::listCombineScatter(patchIsReferred);
 
     // Get the indices of patches that are referred to by processor-cyclics
@@ -220,7 +220,7 @@ void Foam::LagrangianMesh::printGroups(const bool header) const
               - offsets[onPatchZeroi + patchi];
         }
     }
-    Pstream::listCombineGather(columnNumbers, plusEqOp<label>());
+    Pstream::listCombineGather(columnNumbers, addEqOp());
     Pstream::listCombineScatter(columnNumbers);
 
     // Print the numbers
@@ -912,7 +912,7 @@ void Foam::LagrangianMesh::changer::constructBehind() const
                 mesh_.boundary().size(),
                 calculatedLagrangianPatchScalarField::typeName
             ),
-            wordList::null(),
+            wordList{},
             LagrangianModels::New(mesh_).modelTypeFieldSourceTypes
             <
                 LagrangianInjection,
@@ -942,7 +942,7 @@ void Foam::LagrangianMesh::changer::constructBehind() const
                 mesh_.boundary().size(),
                 calculatedLagrangianPatchLabelField::typeName
             ),
-            wordList::null(),
+            wordList{},
             LagrangianModels::New(mesh_).modelTypeFieldSourceTypes
             <
                 LagrangianInjection,
@@ -1057,7 +1057,8 @@ Foam::LagrangianMesh::LagrangianMesh
     statesPtr_(nullptr),
     offsetsPtr_(nullptr),
     subMeshIndex_(0),
-    schemesPtr_(nullptr)
+    schemesPtr_(nullptr),
+    globalData_(*this)
 {
     writeOpt() = writeOption;
 
@@ -1135,8 +1136,6 @@ Foam::LagrangianMesh::changer::changer
 
     constructNonConformal();
 
-    mesh_.subMeshIndex_ = 0;
-
     Info<< indent;
     mesh_.printGroups(true);
     Info<< endl << indent;
@@ -1172,8 +1171,6 @@ Foam::LagrangianMesh::changer::changer
 
     constructNonConformal();
 
-    mesh_.subMeshIndex_ = 0;
-
     Info<< indent;
     mesh_.printGroups(true);
     Info<< endl;
@@ -1202,8 +1199,6 @@ Foam::LagrangianMesh::changer::~changer()
 
     mesh_.fractionBehindPtr_.clear();
     mesh_.nTracksBehindPtr_.clear();
-
-    mesh_.subMeshIndex_ = 0;
 
     forAll(mesh_.boundary(), patchi)
     {
@@ -1293,7 +1288,7 @@ Foam::labelList Foam::LagrangianMesh::subMeshGlobalSizes() const
         size() - boundary()[nGlobalGroups - 2 - onPatchZeroi].mesh().start();
 
     // Sum over all processes
-    Pstream::listCombineGather(sizes, plusEqOp<label>());
+    Pstream::listCombineGather(sizes, addEqOp());
     Pstream::listCombineScatter(sizes);
 
     // Construct the result. This includes processor patch groups, on which a
@@ -1318,7 +1313,7 @@ Foam::LagrangianMesh::position() const
         (
             positionName,
             *this,
-            dimLength
+            dimensions::length
         );
     LagrangianInternalVectorField& result = tresult.ref();
 
@@ -1339,7 +1334,7 @@ Foam::LagrangianMesh::position(const LagrangianSubMesh& subMesh) const
         (
             positionName,
             subMesh,
-            dimLength
+            dimensions::length
         );
     LagrangianSubVectorField& result = tresult.ref();
 
@@ -2044,16 +2039,16 @@ bool Foam::LagrangianMesh::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
-    return objectRegistry::writeObject(fmt, ver, cmp, write);
+    return objectRegistry::writeObject(fmt, ver, cmp, updateInstance);
 }
 
 
-bool Foam::LagrangianMesh::write(const bool write) const
+bool Foam::LagrangianMesh::write(const bool updateInstance) const
 {
-    return objectRegistry::write(write);
+    return objectRegistry::write(updateInstance);
 }
 
 

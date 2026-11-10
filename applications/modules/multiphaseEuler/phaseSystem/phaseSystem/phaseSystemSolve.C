@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,16 +24,17 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "phaseSystem.H"
+#include "interfaceCompressionCoefficient.H"
 #include "momentumTransferSystem.H"
 
 #include "subCycle.H"
 
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "fvcSnGrad.H"
 #include "fvcFlux.H"
 #include "fvcMeshPhi.H"
-#include "fvcSup.H"
+#include "fviSup.H"
 
 #include "fvmDdt.H"
 #include "fvmLaplacian.H"
@@ -168,8 +169,8 @@ void Foam::phaseSystem::solve
         }
     }
 
-    PtrList<volScalarField::Internal> Sps(phases().size());
-    PtrList<volScalarField::Internal> Sus(phases().size());
+    PtrList<volInternalScalarField> Sps(phases().size());
+    PtrList<volInternalScalarField> Sus(phases().size());
 
     forAll(movingPhases(), movingPhasei)
     {
@@ -180,7 +181,7 @@ void Foam::phaseSystem::solve
         Sps.set
         (
             phasei,
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -189,31 +190,31 @@ void Foam::phaseSystem::solve
                     mesh_
                 ),
                 mesh_,
-                dimensionedScalar(dimless/dimTime, 0)
+                dimensionedScalar(dimless/dimensions::time, 0)
             )
         );
 
         Sus.set
         (
             phasei,
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject::groupName("Su", phase.name()),
-                min(alpha.v(), scalar(1))
-               *fvc::div(fvc::absolute(phi_, phase.U()))->v()
+                min(alpha(), scalar(1))
+               *fvi::div(fvc::absolute(phi_, phase.U()))
             )
         );
 
         if (dilatation)
         {
             // Construct the dilatation rate source term
-            volScalarField::Internal vDot
+            volInternalScalarField vDot
             (
-                volScalarField::Internal::New
+                volInternalScalarField::New
                 (
                     "vDot",
                     mesh_,
-                    dimensionedScalar(dimless/dimTime, 0)
+                    dimensionedScalar(dimless/dimensions::time, 0)
                 )
             );
 
@@ -226,18 +227,18 @@ void Foam::phaseSystem::solve
                 {
                     if (!phase.stationary() && phase.divU().valid())
                     {
-                        vDot += alpha2()*phase.divU()()();
+                        vDot += alpha2()*phase.divU()();
                     }
 
                     if (!phase2.stationary() && phase2.divU().valid())
                     {
-                        vDot -= alpha()*phase2.divU()()();
+                        vDot -= alpha()*phase2.divU()();
                     }
                 }
             }
 
-            volScalarField::Internal& Sp = Sps[phasei];
-            volScalarField::Internal& Su = Sus[phasei];
+            volInternalScalarField& Sp = Sps[phasei];
+            volInternalScalarField& Su = Sus[phasei];
 
             forAll(vDot, celli)
             {
@@ -366,9 +367,9 @@ void Foam::phaseSystem::solve
                 );
 
                 Info<< phase.name() << " predicted fraction, min, max = "
-                    << phase.weightedAverage(mesh_.Vsc()).value()
-                    << ' ' << min(phase).value()
-                    << ' ' << max(phase).value()
+                    << weightedAverage(phase(), mesh_.Vsc()()).value()
+                    << ' ' << min(phase.alpha()).value()
+                    << ' ' << max(phase.alpha()).value()
                     << endl;
             }
 
@@ -440,15 +441,15 @@ void Foam::phaseSystem::solve
                         (
                             phase.phi()(),
                             alpha,
-                            "div(phi," + alpha.name() + ')'
+                            word("div(phi,", alpha.name(), ')')
                         ),
-                        phase.alphaPhi()().boundaryField().types()
+                        phase.alphaPhi()().boundary().types()
                     )
                 );
 
                 surfaceScalarField& alphaPhi = alphaPhis[movingPhasei];
 
-                if (!cAlphas_.empty())
+                if (hasCAlphas())
                 {
                     forAll(phases(), phasei)
                     {
@@ -457,43 +458,38 @@ void Foam::phaseSystem::solve
 
                         if (&phase2 == &phase) continue;
 
-                        cAlphaTable::const_iterator cAlpha
+                        const phaseInterface interface(phase, phase2);
+
+                        if (!hasCAlpha(interface)) continue;
+
+                        const surfaceScalarField phir
                         (
-                            cAlphas_.find(phaseInterface(phase, phase2))
+                            phase.phi() - phase2.phi()
                         );
 
-                        if (cAlpha != cAlphas_.end())
-                        {
-                            const surfaceScalarField phir
-                            (
-                                phase.phi() - phase2.phi()
-                            );
+                        const surfaceScalarField phic
+                        (
+                            (mag(phi_) + mag(phir))/mesh_.magSf()
+                        );
 
-                            const surfaceScalarField phic
-                            (
-                                (mag(phi_) + mag(phir))/mesh_.magSf()
-                            );
+                        const surfaceScalarField phirc
+                        (
+                            min(cAlphaf(interface)*phic, max(phic))
+                           *nHatf(alpha, alpha2)
+                        );
 
-                            const surfaceScalarField phirc
-                            (
-                                min(cAlpha()*phic, max(phic))
-                               *nHatf(alpha, alpha2)
-                            );
+                        const word phirScheme
+                        (
+                            "div(phir,", alpha2.name(), ',',
+                            alpha.name(), ')'
+                        );
 
-                            const word phirScheme
-                            (
-                                "div(phir,"
-                              + alpha2.name() + ',' + alpha.name()
-                              + ')'
-                            );
-
-                            alphaPhi += fvc::flux
-                            (
-                                -fvc::flux(-phirc, alpha2, phirScheme),
-                                alpha,
-                                phirScheme
-                            );
-                        }
+                        alphaPhi += fvc::flux
+                        (
+                            -fvc::flux(-phirc, alpha2, phirScheme),
+                            alpha,
+                            phirScheme
+                        );
                     }
                 }
 
@@ -517,14 +513,14 @@ void Foam::phaseSystem::solve
                         (
                             IOobject::groupName("alphaPhiBD", phase.name()),
                             upwind<scalar>(mesh_, phase.phi()()).flux(alpha),
-                            phase.alphaPhi()().boundaryField().types()
+                            phase.alphaPhi()().boundary().types()
                         )
                     );
 
-                    const surfaceScalarField::Boundary& alphaPhiBf =
+                    const surfaceScalarField::BoundaryField& alphaPhiBf =
                         alphaPhi.boundaryField();
 
-                    surfaceScalarField::Boundary& alphaPhiBDBf =
+                    surfaceScalarField::BoundaryField& alphaPhiBDBf =
                         alphaPhiBDs[movingPhasei].boundaryFieldRef();
 
                     // For non-coupled boundaries
@@ -570,7 +566,10 @@ void Foam::phaseSystem::solve
                         alphaPhiPreds[movingPhasei],
                         alphaPhiCorrs[movingPhasei],
                         Sps[phase.index()],
-                        min(alphaVoid.primitiveField(), phase.alphaMax())(),
+                        eval
+                        (
+                            min(alphaVoid.primitiveField(), phase.alphaMax())
+                        )(),
                         zeroField()
                     );
                 }
@@ -619,7 +618,10 @@ void Foam::phaseSystem::solve
                           : alphaPhis[movingPhasei],
                         Sps[phase.index()],
                         Sus[phase.index()],
-                        min(alphaVoid.primitiveField(), phase.alphaMax())(),
+                        eval
+                        (
+                            min(alphaVoid.primitiveField(), phase.alphaMax())
+                        )(),
                         zeroField(),
                         false
                     );
@@ -709,7 +711,10 @@ void Foam::phaseSystem::solve
                           : alphaPhiBDs[movingPhasei],
                         alphaPhis[movingPhasei],
                         Sps[phase.index()],
-                        min(alphaVoid.primitiveField(), phase.alphaMax())(),
+                        eval
+                        (
+                            min(alphaVoid.primitiveField(), phase.alphaMax())
+                        )(),
                         zeroField()
                     );
                 }
@@ -752,7 +757,7 @@ void Foam::phaseSystem::solve
 
                     fvScalarMatrix alphaEqn
                     (
-                        fvm::ddt(alpha) - fvc::ddt(alpha)
+                        fvm::ddt(alpha) - fvi::ddt(alpha)
                       - fvm::laplacian(alphaDByAf, alpha, "bounded")
                     );
 
@@ -773,9 +778,9 @@ void Foam::phaseSystem::solve
                 const phaseModel& phase = solvePhases[solvePhasei];
 
                 Info<< phase.name() << " fraction, min, max = "
-                    << phase.weightedAverage(mesh_.Vsc()).value()
-                    << ' ' << min(phase).value()
-                    << ' ' << max(phase).value()
+                    << weightedAverage(phase(), mesh_.Vsc()()).value()
+                    << ' ' << min(phase.alpha()).value()
+                    << ' ' << max(phase.alpha()).value()
                     << endl;
             }
 
@@ -793,7 +798,7 @@ void Foam::phaseSystem::solve
             }
             else
             {
-                volScalarField::Internal sumAlphaMoving
+                volInternalScalarField sumAlphaMoving
                 (
                     IOobject
                     (
@@ -811,8 +816,11 @@ void Foam::phaseSystem::solve
                 }
 
                 Info<< "Phase-sum volume fraction, min, max = "
-                    << (sumAlphaMoving + 1 - alphaVoid())()
-                      .weightedAverage(mesh_.Vsc()).value()
+                    << weightedAverage
+                       (
+                           eval(sumAlphaMoving + 1 - alphaVoid())(),
+                           mesh_.Vsc()()
+                       ).value()
                     << ' ' << min(sumAlphaMoving + 1 - alphaVoid()).value()
                     << ' ' << max(sumAlphaMoving + 1 - alphaVoid()).value()
                     << endl;
@@ -939,7 +947,7 @@ void Foam::phaseSystem::solve
         if (alphaControls.clip)
         {
             // Clip the phase-fractions between 0 and alphaMax
-            alpha.maxMin(0, phase.alphaMax());
+            alpha.bound(0, phase.alphaMax());
 
             if (stationaryPhases().size())
             {

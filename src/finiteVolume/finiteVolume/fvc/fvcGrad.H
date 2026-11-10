@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -80,6 +80,16 @@ namespace fvc
         const word& name
     );
 
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto grad
+    (
+        const Expression& e,
+        const word& name
+    )
+    {
+        return grad(eval(e), name);
+    }
+
     template<class Type>
     tmp<VolField<typename outerProduct<vector, Type>::type>>
     grad
@@ -93,6 +103,12 @@ namespace fvc
     (
         const tmp<VolField<Type>>&
     );
+
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto grad(const Expression& e)
+    {
+        return grad(eval(e));
+    }
 }
 
 

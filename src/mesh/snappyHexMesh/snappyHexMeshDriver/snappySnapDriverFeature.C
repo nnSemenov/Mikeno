@@ -185,7 +185,7 @@ void Foam::snappySnapDriver::smoothAndConstrain
             mesh,
             pp.meshPoints(),
             dispSum,
-            plusEqOp<point>(),
+            addEqOp(),
             vector::zero,
             distributionMap::transform()
         );
@@ -194,7 +194,7 @@ void Foam::snappySnapDriver::smoothAndConstrain
             mesh,
             pp.meshPoints(),
             dispCount,
-            plusEqOp<label>(),
+            addEqOp(),
             label(0),
             distributionMap::transform()
         );
@@ -623,7 +623,7 @@ void Foam::snappySnapDriver::calcNearestFacePointProperties
         List<point>& pFc = pointFaceCentres[pointi];
         labelList& pFid = pointFacePatchID[pointi];
 
-        sortedOrder(mag(SubField<point>(pFc))(), visitOrder);
+        sortedOrder(eval(mag(SubField<point>(pFc)))(), visitOrder);
 
         pNormals = List<point>(pNormals, visitOrder);
         pDisp = List<point>(pDisp, visitOrder);
@@ -1279,7 +1279,7 @@ void Foam::snappySnapDriver::stringFeatureEdges
         }
 
 
-        reduce(nChanged, sumOp<label>());
+        reduce(nChanged, sumOp());
         Info<< "Stringing feature edges : changed " << nChanged << " points"
             << endl;
         if (nChanged == 0)
@@ -1415,7 +1415,7 @@ void Foam::snappySnapDriver::releasePointsNextToMultiPatch
         }
     }
 
-    reduce(nChanged, sumOp<label>());
+    reduce(nChanged, sumOp());
     Info<< "Removing constraints near multi-patch points : changed "
         << nChanged << " points" << endl;
 }
@@ -2284,9 +2284,9 @@ void Foam::snappySnapDriver::determineBaffleFeatures
     }
 
     Info<< "Detected "
-        << returnReduce(nBaffleEdges, sumOp<label>())
+        << returnReduce(nBaffleEdges, sumOp())
         << " baffle edges out of "
-        << returnReduce(pp.nEdges(), sumOp<label>())
+        << returnReduce(pp.nEdges(), sumOp())
         << " edges." << endl;
 
 
@@ -2483,8 +2483,8 @@ void Foam::snappySnapDriver::reverseAttractMeshPoints
             }
         }
 
-        Info<< "Initially selected " << returnReduce(nFeats, sumOp<label>())
-            << " points out of " << returnReduce(pp.nPoints(), sumOp<label>())
+        Info<< "Initially selected " << returnReduce(nFeats, sumOp())
+            << " points out of " << returnReduce(pp.nPoints(), sumOp())
             << " for reverse attraction." << endl;
 
         // Make sure is synchronised (note: check if constraint is already
@@ -2494,7 +2494,7 @@ void Foam::snappySnapDriver::reverseAttractMeshPoints
             mesh,
             pp.meshPoints(),
             isFeatureEdgeOrPoint,
-            orEqOp<bool>(),         // combine op
+            orEqOp(),         // combine op
             false
         );
 
@@ -2527,7 +2527,7 @@ void Foam::snappySnapDriver::reverseAttractMeshPoints
                 mesh,
                 pp.meshPoints(),
                 isFeatureEdgeOrPoint,
-                orEqOp<bool>(),         // combine op
+                orEqOp(),         // combine op
                 false
             );
         }
@@ -2543,8 +2543,8 @@ void Foam::snappySnapDriver::reverseAttractMeshPoints
         }
 
         Info<< "Selected "
-            << returnReduce(attractPoints.size(), sumOp<label>())
-            << " points out of " << returnReduce(pp.nPoints(), sumOp<label>())
+            << returnReduce(attractPoints.size(), sumOp())
+            << " points out of " << returnReduce(pp.nPoints(), sumOp())
             << " for reverse attraction." << endl;
     }
 
@@ -3215,9 +3215,9 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurfaceFeature
         );
 
         Info<< "Attraction:" << endl
-            << "     linear   : max:" << gMaxMagSqr(patchDisp)
+            << "     linear   : max:" << gMax(magSqr(patchDisp))
             << " avg:" << avgPatchDisp << endl
-            << "     feature  : max:" << gMaxMagSqr(patchAttraction)
+            << "     feature  : max:" << gMax(magSqr(patchAttraction))
             << " avg:" << avgPatchAttr << endl;
     }
 
@@ -3272,10 +3272,10 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurfaceFeature
             }
         }
 
-        reduce(nMasterPoints, sumOp<label>());
-        reduce(nPlanar, sumOp<label>());
-        reduce(nEdge, sumOp<label>());
-        reduce(nPoint, sumOp<label>());
+        reduce(nMasterPoints, sumOp());
+        reduce(nPlanar, sumOp());
+        reduce(nEdge, sumOp());
+        reduce(nPoint, sumOp());
         Info<< "Feature analysis : total master points:"
             << nMasterPoints
             << " attraction to :" << nl
@@ -3380,7 +3380,7 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurfaceFeature
         mesh,
         pp.meshPoints(),
         patchDisp,
-        minMagSqrEqOp<point>(),         // combine op
+        minMagSqrEqOp(),         // combine op
         vector(great, great, great)     // null value (note: can't use vGreat)
     );
 

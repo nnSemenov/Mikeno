@@ -63,8 +63,8 @@ tmp<fvScalarMatrix> RNGkEpsilon<BasicMomentumTransportModel>::kSource() const
         new fvScalarMatrix
         (
             k_,
-            dimVolume*this->rho_.dimensions()*k_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*k_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -79,8 +79,8 @@ RNGkEpsilon<BasicMomentumTransportModel>::epsilonSource() const
         new fvScalarMatrix
         (
             epsilon_,
-            dimVolume*this->rho_.dimensions()*epsilon_.dimensions()
-            /dimTime
+            dimensions::volume*this->rho_.dimensions()*epsilon_.dimensions()
+            /dimensions::time
         )
     );
 }
@@ -130,7 +130,8 @@ RNGkEpsilon<BasicMomentumTransportModel>::RNGkEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentKineticEnergy
     ),
     epsilon_
     (
@@ -142,7 +143,8 @@ RNGkEpsilon<BasicMomentumTransportModel>::RNGkEpsilon
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, this->kMin_);
@@ -197,38 +199,38 @@ void RNGkEpsilon<BasicMomentumTransportModel>::correct()
 
     eddyViscosity<RASModel<BasicMomentumTransportModel>>::correct();
 
-    volScalarField::Internal divU
+    const volInternalScalarField divU
     (
         typedName("divU"),
-        fvc::div(fvc::absolute(this->phi(), U))()
+        fvi::div(fvc::absolute(this->phi(), U))()
     );
 
-    tmp<volTensorField> tgradU = fvc::grad(U);
-    volScalarField::Internal S2
+    tmp<volInternalTensorField> tgradU = fvi::grad(U);
+    const volInternalScalarField S2
     (
         typedName("S2"),
-        (tgradU().v() && dev(twoSymm(tgradU().v())))
+        (tgradU() && dev(twoSymm(tgradU())))
     );
     tgradU.clear();
 
-    volScalarField::Internal G(this->GName(), nut()*S2);
+    const volInternalScalarField G(this->GName(), nut()*S2);
 
-    volScalarField::Internal eta
+    const volInternalScalarField eta
     (
         typedName("eta"),
         sqrt(mag(S2))*k_()/epsilon_()
     );
 
-    volScalarField::Internal eta3(typedName("eta3"), eta*sqr(eta));
+    const volInternalScalarField eta3(typedName("eta3"), eta*sqr(eta));
 
-    volScalarField::Internal R
+    const volInternalScalarField R
     (
         typedName("R"),
         ((eta*(-eta/eta0_ + scalar(1)))/(beta_*eta3 + scalar(1)))
     );
 
     // Update epsilon and G at the wall
-    epsilon_.boundaryFieldRef().updateCoeffs();
+    epsilon_.boundaryRef().updateCoeffs();
 
     // Dissipation equation
     tmp<fvScalarMatrix> epsEqn
@@ -246,7 +248,7 @@ void RNGkEpsilon<BasicMomentumTransportModel>::correct()
 
     epsEqn.ref().relax();
     fvConstraints.constrain(epsEqn.ref());
-    epsEqn.ref().boundaryManipulate(epsilon_.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilon_.boundaryRef());
     solve(epsEqn);
     fvConstraints.constrain(epsilon_);
     boundEpsilon();

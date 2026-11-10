@@ -49,7 +49,7 @@ namespace radiationModels
 void Foam::radiationModels::viewFactor::initialise()
 {
     const polyBoundaryMesh& coarsePatches = coarseMesh_.poly().boundary();
-    const volScalarField::Boundary& qrp = qr_.boundaryField();
+    const volScalarField::BoundaryField& qrp = qr_.boundaryField();
 
     label count = 0;
     forAll(qrp, patchi)
@@ -76,7 +76,7 @@ void Foam::radiationModels::viewFactor::initialise()
     }
 
     totalNCoarseFaces_ = nLocalCoarseFaces_;
-    reduce(totalNCoarseFaces_, sumOp<label>());
+    reduce(totalNCoarseFaces_, sumOp());
 
     if (debug && Pstream::master())
     {
@@ -229,6 +229,7 @@ void Foam::radiationModels::viewFactor::initialise()
             );
 
             pivotIndices_.setSize(CLU_().m());
+            pivotScale_.setSize(CLU_().m());
         }
     }
 }
@@ -275,7 +276,8 @@ Foam::radiationModels::viewFactor::viewFactor(const volScalarField& T)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::heatFluxDensity
     ),
     Fmatrix_(),
     CLU_(),
@@ -284,7 +286,8 @@ Foam::radiationModels::viewFactor::viewFactor(const volScalarField& T)
     nLocalCoarseFaces_(0),
     constEmissivity_(false),
     iterCounter_(0),
-    pivotIndices_(0)
+    pivotIndices_(0),
+    pivotScale_(0)
 {
     initialise();
 }
@@ -333,7 +336,8 @@ Foam::radiationModels::viewFactor::viewFactor
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::heatFluxDensity
     ),
     Fmatrix_(),
     CLU_(),
@@ -342,7 +346,8 @@ Foam::radiationModels::viewFactor::viewFactor
     nLocalCoarseFaces_(0),
     constEmissivity_(false),
     iterCounter_(0),
-    pivotIndices_(0)
+    pivotIndices_(0),
+    pivotScale_(0)
 {
     initialise();
 }
@@ -408,7 +413,7 @@ void Foam::radiationModels::viewFactor::calculate()
     DynamicList<scalar> localCoarseEave(nLocalCoarseFaces_);
     DynamicList<scalar> localCoarseHoave(nLocalCoarseFaces_);
 
-    volScalarField::Boundary& qrBf = qr_.boundaryFieldRef();
+    volScalarField::BoundaryField& qrBf = qr_.boundaryFieldRef();
 
     forAll(selectedPatches_, i)
     {
@@ -512,9 +517,9 @@ void Foam::radiationModels::viewFactor::calculate()
         qrExt[compactGlobalIds[i]] = compactCoarseHo[i];
     }
 
-    Pstream::listCombineGather(T4, maxEqOp<scalar>());
-    Pstream::listCombineGather(E, maxEqOp<scalar>());
-    Pstream::listCombineGather(qrExt, maxEqOp<scalar>());
+    Pstream::listCombineGather(T4, maxEqOp());
+    Pstream::listCombineGather(E, maxEqOp());
+    Pstream::listCombineGather(qrExt, maxEqOp());
 
     Pstream::listCombineScatter(T4);
     Pstream::listCombineScatter(E);
@@ -583,7 +588,7 @@ void Foam::radiationModels::viewFactor::calculate()
                         << "\nDecomposing C matrix..." << endl;
                 }
 
-                LUDecompose(CLU_(), pivotIndices_);
+                LUDecompose(CLU_(), pivotIndices_, pivotScale_);
             }
 
             for (label i=0; i<totalNCoarseFaces_; i++)
@@ -617,7 +622,7 @@ void Foam::radiationModels::viewFactor::calculate()
 
     // Scatter q and fill qr
     Pstream::listCombineScatter(q);
-    Pstream::listCombineGather(q, maxEqOp<scalar>());
+    Pstream::listCombineGather(q, maxEqOp());
 
     label globCoarseId = 0;
     forAll(selectedPatches_, i)
@@ -680,7 +685,7 @@ Foam::tmp<Foam::volScalarField> Foam::radiationModels::viewFactor::Rp() const
         mesh_,
         dimensionedScalar
         (
-            dimMass/pow3(dimTime)/dimLength/pow4(dimTemperature),
+            dimensions::powerDensity/pow4(dimensions::temperature),
             0
         )
     );
@@ -690,11 +695,11 @@ Foam::tmp<Foam::volScalarField> Foam::radiationModels::viewFactor::Rp() const
 Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::fvMesh>>
 Foam::radiationModels::viewFactor::Ru() const
 {
-    return volScalarField::Internal::New
+    return volInternalScalarField::New
     (
         "Ru",
         mesh_,
-        dimensionedScalar(dimMass/dimLength/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::powerDensity, 0)
     );
 }
 

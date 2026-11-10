@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,7 +30,10 @@ License
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::PsiuMulticomponentThermo<BaseThermo>::calculate()
+void Foam::PsiuMulticomponentThermo<BaseThermo>::calculate
+(
+    const bool correctBCs
+)
 {
     const scalarField& hCells = this->he_;
     const scalarField& heuCells = this->heu_;
@@ -80,16 +83,16 @@ void Foam::PsiuMulticomponentThermo<BaseThermo>::calculate()
         );
     }
 
-    volScalarField::Boundary& pBf = this->p_.boundaryFieldRef();
-    volScalarField::Boundary& TBf = this->T_.boundaryFieldRef();
-    volScalarField::Boundary& TuBf = this->Tu_.boundaryFieldRef();
-    volScalarField::Boundary& CpBf = this->Cp_.boundaryFieldRef();
-    volScalarField::Boundary& CvBf = this->Cv_.boundaryFieldRef();
-    volScalarField::Boundary& psiBf = this->psi_.boundaryFieldRef();
-    volScalarField::Boundary& heBf = this->he().boundaryFieldRef();
-    volScalarField::Boundary& heuBf = this->heu().boundaryFieldRef();
-    volScalarField::Boundary& muBf = this->mu_.boundaryFieldRef();
-    volScalarField::Boundary& kappaBf = this->kappa_.boundaryFieldRef();
+    volScalarField::BoundaryField& pBf = this->p_.boundaryFieldRef();
+    volScalarField::BoundaryField& TBf = this->T_.boundaryFieldRef();
+    volScalarField::BoundaryField& TuBf = this->Tu_.boundaryFieldRef();
+    volScalarField::BoundaryField& CpBf = this->Cp_.boundaryFieldRef();
+    volScalarField::BoundaryField& CvBf = this->Cv_.boundaryFieldRef();
+    volScalarField::BoundaryField& psiBf = this->psi_.boundaryFieldRef();
+    volScalarField::BoundaryField& heBf = this->he().boundaryFieldRef();
+    volScalarField::BoundaryField& heuBf = this->heu().boundaryFieldRef();
+    volScalarField::BoundaryField& muBf = this->mu_.boundaryFieldRef();
+    volScalarField::BoundaryField& kappaBf = this->kappa_.boundaryFieldRef();
 
     forAll(TBf, patchi)
     {
@@ -106,6 +109,13 @@ void Foam::PsiuMulticomponentThermo<BaseThermo>::calculate()
 
         if (TPf.fixesValue())
         {
+            if (correctBCs)
+            {
+                // Update temperature boundary condition
+                // for consistency with updated internal temperature
+                TPf.evaluate();
+            }
+
             forAll(TPf, facei)
             {
                 auto composition =
@@ -194,7 +204,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::PsiuMulticomponentThermo
         this->volScalarFieldProperty
         (
             BaseThermo::mixtureType::thermoType::heName() + 'u',
-            dimEnergy/dimMass,
+            dimensions::specificEnergy,
             &BaseThermo::mixtureType::reactants,
             &BaseThermo::mixtureType::thermoMixtureType::he,
             this->p_,
@@ -205,7 +215,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::PsiuMulticomponentThermo
 {
     this->heuBoundaryCorrection(this->heu_);
 
-    calculate();
+    calculate(false);
 
     this->psi_.oldTime(); // Switch on saving old time
 }
@@ -221,7 +231,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::~PsiuMulticomponentThermo()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::PsiuMulticomponentThermo<BaseThermo>::correct()
+void Foam::PsiuMulticomponentThermo<BaseThermo>::correct(const bool correctBCs)
 {
     if (BaseThermo::debug)
     {
@@ -231,7 +241,7 @@ void Foam::PsiuMulticomponentThermo<BaseThermo>::correct()
     // force the saving of the old-time values
     this->psi_.oldTime();
 
-    calculate();
+    calculate(correctBCs);
 
     if (BaseThermo::debug)
     {
@@ -323,7 +333,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::Tb() const
     return this->volScalarFieldProperty
     (
         "Tb",
-        dimTemperature,
+        dimensions::temperature,
         &BaseThermo::mixtureType::products,
         &BaseThermo::mixtureType::thermoMixtureType::The,
         this->he_,
@@ -341,14 +351,14 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::hr() const
         this->volScalarFieldProperty
         (
             "hf",
-            dimEnergy/dimMass,
+            dimensions::specificEnergy,
             &BaseThermo::mixtureType::reactants,
             &BaseThermo::mixtureType::thermoMixtureType::hf
         )
       - this->volScalarFieldProperty
         (
             "hf",
-            dimEnergy/dimMass,
+            dimensions::specificEnergy,
             &BaseThermo::mixtureType::products,
             &BaseThermo::mixtureType::thermoMixtureType::hf
         );
@@ -396,7 +406,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::muu() const
     return this->volScalarFieldProperty
     (
         "muu",
-        dimDynamicViscosity,
+        dimensions::dynamicViscosity,
         &BaseThermo::mixtureType::reactants,
         &BaseThermo::mixtureType::transportMixtureType::mu,
         this->p_,
@@ -414,7 +424,7 @@ Foam::PsiuMulticomponentThermo<BaseThermo>::mub() const
     return this->volScalarFieldProperty
     (
         "mub",
-        dimDynamicViscosity,
+        dimensions::dynamicViscosity,
         &BaseThermo::mixtureType::products,
         &BaseThermo::mixtureType::transportMixtureType::mu,
         this->p_,

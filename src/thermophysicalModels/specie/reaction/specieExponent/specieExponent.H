@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -36,7 +36,7 @@ SourceFiles
 #ifndef specieExponent_H
 #define specieExponent_H
 
-#include "label.H"
+#include "int32.H"
 #include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -49,10 +49,26 @@ class Ostream;
 
 // Forward declaration of friend functions and operators
 class specieExponent;
-scalar pow(scalar x, const specieExponent& e);
-specieExponent operator+(const specieExponent& a, const specieExponent& b);
-specieExponent operator-(const specieExponent& a, const specieExponent& b);
-Ostream& operator<<(Ostream&, const specieExponent&);
+
+inline scalar pow(scalar c, const specieExponent& e);
+
+inline scalar dpowdc(const scalar c, const specieExponent& e);
+
+inline specieExponent operator+
+(
+    const specieExponent& a,
+    const specieExponent& b
+);
+
+inline specieExponent operator-
+(
+    const specieExponent& a,
+    const specieExponent& b
+);
+
+inline specieExponent operator-(const specieExponent& a, const int32_t b);
+
+inline Ostream& operator<<(Ostream&, const specieExponent&);
 
 
 /*---------------------------------------------------------------------------*\
@@ -65,10 +81,10 @@ class specieExponent
 
         //- Marker value to indicate that there is no possible integer
         //  representation of this exponent
-        static const label noIntegerExponent_ = labelMax;
+        static const int32_t noIntegerExponent_ = INT32_MAX;
 
         //- Integer exponent
-        label integerExponent_;
+        int32_t integerExponent_;
 
         //- Scalar exponent
         scalar scalarExponent_;
@@ -88,7 +104,7 @@ public:
         inline specieExponent();
 
         //- Construct from integer
-        inline specieExponent(const label integerExponent);
+        inline specieExponent(const int32_t integerExponent);
 
         //- Construct from scalar
         inline specieExponent(const scalar scalarExponent);
@@ -100,7 +116,7 @@ public:
         inline operator scalar() const;
 
         //- Assign to integer
-        inline specieExponent& operator=(const label integerExponent);
+        inline specieExponent& operator=(const int32_t integerExponent);
 
         //- Assign to scalar
         inline specieExponent& operator=(const scalar scalarExponent);
@@ -112,7 +128,10 @@ public:
     // Friend Functions
 
         //- Compute the power of a number to a specie exponent
-        inline friend scalar pow(const scalar x, const specieExponent& e);
+        inline friend scalar pow(const scalar c, const specieExponent& e);
+
+        //- Compute the derivative of the power of a number to a specie exponent
+        inline friend scalar dpowdc(const scalar c, const specieExponent& e);
 
 
     // Friend Operators
@@ -129,6 +148,13 @@ public:
         (
             const specieExponent& a,
             const specieExponent& b
+        );
+
+        //- Subtract integer from specie exponent
+        inline friend specieExponent operator-
+        (
+            const specieExponent& a,
+            const int32_t b
         );
 
 

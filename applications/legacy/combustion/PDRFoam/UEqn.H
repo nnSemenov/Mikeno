@@ -1,11 +1,11 @@
     fvVectorMatrix UEqn
     (
-        betav*fvm::ddt(rho, U) + fvm::div(phi, U)
+        betav()*fvm::ddt(rho, U) + fvm::div(phi, U)
       + MRF.DDt(rho, U)
       + turbulence->divDevTau(U)
      ==
-        betav*rho*g
-      + betav*fvModels.source(rho, U)
+        betav()*rho()*g
+      + betav()*fvModels.source(rho, U)
     );
 
     fvConstraints.constrain(UEqn);
@@ -14,7 +14,7 @@
 
     if (pimple.momentumPredictor())
     {
-        U = invA & (UEqn.H() - betav*fvc::grad(p));
+        U.internalFieldRef() = invA() & (UEqn.H()()() - betav()*fvi::grad(p));
         U.correctBoundaryConditions();
         fvConstraints.constrain(U);
         K = 0.5*magSqr(U);

@@ -24,10 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "symmTensorField.H"
-#include "transformField.H"
-
-#define TEMPLATE
-#include "FieldFunctionsM.C"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -36,152 +32,102 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * global functions  * * * * * * * * * * * * * //
 
-UNARY_FUNCTION(symmTensor, vector, sqr)
-UNARY_FUNCTION(symmTensor, symmTensor, innerSqr)
-
-UNARY_FUNCTION(scalar, symmTensor, tr)
-UNARY_FUNCTION(sphericalTensor, symmTensor, sph)
-UNARY_FUNCTION(symmTensor, symmTensor, symm)
-UNARY_FUNCTION(symmTensor, symmTensor, twoSymm)
-UNARY_FUNCTION(symmTensor, symmTensor, dev)
-UNARY_FUNCTION(symmTensor, symmTensor, dev2)
-UNARY_FUNCTION(scalar, symmTensor, det)
-UNARY_FUNCTION(symmTensor, symmTensor, cof)
-
-void inv(Field<symmTensor>& tf, const UList<symmTensor>& tf1)
+void inv
+(
+    Field<symmTensor>& tf,
+    const UList<symmTensor>& tf1,
+    const Vector<label>& solutionD
+)
 {
     if (tf.empty())
     {
         return;
     }
 
-    scalar scale = magSqr(tf1[0]);
-    Vector<bool> removeCmpts
-    (
-        magSqr(tf1[0].xx())/scale < small,
-        magSqr(tf1[0].yy())/scale < small,
-        magSqr(tf1[0].zz())/scale < small
-    );
-
-    if (removeCmpts.x() || removeCmpts.y() || removeCmpts.z())
+    if (solutionD.x() == -1 || solutionD.y() == -1 || solutionD.z() == -1)
     {
         symmTensorField tf1Plus(tf1);
 
-        if (removeCmpts.x())
+        if (solutionD.x() == -1)
         {
             tf1Plus += symmTensor(1,0,0,0,0,0);
         }
 
-        if (removeCmpts.y())
+        if (solutionD.y() == -1)
         {
             tf1Plus += symmTensor(0,0,0,1,0,0);
         }
 
-        if (removeCmpts.z())
+        if (solutionD.z() == -1)
         {
             tf1Plus += symmTensor(0,0,0,0,0,1);
         }
 
-        TFOR_ALL_F_OP_FUNC_F(symmTensor, tf, =, inv, symmTensor, tf1Plus)
+        forAll(tf, i)
+        {
+            tf[i] = inv(tf1Plus[i]);
+        }
 
-        if (removeCmpts.x())
+        if (solutionD.x() == -1)
         {
             tf -= symmTensor(1,0,0,0,0,0);
         }
 
-        if (removeCmpts.y())
+        if (solutionD.y() == -1)
         {
             tf -= symmTensor(0,0,0,1,0,0);
         }
 
-        if (removeCmpts.z())
+        if (solutionD.z() == -1)
         {
             tf -= symmTensor(0,0,0,0,0,1);
         }
     }
     else
     {
-        TFOR_ALL_F_OP_FUNC_F(symmTensor, tf, =, inv, symmTensor, tf1)
+        forAll(tf, i)
+        {
+            tf[i] = inv(tf1[i]);
+        }
     }
 }
 
-tmp<symmTensorField> inv(const Field<symmTensor>& tf)
+tmp<symmTensorField> inv
+(
+    const Field<symmTensor>& tf,
+    const Vector<label>& solutionD
+)
 {
     tmp<symmTensorField> result(new symmTensorField(tf.size()));
-    inv(result.ref(), tf);
+    inv(result.ref(), tf, solutionD);
     return result;
 }
 
-tmp<symmTensorField> inv(const SubField<symmTensor>& tf)
+tmp<symmTensorField> inv
+(
+    const SubField<symmTensor>& tf,
+    const Vector<label>& solutionD
+)
 {
     tmp<symmTensorField> result(new symmTensorField(tf.size()));
-    inv(result.ref(), tf);
+    inv(result.ref(), tf, solutionD);
     return result;
 }
 
-tmp<symmTensorField> inv(const tmp<symmTensorField>& tf)
+tmp<symmTensorField> inv
+(
+    const tmp<symmTensorField>& tf,
+    const Vector<label>& solutionD
+)
 {
-    tmp<symmTensorField> tRes = New(tf);
-    inv(tRes.ref(), tf());
+    tmp<symmTensorField> tRes = symmTensorField::New(tf, false);
+    inv(tRes.ref(), tf(), solutionD);
     tf.clear();
     return tRes;
 }
 
-
-template<>
-tmp<Field<symmTensor>> transformFieldMask<symmTensor>
-(
-    const tensorField& tf
-)
-{
-    return symm(tf);
-}
-
-template<>
-tmp<Field<symmTensor>> transformFieldMask<symmTensor>
-(
-    const tmp<tensorField>& ttf
-)
-{
-    tmp<Field<symmTensor>> ret = transformFieldMask<symmTensor>(ttf());
-    ttf.clear();
-    return ret;
-}
-
-
-template<>
-tmp<Field<symmTensor>> transformFieldMask<symmTensor>
-(
-    const symmTensorField& stf
-)
-{
-    return stf;
-}
-
-template<>
-tmp<Field<symmTensor>> transformFieldMask<symmTensor>
-(
-    const tmp<symmTensorField>& tstf
-)
-{
-    return tstf;
-}
-
-
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
-
-UNARY_OPERATOR(vector, symmTensor, *, hdual)
-
-BINARY_OPERATOR(tensor, symmTensor, symmTensor, &, dot)
-BINARY_TYPE_OPERATOR(tensor, symmTensor, symmTensor, &, dot)
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
 
 // ************************************************************************* //

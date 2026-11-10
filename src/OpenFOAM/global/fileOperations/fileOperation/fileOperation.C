@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,6 +28,7 @@ License
 #include "polyMesh.H"
 #include "Time.H"
 #include "OSspecific.H"
+#include "read.H"
 
 /* * * * * * * * * * * * * * * Static Member Data  * * * * * * * * * * * * * */
 
@@ -91,8 +92,7 @@ Foam::fileMonitor& Foam::fileOperation::monitor() const
 
 Foam::instantList Foam::fileOperation::sortTimes
 (
-    const fileNameList& dirEntries,
-    const word& constantName
+    const fileNameList& dirEntries
 )
 {
     // Initialise instant list
@@ -100,15 +100,13 @@ Foam::instantList Foam::fileOperation::sortTimes
     label nTimes = 0;
 
     // Check for "constant"
-    bool haveConstant = false;
     forAll(dirEntries, i)
     {
-        if (dirEntries[i] == constantName)
+        if (dirEntries[i] == Time::constantName)
         {
-            Times[nTimes].value() = 0;
+            Times[nTimes].value() = Time::constantValue;
             Times[nTimes].name() = dirEntries[i];
             nTimes++;
-            haveConstant = true;
             break;
         }
     }
@@ -128,14 +126,7 @@ Foam::instantList Foam::fileOperation::sortTimes
     // Reset the length of the times list
     Times.setSize(nTimes);
 
-    if (haveConstant)
-    {
-        if (nTimes > 2)
-        {
-            std::sort(&Times[1], Times.end(), instant::less());
-        }
-    }
-    else if (nTimes > 1)
+    if (nTimes > 1)
     {
         std::sort(&Times[0], Times.end(), instant::less());
     }
@@ -147,23 +138,16 @@ Foam::instantList Foam::fileOperation::sortTimes
 void Foam::fileOperation::mergeTimes
 (
     const instantList& extraTimes,
-    const word& constantName,
     instantList& times
 )
 {
     if (extraTimes.size())
     {
-        bool haveConstant =
-        (
-            times.size() > 0
-         && times[0].name() == constantName
-        );
+        const bool haveConstant =
+            times.size() > 0 && times[0].name() == Time::constantName;
 
-        bool haveExtraConstant =
-        (
-            extraTimes.size() > 0
-         && extraTimes[0].name() == constantName
-        );
+        const bool haveExtraConstant =
+            extraTimes.size() > 0 && extraTimes[0].name() == Time::constantName;
 
         // Combine times
         instantList combinedTimes(times.size()+extraTimes.size());
@@ -192,7 +176,7 @@ void Foam::fileOperation::mergeTimes
         if (times.size() > 1)
         {
             label starti = 0;
-            if (times[0].name() == constantName)
+            if (times[0].name() == Time::constantName)
             {
                 starti = 1;
             }
@@ -333,7 +317,7 @@ Foam::fileOperation::lookupProcessorsPath(const fileName& fName) const
             }
         }
 
-        if (returnReduce(procDirs.size(), sumOp<label>()))
+        if (returnReduce(procDirs.size(), sumOp()))
         {
             procsDirs_.insert(procPath, procDirs);
 
@@ -392,6 +376,99 @@ bool Foam::fileOperation::exists(IOobject& io) const
 }
 
 
+bool Foam::fileOperation::exists(const dirIndexList& pDirs, IOobject& io) const
+{
+    return exists(io);
+}
+
+
+void Foam::fileOperation::searchInstance
+(
+    const dirIndexList& pDirs,
+    IOobject& io,
+    const IOobject& startIo,
+    const scalar startValue,
+    const word& stopInstance,
+    const instantList& ts
+) const
+{
+    const Time& time = io.time();
+
+    // Find the instance at or immediately below the start time
+    label instancei;
+    for (instancei = ts.size() - 1; instancei >= 0; -- instancei)
+    {
+        if
+        (
+            ts[instancei].name() == time.constant()
+         || ts[instancei].value() <= startValue
+        )
+        {
+            break;
+        }
+    }
+
+    // Error if the object must be read
+    auto notFound = [&]()
+    {
+        if
+        (
+            startIo.readOpt() == IOobject::MUST_READ
+         || startIo.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+        {
+            if (io.name().empty())
+            {
+                FatalErrorInFunction
+                    << "Cannot find directory " << io.local();
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "Cannot find file \"" << io.name()
+                    << "\" in directory " << io.local();
+            }
+
+            FatalIOError
+                << " in times " << startIo.instance() << " down to "
+                << (stopInstance == word::null ? time.constant() : stopInstance)
+                << exit(FatalError);
+        }
+    };
+
+    // Create a numeric stop time
+    const scalar stopValue =
+        stopInstance == word::null ? -vGreat : instant(stopInstance).value();
+
+    // Search remaining instances
+    for (; instancei >= 0; -- instancei)
+    {
+        if (ts[instancei].value() < stopValue)
+        {
+            notFound();
+            io.instance() = stopInstance;
+            return;
+        }
+
+        io.instance() = ts[instancei].name();
+        if (exists(pDirs, io)) return;
+    }
+
+    // Ensure that the constant instance has been checked
+    if (stopValue <= 0 && (!ts.size() || ts[0].name() != time.constant()))
+    {
+        io.instance() = time.constant();
+        if (exists(pDirs, io)) return;
+    }
+
+    // Everything has been searched and nothing has been found. Return the
+    // constant instance, or the stop instance (if any).
+    notFound();
+    io.instance() = stopValue <= 0 ? time.constant() : stopInstance;
+    return;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::fileOperation::fileOperation(label comm)
@@ -442,53 +519,49 @@ bool Foam::fileOperation::writeObject
     const regIOobject& io,
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
-    IOstream::compressionType cmp,
-    const bool write
+    IOstream::compressionType cmp
 ) const
 {
-    if (write)
-    {
-        const fileName filePath(io.objectPath());
+    const fileName filePath(io.objectPath());
 
-        mkDir(filePath.path());
+    mkDir(filePath.path());
 
-        autoPtr<Ostream> osPtr
+    autoPtr<Ostream> osPtr
+    (
+        NewOFstream
         (
-            NewOFstream
-            (
-                filePath,
-                fmt,
-                ver,
-                cmp
-            )
-        );
+            filePath,
+            fmt,
+            ver,
+            cmp
+        )
+    );
 
-        if (!osPtr.valid())
-        {
-            return false;
-        }
-
-        Ostream& os = osPtr();
-
-        // If any of these fail, return (leave error handling to Ostream class)
-        if (!os.good())
-        {
-            return false;
-        }
-
-        if (!io.writeHeader(os))
-        {
-            return false;
-        }
-
-        // Write the data to the Ostream
-        if (!io.writeData(os))
-        {
-            return false;
-        }
-
-        IOobject::writeEndDivider(os);
+    if (!osPtr.valid())
+    {
+        return false;
     }
+
+    Ostream& os = osPtr();
+
+    // If any of these fail, return (leave error handling to Ostream class)
+    if (!os.good())
+    {
+        return false;
+    }
+
+    if (!io.writeHeader(os))
+    {
+        return false;
+    }
+
+    // Write the data to the Ostream
+    if (!io.writeData(os))
+    {
+        return false;
+    }
+
+    IOobject::writeEndDivider(os);
 
     return true;
 }
@@ -656,8 +729,7 @@ void Foam::fileOperation::setUnmodified(const label watchFd) const
 Foam::instantList Foam::fileOperation::findTimes
 (
     const Time&,
-    const fileName& directory,
-    const word& constantName
+    const fileName& directory
 ) const
 {
     if (debug)
@@ -676,7 +748,7 @@ Foam::instantList Foam::fileOperation::findTimes
         )
     );
 
-    instantList times = sortTimes(dirEntries, constantName);
+    instantList times = sortTimes(dirEntries);
 
 
     // Get all processor directories
@@ -695,12 +767,7 @@ Foam::instantList Foam::fileOperation::findTimes
                     fileType::directory
                 )
             );
-            mergeTimes
-            (
-                sortTimes(extraEntries, constantName),
-                constantName,
-                times
-            );
+            mergeTimes(sortTimes(extraEntries), times);
         }
     }
 
@@ -714,155 +781,27 @@ Foam::instantList Foam::fileOperation::findTimes
 
 Foam::IOobject Foam::fileOperation::findInstance
 (
-    const IOobject& startIO,
+    const IOobject& startIo,
     const scalar startValue,
     const word& stopInstance
 ) const
 {
-    const Time& time = startIO.time();
+    // Make a copy
+    IOobject io(startIo);
 
-    IOobject io(startIO);
+    // Quick return if the given object exists
+    if (exists(io)) return io;
 
-    // Note: - if name is empty, just check the directory itself
-    //       - check both for isFile and headerOk since the latter does a
-    //         filePath so searches for the file.
-    //       - check for an object with local file scope (so no looking up in
-    //         parent directory in case of parallel)
-
-    if (exists(io))
-    {
-        if (debug)
-        {
-            InfoInFunction
-                << "Found exact match for \"" << io.name()
-                << "\" in " << io.instance()/io.local()
-                << endl;
-        }
-
-        return io;
-    }
-
-    // Search back through the time directories to find the time
-    // closest to and lower than current time
-
-    instantList ts = time.times();
-    label instanceI;
-
-    for (instanceI = ts.size()-1; instanceI >= 0; --instanceI)
-    {
-        if
-        (
-            ts[instanceI].name() == time.constant()
-         || ts[instanceI].value() <= startValue
-        )
-        {
-            break;
-        }
-    }
-
-    // continue searching from here
-    for (; instanceI >= 0; --instanceI)
-    {
-        // Shortcut: if actual directory is the timeName we've already tested it
-        if
-        (
-            ts[instanceI].name() == startIO.instance()
-         && ts[instanceI].name() != stopInstance
-        )
-        {
-            continue;
-        }
-
-        io.instance() = ts[instanceI].name();
-        if (exists(io))
-        {
-            if (debug)
-            {
-                InfoInFunction
-                    << "Found exact match for \"" << io.name()
-                    << "\" in " << io.instance()/io.local()
-                    << endl;
-            }
-
-            return io;
-        }
-
-        // Check if hit minimum instance
-        if (ts[instanceI].name() == stopInstance)
-        {
-            if (debug)
-            {
-                InfoInFunction
-                    << "Hit stopInstance " << stopInstance << endl;
-            }
-
-            if
-            (
-                startIO.readOpt() == IOobject::MUST_READ
-             || startIO.readOpt() == IOobject::MUST_READ_IF_MODIFIED
-            )
-            {
-                if (io.name().empty())
-                {
-                    FatalErrorInFunction
-                        << "Cannot find directory "
-                        << io.local() << " in times " << startIO.instance()
-                        << " down to " << stopInstance
-                        << exit(FatalError);
-                }
-                else
-                {
-                    FatalErrorInFunction
-                        << "Cannot find file \"" << io.name()
-                        << "\" in directory " << io.local()
-                        << " in times " << startIO.instance()
-                        << " down to " << stopInstance
-                        << exit(FatalError);
-                }
-            }
-
-            return io;
-        }
-    }
-
-    // times() usually already includes the constant() so would have been
-    // checked above. Re-test if
-    // - times() is empty. Sometimes this can happen (e.g. decomposePar with
-    //   collated)
-    // - times()[0] is not constant
-    if (!ts.size() || ts[0].name() != time.constant())
-    {
-        // Note. This needs to be a hard-coded constant, rather than the
-        // constant function of the time, because the latter points to
-        // the case constant directory in parallel cases
-
-        io.instance() = time.constant();
-        if (exists(io))
-        {
-            if (debug)
-            {
-                InfoInFunction
-                    << "Found constant match for \"" << io.name()
-                    << "\" in " << io.instance()/io.local()
-                    << endl;
-            }
-            return io;
-        }
-    }
-
-
-    if
+    // Search other instances
+    searchInstance
     (
-        startIO.readOpt() == IOobject::MUST_READ
-     || startIO.readOpt() == IOobject::MUST_READ_IF_MODIFIED
-    )
-    {
-        FatalErrorInFunction
-            << "Cannot find file \"" << io.name() << "\" in directory "
-            << io.local() << " in times " << startIO.instance()
-            << " down to " << time.constant()
-            << exit(FatalError);
-    }
+        dirIndexList(),
+        io,
+        startIo,
+        startValue,
+        stopInstance,
+        io.time().times()
+    );
 
     return io;
 }
@@ -1210,10 +1149,37 @@ void Foam::fileHandler(autoPtr<fileOperation>& newHandlerPtr)
 }
 
 
-Foam::fileName Foam::search(const word& file, const fileName& directory)
+// Foam::fileName Foam::search(const word& file, const fileName& directory)
+// {
+//     // Search the current directory for the file
+//     fileNameList files(fileHandler().readDir(directory));
+//     forAll(files, i)
+//     {
+//         if (files[i] == file)
+//         {
+//             return directory/file;
+//         }
+//     }
+
+//     // If not found search each of the sub-directories
+//     fileNameList dirs(fileHandler().readDir(directory, fileType::directory));
+//     forAll(dirs, i)
+//     {
+//         fileName path = search(file, directory/dirs[i]);
+//         if (path != fileName::null)
+//         {
+//             return path;
+//         }
+//     }
+
+//     return fileName::null;
+// }
+
+
+Foam::fileName Foam::searchDir(const word& file, const fileName& directory)
 {
     // Search the current directory for the file
-    fileNameList files(fileHandler().readDir(directory));
+    fileNameList files(readDir(directory));
     forAll(files, i)
     {
         if (files[i] == file)
@@ -1223,10 +1189,10 @@ Foam::fileName Foam::search(const word& file, const fileName& directory)
     }
 
     // If not found search each of the sub-directories
-    fileNameList dirs(fileHandler().readDir(directory, fileType::directory));
+    fileNameList dirs(readDir(directory, fileType::directory));
     forAll(dirs, i)
     {
-        fileName path = search(file, directory/dirs[i]);
+        fileName path = searchDir(file, directory/dirs[i]);
         if (path != fileName::null)
         {
             return path;

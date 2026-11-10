@@ -55,7 +55,7 @@ void Foam::motionSmootherAlgo::checkConstraints
     }
 
 
-    typename PointField<Type>::Boundary& bFld = pf.boundaryField();
+    typename PointField<Type>::BoundaryField& bFld = pf.boundaryField();
 
 
     // Evaluate in reverse order
@@ -143,7 +143,7 @@ Foam::motionSmootherAlgo::avg
     (
         PointField<Type>::New
         (
-            "avg("+fld.name()+')',
+            word("avg(", fld.name(), ')'),
             fld.mesh(),
             dimensioned<Type>("zero", fld.dimensions(), Zero)
         )
@@ -186,14 +186,14 @@ Foam::motionSmootherAlgo::avg
     (
         mesh,
         res,
-        plusEqOp<Type>(),
+        addEqOp(),
         Type(Zero)     // null value
     );
     syncTools::syncPointList
     (
         mesh,
         sumWeight,
-        plusEqOp<scalar>(),
+        addEqOp(),
         scalar(0)               // null value
     );
 

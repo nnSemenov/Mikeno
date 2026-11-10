@@ -42,7 +42,7 @@ Foam::uInhomogeneousEGRMixture::uInhomogeneousEGRMixture
 :
     species_({"fu", "egr"}),
     stoicRatio_(dict.lookup<scalar>("stoichiometricAirFuelMassRatio")),
-    active_(2, true)
+    activeSpecies_(2, true)
 {}
 
 

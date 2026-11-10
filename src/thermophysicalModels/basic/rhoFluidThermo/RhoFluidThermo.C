@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,7 +28,7 @@ License
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::RhoFluidThermo<BaseThermo>::calculate()
+void Foam::RhoFluidThermo<BaseThermo>::calculate(const bool correctBCs)
 {
     const scalarField& hCells = this->he();
     const scalarField& pCells = this->p_;
@@ -75,34 +75,34 @@ void Foam::RhoFluidThermo<BaseThermo>::calculate()
             transportMixture.kappa(pCells[celli]+pressureOffset, TCells[celli]);
     }
 
-    volScalarField::Boundary& pBf =
+    volScalarField::BoundaryField& pBf =
         this->p_.boundaryFieldRef();
 
-    volScalarField::Boundary& TBf =
+    volScalarField::BoundaryField& TBf =
         this->T_.boundaryFieldRef();
 
-    volScalarField::Boundary& CpBf =
+    volScalarField::BoundaryField& CpBf =
         this->Cp_.boundaryFieldRef();
 
-    volScalarField::Boundary& CvBf =
+    volScalarField::BoundaryField& CvBf =
         this->Cv_.boundaryFieldRef();
 
-    volScalarField::Boundary& psiBf =
+    volScalarField::BoundaryField& psiBf =
         this->psi_.boundaryFieldRef();
 
-    volScalarField::Boundary& rhoBf =
+    volScalarField::BoundaryField& rhoBf =
         this->rho_.boundaryFieldRef();
 
-    volScalarField::Boundary& heBf =
+    volScalarField::BoundaryField& heBf =
         this->he().boundaryFieldRef();
         
-    volScalarField::Boundary& dhedp_TBf =
+    volScalarField::BoundaryField& dhedp_TBf =
         this->kappa_.boundaryFieldRef();
 
-    volScalarField::Boundary& muBf =
+    volScalarField::BoundaryField& muBf =
         this->mu_.boundaryFieldRef();
 
-    volScalarField::Boundary& kappaBf =
+    volScalarField::BoundaryField& kappaBf =
         this->kappa_.boundaryFieldRef();
 
     forAll(this->T_.boundaryField(), patchi)
@@ -120,6 +120,13 @@ void Foam::RhoFluidThermo<BaseThermo>::calculate()
 
         if (pT.fixesValue())
         {
+            if (correctBCs)
+            {
+                // Update temperature boundary condition
+                // for consistency with updated internal temperature
+                pT.evaluate();
+            }
+
             forAll(pT, facei)
             {
                 auto composition =
@@ -185,7 +192,7 @@ Foam::RhoFluidThermo<BaseThermo>::RhoFluidThermo
 :
     BaseThermo(mesh, phaseName)
 {
-    calculate();
+    calculate(false);
 }
 
 
@@ -199,14 +206,14 @@ Foam::RhoFluidThermo<BaseThermo>::~RhoFluidThermo()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class BaseThermo>
-void Foam::RhoFluidThermo<BaseThermo>::correct()
+void Foam::RhoFluidThermo<BaseThermo>::correct(const bool correctBCs)
 {
     if (BaseThermo::debug)
     {
         InfoInFunction << endl;
     }
 
-    calculate();
+    calculate(correctBCs);
 
     if (BaseThermo::debug)
     {

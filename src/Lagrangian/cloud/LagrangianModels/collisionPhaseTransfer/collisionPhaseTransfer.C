@@ -24,12 +24,12 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "collisionPhaseTransfer.H"
-#include "addToRunTimeSelectionTable.H"
 #include "carried.H"
 #include "grouped.H"
 #include "massive.H"
 #include "standardNormal.H"
 #include "LagrangianmSp.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -74,11 +74,15 @@ void Foam::Lagrangian::collisionPhaseTransfer::addSupType
         tmp<LagrangianSubScalarField> deltaTSu = PhitPtr_()*vOrM;
 
         // Modify the rate of consumption to fully consume removed particles
-        forAll(subMesh, subi)
+        if (sumDeltaTSp_.valid())
         {
-            if (subStates[subi] == LagrangianState::toBeRemoved)
+            forAll(subMesh, subi)
             {
-                deltaTSu.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                if (subStates[subi] == LagrangianState::toBeRemoved)
+                {
+                    deltaTSu.ref()[subi] *=
+                        1 + 1/max(sumDeltaTSp_()[subi], small);
+                }
             }
         }
 
@@ -119,7 +123,7 @@ void Foam::Lagrangian::collisionPhaseTransfer::addSupType
     if (eqn.isPsi(field))
     {
         // Add an implicit source to the cloud
-        eqn.deltaTSp -= PhitPtr_()*vOrM;
+        eqn.deltaTSp -= eval(PhitPtr_()*vOrM);
     }
     else
     {
@@ -127,11 +131,15 @@ void Foam::Lagrangian::collisionPhaseTransfer::addSupType
         tmp<LagrangianSubField<Type>> deltaTSu = PhitPtr_()*vOrM*field;
 
         // Modify the rate of consumption to fully consume removed particles
-        forAll(subMesh, subi)
+        if (sumDeltaTSp_.valid())
         {
-            if (subStates[subi] == LagrangianState::toBeRemoved)
+            forAll(subMesh, subi)
             {
-                deltaTSu.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                if (subStates[subi] == LagrangianState::toBeRemoved)
+                {
+                    deltaTSu.ref()[subi] *=
+                        1 + 1/max(sumDeltaTSp_()[subi], small);
+                }
             }
         }
 
@@ -181,8 +189,7 @@ Foam::Lagrangian::collisionPhaseTransfer::collisionPhaseTransfer
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::wordList
-Foam::Lagrangian::collisionPhaseTransfer::addSupFields() const
+Foam::wordList Foam::Lagrangian::collisionPhaseTransfer::addSupFields() const
 {
     const bool isGrouped = isCloud<clouds::grouped>();
 
@@ -210,13 +217,8 @@ bool Foam::Lagrangian::collisionPhaseTransfer::addsSupToField
 
     return
         !isCarrierEqn
-     || (
-            cloud<clouds::carried>().hasPhase()
-         && (
-                eqnPhaseName == word::null
-             || eqnPhaseName == cloud<clouds::carried>().phaseName()
-            )
-        );
+     || eqnPhaseName == word::null
+     || eqnPhaseName == cloud<clouds::carried>().phaseName();
 }
 
 
@@ -263,7 +265,7 @@ void Foam::Lagrangian::collisionPhaseTransfer::calculate
         (
             "L",
             subMesh,
-            dimLength,
+            dimensions::length,
             cbrt
             (
                 scalarField
@@ -278,6 +280,7 @@ void Foam::Lagrangian::collisionPhaseTransfer::calculate
     // interface during this step
     PhitPtr_.set
     (
+        eval
         (
             max(mag(alphac_.grad(subMesh)), rootVSmall/L)
            *mag(cloud().U(subMesh))
@@ -304,9 +307,9 @@ void Foam::Lagrangian::collisionPhaseTransfer::calculate
         // successes to get the number is equivalent to sampling a normal
         // distribution for the number. So sample the normal distribution in
         // order to randomise the collisions for the entire parcel.
-        Phit.maxMin(scalar(0), scalar(1));
+        Phit.bound(scalar(0), scalar(1));
         Phit += sqrt(Phit*(1 - Phit)/number)*sampleStandardNormal();
-        Phit.maxMin(scalar(0), scalar(1));
+        Phit.bound(scalar(0), scalar(1));
 
         // Clamp the probability to zero if the fraction is below the minimum
         // permitted. This prevents small transfers and positive feedback in
@@ -363,7 +366,7 @@ void Foam::Lagrangian::collisionPhaseTransfer::preAddSup
         (
             IOobject
             (
-                "sumDeltaTSpvOrM",
+                "sumDeltaTSp",
                 mesh().time().name(),
                 mesh()
             ),

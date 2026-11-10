@@ -34,11 +34,6 @@ License
 #include "minData.H"
 #include "FaceCellWave.H"
 
-#include "preserveBafflesConstraint.H"
-#include "preservePatchesConstraint.H"
-#include "preserveFaceZonesConstraint.H"
-#include "singleProcessorFaceSetsConstraint.H"
-
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
@@ -60,7 +55,7 @@ Foam::label Foam::decompositionMethod::nWeights
     const label localnWeights =
         points.size() ? pointWeights.size()/points.size() : 0;
 
-    const label nWeights = returnReduce(localnWeights, maxOp<label>());
+    const label nWeights = returnReduce(localnWeights, maxOp());
 
     if (localnWeights && localnWeights != nWeights)
     {
@@ -360,7 +355,7 @@ Foam::labelList Foam::decompositionMethod::scaleWeights
         );
 
         // Hack for scotch which does not accept 64bit label range for weights
-        const scalar scale = INT32_MAX/(2*sumWeights);
+        const scalar scale = double{INT32_MAX}/(2*sumWeights);
         // const scalar scale = labelMax/(2*sumWeights);
 
 
@@ -386,7 +381,7 @@ Foam::labelList Foam::decompositionMethod::scaleWeights
 
         if (distributed)
         {
-            reduce(sumWeights, ListOp<sumOp<scalar>>());
+            reduce(sumWeights, ListOp<sumOp>());
         }
 
         scalarList scale(nWeights, 0.0);
@@ -415,7 +410,7 @@ Foam::labelList Foam::decompositionMethod::scaleWeights
 
         if (distributed)
         {
-            reduce(sumIntWeights, ListOp<sumOp<label>>());
+            reduce(sumIntWeights, ListOp<sumOp>());
         }
 
         // Check that the sum of each weight is non-zero
@@ -860,7 +855,7 @@ Foam::labelList Foam::decompositionMethod::decompose
 {
     // Any weights specified?
     const bool hasWeights =
-        returnReduce(cellWeights.size(), sumOp<label>()) > 0;
+        returnReduce(cellWeights.size(), sumOp()) > 0;
 
     // Any processor sets?
     label nProcSets = 0;
@@ -868,13 +863,13 @@ Foam::labelList Foam::decompositionMethod::decompose
     {
         nProcSets += specifiedProcessorFaces[setI].size();
     }
-    reduce(nProcSets, sumOp<label>());
+    reduce(nProcSets, sumOp());
 
     // Any non-mesh connections?
     label nConnections = returnReduce
     (
         explicitConnections.size(),
-        sumOp<label>()
+        sumOp()
     );
 
     // Any faces not blocked?
@@ -886,7 +881,7 @@ Foam::labelList Foam::decompositionMethod::decompose
             nUnblocked++;
         }
     }
-    reduce(nUnblocked, sumOp<label>());
+    reduce(nUnblocked, sumOp());
 
 
     // Either do decomposition on cell centres or on agglomeration
@@ -932,7 +927,7 @@ Foam::labelList Foam::decompositionMethod::decompose
         if (debug)
         {
             Info<< "Constrained decomposition:" << endl
-                << "    split into " << localRegion.nLocalRegions()
+                << "    split into " << localRegion.nRegions()
                 << " regions."
                 << endl;
         }
@@ -945,7 +940,7 @@ Foam::labelList Foam::decompositionMethod::decompose
         // somewhere in the middle of the domain which might not be anywhere
         // near any of the cells.
 
-        pointField regionCentres(localRegion.nLocalRegions(), point::max);
+        pointField regionCentres(localRegion.nRegions(), point::max);
 
         forAll(localRegion, celli)
         {
@@ -960,7 +955,7 @@ Foam::labelList Foam::decompositionMethod::decompose
         // Do decomposition on agglomeration
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        scalarField regionWeights(localRegion.nLocalRegions(), 0);
+        scalarField regionWeights(localRegion.nRegions(), 0);
 
         if (hasWeights)
         {
@@ -1113,7 +1108,7 @@ Foam::labelList Foam::decompositionMethod::decompose
             {
                 // If no processor specified use the one from the
                 // 0th element
-                proci = finalDecomp[mesh.faceOwner()[set[0]]];
+                proci = set.size() ? finalDecomp[mesh.faceOwner()[set[0]]] : -1;
             }
 
             forAll(set, fI)

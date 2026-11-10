@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -61,7 +61,7 @@ Foam::wallBoilingModels::nucleationSiteModels::LemmertChawla::calculate
     auto NRef = coefficient<ScalarFieldType>::value(NRef_);
     auto deltaTRef = coefficient<ScalarFieldType>::value(deltaTRef_);
 
-    return Cn*NRef*pow(max((Tw - Tsatw)/deltaTRef, scalar(0)), 1.805);
+    return Cn*NRef*pow(max((Tw - Tsatw)/deltaTRef, scalar{0}), scalar{1.805});
 }
 
 
@@ -74,8 +74,8 @@ Foam::wallBoilingModels::nucleationSiteModels::LemmertChawla::LemmertChawla
 :
     nucleationSiteModel(),
     Cn_("Cn", dimless, dict, 1),
-    NRef_("NRef", dimless/dimArea, dict, 9.922e5),
-    deltaTRef_("deltaTRef", dimTemperature, dict, 10)
+    NRef_("NRef", dimless/dimensions::area, dict, scalar{9.922e5}),
+    deltaTRef_("deltaTRef", dimensions::temperature, dict, scalar{10})
 {}
 
 
@@ -120,18 +120,18 @@ nucleationSiteDensity
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::wallBoilingModels::nucleationSiteModels::LemmertChawla::
 nucleationSiteDensity
 (
     const phaseModel& liquid,
     const phaseModel& vapour,
     const phaseModel& solid,
-    const volScalarField::Internal& Tf,
-    const volScalarField::Internal& Tsatw,
-    const volScalarField::Internal& L,
-    const volScalarField::Internal& dDep,
-    const volScalarField::Internal& fDep
+    const volInternalScalarField& Tf,
+    const volInternalScalarField& Tsatw,
+    const volInternalScalarField& L,
+    const volInternalScalarField& dDep,
+    const volInternalScalarField& fDep
 ) const
 {
     return calculate(Tsatw, Tf);

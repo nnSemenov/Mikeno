@@ -44,7 +44,7 @@ Foam::LagrangianSubMesh::LagrangianSubMesh
     const LagrangianGroup group,
     const label size,
     const label start,
-    const label index
+    const uint64_t index
 )
 :
     mesh_(mesh),
@@ -275,7 +275,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::Uf
         (
             subMesh.sub("Uf"),
             subMesh,
-            dimVelocity,
+            dimensions::velocity,
             Uf<vectorField>(fraction)
         );
 }
@@ -319,7 +319,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::Uf
         (
             sub("Uf"),
             *this,
-            dimVelocity,
+            dimensions::velocity,
             Uf<vectorField>(fraction)
         );
 }

@@ -40,10 +40,10 @@ namespace DimensionedFieldFunctions
     );
 
     typedef DimensionedFieldFunction<DimensionedField<scalar, fvPatch>>
-        DimensionedFieldFunctionScalarFvPatch;
+        scalarFvPatchDimensionedFieldFunction;
     addToRunTimeSelectionTable
     (
-        DimensionedFieldFunctionScalarFvPatch,
+        scalarFvPatchDimensionedFieldFunction,
         externalWallLayersHeatTransferCoefficient,
         dictionary
     );
@@ -62,7 +62,14 @@ externalWallLayersHeatTransferCoefficient
 )
 :
     wallLayersHeatTransferCoefficient(dict, field),
-    h_(dict.lookup<scalar>("h", dimPower/dimArea/dimTemperature))
+    h_
+    (
+        dict.lookup<scalar>
+        (
+            "h",
+            dimensions::heatFluxDensity/dimensions::temperature
+        )
+    )
 {}
 
 

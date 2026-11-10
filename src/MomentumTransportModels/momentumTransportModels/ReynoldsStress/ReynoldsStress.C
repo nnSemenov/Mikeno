@@ -37,7 +37,7 @@ void Foam::ReynoldsStress<BasicMomentumTransportModel>::boundNormalStress
 {
     scalar kMin = this->kMin_.value();
 
-    R.max
+    R.boundLower
     (
         dimensionedSymmTensor
         (
@@ -62,7 +62,7 @@ void Foam::ReynoldsStress<BasicMomentumTransportModel>::correctWallShearStress
 {
     const fvPatchList& patches = this->mesh_.boundary();
 
-    volSymmTensorField::Boundary& RBf = R.boundaryFieldRef();
+    volSymmTensorField::BoundaryField& RBf = R.boundaryFieldRef();
 
     forAll(patches, patchi)
     {
@@ -109,7 +109,8 @@ Foam::ReynoldsStress<BasicMomentumTransportModel>::RSource() const
         new fvSymmTensorMatrix
         (
             this->R_,
-            dimVolume*this->rho_.dimensions()*this->R_.dimensions()/dimTime
+            dimensions::volume*this->rho_.dimensions()
+           *this->R_.dimensions()/dimensions::time
         )
     );
 }
@@ -152,7 +153,8 @@ Foam::ReynoldsStress<BasicMomentumTransportModel>::ReynoldsStress
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::ReynoldsStress
     ),
 
     nut_
@@ -165,7 +167,8 @@ Foam::ReynoldsStress<BasicMomentumTransportModel>::ReynoldsStress
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        this->mesh_
+        this->mesh_,
+        dimensions::turbulentViscosity
     )
 {
     if (couplingFactor_.value() < 0 || couplingFactor_.value() > 1)
@@ -261,7 +264,7 @@ Foam::ReynoldsStress<BasicMomentumTransportModel>::DivDevTau
 {
     return
     (
-        fvc::div(fvc::interpolate(this->alpha_*rho)*Refff(U))
+        fvi::div(fvc::interpolate(this->alpha_*rho)*Refff(U))
       - correction(fvm::laplacian(this->alpha_*rho*this->nuEff(), U))
     );
 }

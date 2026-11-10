@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvcCellReduce.H"
-#include "fvMesh.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "extrapolatedCalculatedFvPatchFields.H"
@@ -46,7 +45,7 @@ Foam::fvc::cellReduce
     (
         VolField<Type>::New
         (
-            "cellReduce(" + ssf.name() + ')',
+            word("cellReduce(", ssf.name(), ')'),
             mesh,
             dimensioned<Type>
             (

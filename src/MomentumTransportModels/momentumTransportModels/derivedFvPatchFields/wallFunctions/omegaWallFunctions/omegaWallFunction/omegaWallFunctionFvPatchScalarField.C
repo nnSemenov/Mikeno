@@ -150,7 +150,7 @@ void Foam::omegaWallFunctionFvPatchScalarField::updateCoeffsMaster()
             )
         );
 
-    const volScalarField::Boundary& omegaBf = omega.boundaryField();
+    const volScalarField::BoundaryField& omegaBf = omega.boundaryField();
 
     // Make all processors build the near wall distances
     mtm.yb();
@@ -178,12 +178,16 @@ void Foam::omegaWallFunctionFvPatchScalarField::updateCoeffsMaster()
     wallCellOmegaPtr_.reset(patchFieldsToWallCellField(omegaPfs).ptr());
 
     // Set the fractional proportion of the value in the wall cells
-    UIndirectList<scalar>(G, wallCells()) =
+    UIndirectList<scalar>(G, wallCells()) = eval
+    (
         (1 - wallCellFraction())*scalarField(G, wallCells())
-      + wallCellFraction()*wallCellGPtr_();
-    UIndirectList<scalar>(omega, wallCells()) =
+      + wallCellFraction()*wallCellGPtr_()
+    );
+    UIndirectList<scalar>(omega, wallCells()) = eval
+    (
         (1 - wallCellFraction())*scalarField(omega, wallCells())
-      + wallCellFraction()*wallCellOmegaPtr_();
+      + wallCellFraction()*wallCellOmegaPtr_()
+    );
 }
 
 

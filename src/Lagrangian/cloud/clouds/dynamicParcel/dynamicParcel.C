@@ -100,7 +100,7 @@ bool Foam::clouds::dynamicParcel::reCalculateModified()
     }
 
     {
-        result = Lagrangianm::initDdt(dimMass, U, dUdt) || result;
+        result = Lagrangianm::initDdt(dimensions::mass, U, dUdt) || result;
 
         if (context == cloud::contextType::fvModel)
         {
@@ -168,7 +168,7 @@ void Foam::clouds::dynamicParcel::calculate
         mEqn.solve(final);
 
         // Correct the diameter, assuming the density remains constant
-        spherical::correct(toSubField(m/rho));
+        spherical::correct(toSubField(eval(m/rho)));
 
         // Calculate mass exchanges with the carrier
         if (context == cloud::contextType::fvModel && final)

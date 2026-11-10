@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,7 +62,7 @@ SourceFiles
 #ifndef hPowerThermo_H
 #define hPowerThermo_H
 
-#include "scalar.H"
+#include "autoPtr.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -121,6 +121,17 @@ class hPowerThermo
         scalar hf_;
 
 
+    // Private Constructors
+
+        //- Construct from name and parent dictionary and dictionary
+        hPowerThermo
+        (
+            const word& name,
+            const dictionary& dict,
+            const dictionary& subDict
+        );
+
+
     // Private Member Functions
 
         //- Check given temperature is within the range of the fitted coeffs
@@ -161,7 +172,7 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return "hPower<" + EquationOfState::typeName() + '>';
+            return word("hPower<", EquationOfState::typeName(), '>');
         }
 
         //- Limit the temperature to be in the range Tlow_ to Thigh_
@@ -209,6 +220,12 @@ public:
 
             //- Temperature derivative of heat capacity at constant pressure
             inline scalar dCpdT(const scalar p, const scalar T) const;
+
+
+        // I-O
+
+            //- Write to Ostream
+            void write(Ostream& os) const;
 
 
     // Member Operators

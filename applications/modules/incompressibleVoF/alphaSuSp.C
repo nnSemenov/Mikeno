@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,19 +30,19 @@ License
 
 void Foam::solvers::incompressibleVoF::alphaSuSp
 (
-    tmp<volScalarField::Internal>& tSu,
-    tmp<volScalarField::Internal>& tSp
+    tmp<volInternalScalarField>& tSu,
+    tmp<volInternalScalarField>& tSp
 )
 {
     if (!divergent()) return;
 
-    const dimensionedScalar Szero(dimless/dimTime, 0);
+    const dimensionedScalar Szero(dimless/dimensions::time, 0);
 
-    tSp = volScalarField::Internal::New("Sp", mesh, Szero);
-    tSu = volScalarField::Internal::New("Su", mesh, Szero);
+    tSp = volInternalScalarField::New("Sp", mesh, Szero);
+    tSu = volInternalScalarField::New("Su", mesh, Szero);
 
-    volScalarField::Internal& Sp = tSp.ref();
-    volScalarField::Internal& Su = tSu.ref();
+    volInternalScalarField& Sp = tSp.ref();
+    volInternalScalarField& Su = tSu.ref();
 
     if (fvModels().addsSupToField(alpha1.name()))
     {

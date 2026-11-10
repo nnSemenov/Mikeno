@@ -71,7 +71,7 @@ Foam::nucleationGroupSurfaceAreaVolumeRatioFvScalarFieldSource::sourceValue
 ) const
 {
     // Get the surface area volume ratio of the nucleates
-    tmp<volScalarField::Internal> kappa =
+    tmp<volInternalScalarField> kappa =
         6/refCast<const fv::nucleation>(model).d();
 
     // Scale the value by the source for the corresponding group fraction
@@ -88,13 +88,12 @@ Foam::nucleationGroupSurfaceAreaVolumeRatioFvScalarFieldSource::internalCoeff
 {
     // Nucleation is always an "inflow" to the nucleating phase, so the source
     // should be fully explicit
-    return
-        DimensionedField<scalar, fvMesh>::New
-        (
-            model.name() + ":" + this->internalField().name() + "InternalCoeff",
-            this->internalField().mesh(),
-            dimensionedScalar(dimless, scalar(0))
-        );
+    return DimensionedField<scalar, fvMesh>::New
+    (
+        word(model.name(), ':', this->internalField().name(), "InternalCoeff"),
+        this->internalField().mesh(),
+        dimensionedScalar(dimless, scalar(0))
+    );
 }
 
 

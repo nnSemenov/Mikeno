@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,8 +52,11 @@ Foam::functionObjects::cloudMassFlux::q
         isCloud<clouds::grouped>()
       ? toSubField
         (
-            cloud<clouds::grouped>().number(fraction.mesh())
-           *cloud<clouds::massive>().m(fraction.mesh())
+            eval
+            (
+                cloud<clouds::grouped>().number(fraction.mesh())
+               *cloud<clouds::massive>().m(fraction.mesh())
+            )
         )
       : toSubField
         (
@@ -71,7 +74,7 @@ Foam::functionObjects::cloudMassFlux::cloudMassFlux
     const dictionary& dict
 )
 :
-    cloudFlux(name, runTime, dict, clouds::massive::mName, dimMass)
+    cloudFlux(name, runTime, dict, clouds::massive::mName, dimensions::mass)
 {}
 
 

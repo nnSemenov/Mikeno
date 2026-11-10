@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -1026,7 +1026,7 @@ bool Foam::polyBoundaryMesh::checkDefinition(const bool report) const
         }
     }
 
-    reduce(hasError, orOp<bool>());
+    reduce(hasError, orOp());
 
     if (debug || report)
     {
@@ -1217,10 +1217,17 @@ bool Foam::polyBoundaryMesh::writeObject
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
-    return regIOobject::writeObject(fmt, ver, IOstream::UNCOMPRESSED, write);
+    return
+        regIOobject::writeObject
+        (
+            fmt,
+            ver,
+            IOstream::UNCOMPRESSED,
+            updateInstance
+        );
 }
 
 

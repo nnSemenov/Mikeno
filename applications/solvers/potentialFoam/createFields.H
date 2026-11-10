@@ -56,19 +56,24 @@ forAll(U.boundaryField(), patchi)
 }
 
 Info<< "Constructing pressure field " << pName << nl << endl;
+typeIOobject<volScalarField> pHeader
+(
+    pName,
+    runTime.name(),
+    mesh
+);
+
 volScalarField p
 (
-    IOobject
+    pHeader.headerOk()
+  ? volScalarField(pHeader, mesh)
+  : volScalarField
     (
-        pName,
-        runTime.name(),
+        pHeader,
         mesh,
-        IOobject::READ_IF_PRESENT,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    dimensionedScalar(pName, sqr(dimVelocity), 0),
-    pBCTypes
+        dimensionedScalar(pName, sqr(dimensions::velocity), 0),
+        pBCTypes
+    )
 );
 
 // Infer the velocity potential BCs from the pressure
@@ -86,6 +91,8 @@ forAll(p.boundaryField(), patchi)
     }
 }
 
+Info << p << endl;
+
 Info<< "Constructing velocity potential field Phi\n" << endl;
 volScalarField Phi
 (
@@ -98,7 +105,7 @@ volScalarField Phi
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar(dimLength*dimVelocity, 0),
+    dimensionedScalar(dimensions::length*dimensions::velocity, 0),
     PhiBCTypes
 );
 

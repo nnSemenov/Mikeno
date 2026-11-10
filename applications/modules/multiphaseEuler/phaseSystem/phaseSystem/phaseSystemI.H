@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2014-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -205,19 +205,19 @@ inline Foam::surfaceScalarField& Foam::phaseSystem::phi()
 }
 
 
-inline const Foam::volScalarField& Foam::phaseSystem::dpdt() const
+inline const Foam::volInternalScalarField& Foam::phaseSystem::dpdt() const
 {
     return dpdt_;
 }
 
 
-inline Foam::volScalarField& Foam::phaseSystem::dpdt()
+inline Foam::volInternalScalarField& Foam::phaseSystem::dpdt()
 {
     return dpdt_;
 }
 
 
-inline const Foam::IOMRFZoneList& Foam::phaseSystem::MRF() const
+inline const Foam::MRFZones& Foam::phaseSystem::MRF() const
 {
     return MRF_;
 }
@@ -265,7 +265,7 @@ inline void addField
 (
     const label phasei,
     const word& name,
-    tmp<GeoField> field,
+    const tmp<GeoField>& field,
     PtrList<GeoField>& fieldList
 )
 {
@@ -282,6 +282,38 @@ inline void addField
             (
                 name, // IOobject::groupName(name, group.name()),
                 field
+            )
+        );
+    }
+}
+
+template
+<
+    class GeoField,
+    class Expression,
+    class = EnableIfExpression<Expression>
+>
+inline void addField
+(
+    const label phasei,
+    const word& name,
+    const Expression& e,
+    PtrList<GeoField>& fieldList
+)
+{
+    if (fieldList.set(phasei))
+    {
+        fieldList[phasei] += e;
+    }
+    else
+    {
+        fieldList.set
+        (
+            phasei,
+            new GeoField
+            (
+                name, // IOobject::groupName(name, group.name()),
+                e
             )
         );
     }
@@ -310,6 +342,40 @@ inline void addField
             (
                 IOobject::groupName(name, group.name()),
                 field
+            )
+        );
+    }
+}
+
+
+template
+<
+    class GeoField,
+    class Group,
+    class Expression,
+    class = EnableIfExpression<Expression>
+>
+inline void addField
+(
+    const Group& group,
+    const word& name,
+    const Expression& e,
+    PtrList<GeoField>& fieldList
+)
+{
+    if (fieldList.set(group.index()))
+    {
+        fieldList[group.index()] += e;
+    }
+    else
+    {
+        fieldList.set
+        (
+            group.index(),
+            new GeoField
+            (
+                IOobject::groupName(name, group.name()),
+                e
             )
         );
     }
@@ -351,6 +417,40 @@ inline void addField
             (
                 IOobject::groupName(name, group.name()),
                 field
+            )
+        );
+    }
+}
+
+
+template
+<
+    class GeoField,
+    class Group,
+    class Expression,
+    class = EnableIfExpression<Expression>
+>
+inline void addField
+(
+    const Group& group,
+    const word& name,
+    const Expression& e,
+    HashPtrTable<GeoField>& fieldTable
+)
+{
+    if (fieldTable.found(group.name()))
+    {
+        *fieldTable[group.name()] += e;
+    }
+    else
+    {
+        fieldTable.set
+        (
+            group.name(),
+            new GeoField
+            (
+                IOobject::groupName(name, group.name()),
+                e
             )
         );
     }

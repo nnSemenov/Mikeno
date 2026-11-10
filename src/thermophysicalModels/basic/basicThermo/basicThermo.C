@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -174,7 +174,7 @@ Foam::List<Foam::Pair<Foam::word>> Foam::basicThermo::thermoNameComponents
 
 Foam::wordList Foam::basicThermo::heBoundaryBaseTypes()
 {
-    const volScalarField::Boundary& tbf = T().boundaryField();
+    const volScalarField::BoundaryField& tbf = T().boundaryField();
 
     wordList hbt(tbf.size(), word::null);
 
@@ -192,7 +192,7 @@ Foam::wordList Foam::basicThermo::heBoundaryBaseTypes()
 
 Foam::wordList Foam::basicThermo::heBoundaryTypes()
 {
-    const volScalarField::Boundary& tbf = T().boundaryField();
+    const volScalarField::Boundary& tbf = T().boundary();
 
     wordList hbt = tbf.types();
 
@@ -272,7 +272,8 @@ Foam::basicThermo::implementation::implementation
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::temperature
     ),
 
     kappa_
@@ -286,7 +287,7 @@ Foam::basicThermo::implementation::implementation
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimThermalConductivity, Zero)
+        dimensionedScalar(dimensions::thermalConductivity, Zero)
     ),
 
     dpdt_(dict.lookupOrDefault<Switch>("dpdt", true)),

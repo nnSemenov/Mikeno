@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -72,6 +72,20 @@ class Rosenbrock34
 {
     // Private Data
 
+        // Controls
+
+           //- Optional LU decomposition pivoting switch
+           //  Defaults to false
+           Switch pivot_;
+
+           //- Optional LU decomposition row filtering tolerance
+           //  Defaults to min(absTol_)
+           scalar rowTol_;
+
+        // Temporary storage
+        // held to avoid dynamic memory allocation between calls
+        // and to transfer internal values between functions
+
         mutable scalarField k1_;
         mutable scalarField k2_;
         mutable scalarField k3_;
@@ -82,6 +96,7 @@ class Rosenbrock34
         mutable scalarSquareMatrix dfdy_;
         mutable scalarSquareMatrix a_;
         mutable labelList pivotIndices_;
+        mutable scalarList pivotScale_;
 
         static const scalar
             a21, a31, a32,

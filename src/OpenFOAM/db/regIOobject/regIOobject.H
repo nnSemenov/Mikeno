@@ -302,11 +302,11 @@ public:
                 IOstream::streamFormat,
                 IOstream::versionNumber,
                 IOstream::compressionType,
-                const bool write
+                const bool updateInstance
             ) const;
 
             //- Write using setting from DB
-            virtual bool write(const bool write = true) const;
+            virtual bool write(const bool updateInstance = true) const;
 
 
     // Member Operators

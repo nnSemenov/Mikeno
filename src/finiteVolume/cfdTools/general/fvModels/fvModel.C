@@ -156,7 +156,7 @@ Foam::fvModel::~fvModel()
 
 Foam::wordList Foam::fvModel::addSupFields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
@@ -199,7 +199,7 @@ bool Foam::fvModel::read(const dictionary& dict)
 }
 
 
-bool Foam::fvModel::write(const bool write) const
+bool Foam::fvModel::write(const bool updateInstance) const
 {
     return true;
 }

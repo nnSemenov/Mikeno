@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LiaoBase.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 #include "phaseCompressibleMomentumTransportModel.H"
 #include "uniformDimensionedFields.H"
 
@@ -49,7 +49,7 @@ Foam::populationBalance::LiaoBase::LiaoBase
         dimensionedScalar
         (
             "kolmogorovLengthScale",
-            dimLength,
+            dimensions::length,
             Zero
         )
     ),
@@ -65,7 +65,7 @@ Foam::populationBalance::LiaoBase::LiaoBase
         dimensionedScalar
         (
             "shearStrainRate",
-            dimVelocity/dimLength,
+            dimensions::rate,
             Zero
         )
     ),
@@ -81,7 +81,7 @@ Foam::populationBalance::LiaoBase::LiaoBase
         dimensionedScalar
         (
             "eddyStrainRate",
-            dimVelocity/dimLength,
+            dimensions::rate,
             Zero
         )
     )
@@ -92,19 +92,19 @@ Foam::populationBalance::LiaoBase::LiaoBase
 
 void Foam::populationBalance::LiaoBase::precompute()
 {
-    const volScalarField::Internal& rhoc = popBal_.continuousPhase().rho();
+    const volInternalScalarField& rhoc = popBal_.continuousPhase().rho();
 
     tmp<volScalarField> tepsilonc(popBal_.continuousTurbulence().epsilon());
-    const volScalarField::Internal& epsilonc = tepsilonc();
+    const volInternalScalarField& epsilonc = tepsilonc();
     tmp<volScalarField> tmu(popBal_.continuousPhase().fluidThermo().mu());
-    const volScalarField::Internal muc = tmu();
+    const volInternalScalarField& muc = tmu();
     tmp<volScalarField> tnu(popBal_.continuousPhase().fluidThermo().nu());
-    const volScalarField::Internal nuc = tnu();
+    const volInternalScalarField& nuc = tnu();
 
     kolmogorovLengthScale_ = pow025(pow3(nuc)/epsilonc);
 
     shearStrainRate_ =
-        sqrt(2.0)*mag(symm(fvc::grad(popBal_.continuousPhase().U())));
+        sqrt(2.0)*mag(symm(fvi::grad(popBal_.continuousPhase().U())));
 
     eddyStrainRate_ = sqrt(rhoc*epsilonc/muc);
 
@@ -116,36 +116,39 @@ void Foam::populationBalance::LiaoBase::precompute()
         const dimensionedScalar nuc
         (
             "nuc",
-            dimKinematicViscosity,
-            gAverage(popBal_.continuousPhase().fluidThermo().nu()())
+            dimensions::kinematicViscosity,
+            gAverage
+            (
+                popBal_.continuousPhase().fluidThermo().nu()().primitiveField()
+            )
         );
 
         const dimensionedScalar rhoc
         (
             "rhoc",
-            dimDensity,
-            gAverage(popBal_.continuousPhase().rho())
+            dimensions::density,
+            gAverage(popBal_.continuousPhase().rho().primitiveField())
         );
 
         const dimensionedScalar rhod
         (
             "rhod",
-            dimDensity,
-            gAverage(popBal_.phases().first().rho())
+            dimensions::density,
+            gAverage(popBal_.phases().first().rho().primitiveField())
         );
 
         const dimensionedScalar sigma
         (
             "sigma",
-            dimForce/dimLength,
-            gAverage(popBal_.sigmaWithContinuousPhase(0)())
+            dimensions::force/dimensions::length,
+            gAverage(popBal_.sigmaWithContinuousPhase(0)().primitiveField())
         );
 
         forAll(popBal_.phases(), i)
         {
             const dimensionedScalar& dSph = popBal_.dSph(i);
 
-            dimensionedScalar uTerminal("uTerminal", dimVelocity, 0.2);
+            dimensionedScalar uTerminal("uTerminal", dimensions::velocity, 0.2);
             dimensionedScalar Cd("Cd", dimless, 0.44);
             dimensionedScalar CdEllipse("CdEllipse", dimless, 1);
 
@@ -153,12 +156,27 @@ void Foam::populationBalance::LiaoBase::precompute()
 
             const dimensionedScalar Eo(mag(g)*mag(rhoc - rhod)*sqr(dSph)/sigma);
 
-            dimensionedScalar F("F", dimForce/dimArea, 1);
-            dimensionedScalar dF("dF", dimForce/dimArea/dimVelocity, 1);
-            const dimensionedScalar uTerminalX("uTerminalX", dimVelocity, 1e-5);
+            dimensionedScalar F("F", dimensions::pressure, 1);
+            dimensionedScalar dF
+            (
+                "dF",
+                dimensions::pressure/dimensions::velocity,
+                1
+            );
+            const dimensionedScalar uTerminalX
+            (
+                "uTerminalX",
+                dimensions::velocity,
+                1e-5
+            );
             dimensionedScalar ReX("ReX", dimless, Re.value());
             dimensionedScalar CdX("CdX", dimless, Cd.value());
-            dimensionedScalar dCd("dCd", Cd.dimensions()/dimVelocity, Zero);
+            dimensionedScalar dCd
+            (
+                "dCd",
+                Cd.dimensions()/dimensions::velocity,
+                Zero
+            );
 
             int n = 0;
 

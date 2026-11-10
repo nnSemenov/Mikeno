@@ -119,12 +119,12 @@ void Foam::mappedFlowRateVelocityFvPatchVectorField::updateCoeffs()
 
     const vectorField np(patch().nf());
 
-    if (phi.dimensions() == dimVolumetricFlux)
+    if (phi.dimensions() == dimensions::volumetricFlux)
     {
         // volumetric flow-rate
         operator==(np*Unp);
     }
-    else if (phi.dimensions() == dimMassFlux)
+    else if (phi.dimensions() == dimensions::massFlux)
     {
         const fvPatchField<scalar>& rhop =
             patch().lookupPatchField<volScalarField, scalar>(rhoName_);
@@ -136,9 +136,9 @@ void Foam::mappedFlowRateVelocityFvPatchVectorField::updateCoeffs()
     {
         FatalErrorInFunction
             << "dimensions of " << phiName_ << " are incorrect" << nl
-            << "    on patch " << this->patch().name()
-            << " of field " << this->internalField().name()
-            << " in file " << this->internalField().objectPath()
+            << "    on patch " << patch().name()
+            << " of field " << internalField().name()
+            << " in file " << internalField().objectPath()
             << nl << exit(FatalError);
     }
 

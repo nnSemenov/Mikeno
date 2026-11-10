@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -99,7 +99,7 @@ Foam::linearUpwindV<Type>::correction
     (
         SurfaceField<Type>::New
         (
-            "linearUpwindV::correction(" + vf.name() + ')',
+            word("linearUpwindV::correction(", vf.name(), ')'),
             mesh,
             dimensioned<Type>
             (
@@ -123,7 +123,7 @@ Foam::linearUpwindV<Type>::correction
 
     tmp<VolField<typename outerProduct<vector, Type>::type>> tgradVf
     (
-        gradScheme_().grad(vf, gradSchemeName_)
+        gradScheme_().fvcGrad(vf, gradSchemeName_)
     );
 
     const VolField<typename outerProduct<vector, Type>::type>& gradVf
@@ -167,8 +167,8 @@ Foam::linearUpwindV<Type>::correction
     }
 
 
-    typename SurfaceField<Type>::
-        Boundary& bSfCorr = sfCorr.boundaryFieldRef();
+    typename SurfaceField<Type>::BoundaryField& bSfCorr =
+        sfCorr.boundaryFieldRef();
 
     forAll(bSfCorr, patchi)
     {

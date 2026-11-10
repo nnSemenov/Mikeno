@@ -38,8 +38,7 @@ SourceFiles
 #ifndef thermo_H
 #define thermo_H
 
-#include "thermodynamicConstants.H"
-using namespace Foam::constant::thermodynamic;
+#include "dictionary.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -125,9 +124,11 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return
-                  Thermo::typeName() + ','
-                + Type<thermo<Thermo, Type>>::typeName();
+            return word
+            (
+                Thermo::typeName(), ',',
+                Type<thermo<Thermo, Type>>::typeName()
+            );
         }
 
         //- Return true if energy type is enthalpy

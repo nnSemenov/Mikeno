@@ -28,7 +28,7 @@ License
 #include "localEulerDdtScheme.H"
 #include "hydrostaticInitialisation.H"
 #include "fvcMeshPhi.H"
-#include "fvcVolumeIntegrate.H"
+#include "fvcDomainIntegrate.H"
 #include "fvcReconstruct.H"
 #include "fvcSnGrad.H"
 #include "addToRunTimeSelectionTable.H"
@@ -49,7 +49,7 @@ namespace solvers
 
 void Foam::solvers::shockFluid::correctCoNum(const surfaceScalarField& amaxSf)
 {
-    const scalarField sumAmaxSf(fvc::surfaceSum(amaxSf)().primitiveField());
+    const scalarField sumAmaxSf(fvi::surfaceSum(amaxSf)().primitiveField());
 
     CoNum_ =
         0.5*gMax(sumAmaxSf/mesh.V().primitiveField())*runTime.deltaTValue();
@@ -127,7 +127,8 @@ Foam::solvers::shockFluid::shockFluid(fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     phi_
@@ -223,7 +224,7 @@ Foam::solvers::shockFluid::shockFluid(fvMesh& mesh)
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimless/dimTime, 1),
+                dimensionedScalar(dimless/dimensions::time, 1),
                 extrapolatedCalculatedFvPatchScalarField::typeName
             )
         );

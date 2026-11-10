@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -99,11 +99,15 @@ Foam::PBiCICG<Type, DType, LUType>::solve(Field<Type>& psi) const
     }
 
     // --- Calculate normalised residual norm
-    solverPerf.initialResidual() = cmptDivide(gSumCmptMag(rA), normFactor);
+    solverPerf.initialResidual() = cmptDivide(gSum(cmptMag(rA)), normFactor);
     solverPerf.finalResidual() = solverPerf.initialResidual();
 
     // --- Check convergence, solve if not converged
-    if (!solverPerf.checkConvergence(this->tolerance_, this->relTol_))
+    if
+    (
+        this->minIter_ > 0
+     || !solverPerf.checkConvergence(this->tolerance_, this->relTol_)
+    )
     {
         // --- Select and construct the preconditioner
         autoPtr<typename LduMatrix<Type, DType, LUType>::preconditioner>
@@ -124,7 +128,7 @@ Foam::PBiCICG<Type, DType, LUType>::solve(Field<Type>& psi) const
             preconPtr->preconditionT(wT, rT);
 
             // --- Update search directions:
-            wArT = gSumCmptProd(wA, rT);
+            wArT = gSum(cmptMultiply(wA, rT));
 
             if (nIter == 0)
             {
@@ -154,7 +158,7 @@ Foam::PBiCICG<Type, DType, LUType>::solve(Field<Type>& psi) const
             this->matrix_.Amul(wA, pA);
             this->matrix_.Tmul(wT, pT);
 
-            Type wApT = gSumCmptProd(wA, pT);
+            Type wApT = gSum(cmptMultiply(wA, pT));
 
             // --- Test for singularity
             if
@@ -185,13 +189,28 @@ Foam::PBiCICG<Type, DType, LUType>::solve(Field<Type>& psi) const
             }
 
             solverPerf.finalResidual() =
-                cmptDivide(gSumCmptMag(rA), normFactor);
+                cmptDivide(gSum(cmptMag(rA)), normFactor);
 
         } while
         (
-            nIter++ < this->maxIter_
-        && !(solverPerf.checkConvergence(this->tolerance_, this->relTol_))
+            (
+              ++nIter < this->maxIter_
+            && !solverPerf.checkConvergence(this->tolerance_, this->relTol_)
+            )
+         || nIter < this->minIter_
         );
+    }
+
+    // Recommend PBiCICGStab if PBiCICG fails to converge
+    if (nIter > max(this->defaultMaxIter_, this->maxIter_))
+    {
+        FatalErrorInFunction
+            << "PBiCICG has failed to converge within the maximum number"
+               " of iterations "
+            << max(this->defaultMaxIter_, this->maxIter_) << nl
+            << "    Please fund the development of the more robust"
+               " PBiCICGStab solver."
+            << exit(FatalError);
     }
 
     solverPerf.nIterations() =

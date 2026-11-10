@@ -123,8 +123,8 @@ void Foam::reactionModels::EDC::correct()
 
     if (version_ == EDCversions::v2016)
     {
-        tmp<volScalarField> ttc(chemistryPtr_->tc());
-        const volScalarField& tc = ttc();
+        tmp<volInternalScalarField> ttc(chemistryPtr_->tc());
+        const volInternalScalarField& tc = ttc();
 
         forAll(tauStar, i)
         {
@@ -195,17 +195,20 @@ void Foam::reactionModels::EDC::correct()
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::reactionModels::EDC::R(const label speciei) const
 {
-    return kappa_*chemistryPtr_->RR()[speciei];
+    return kappa_()*chemistryPtr_->RR()[speciei];
 }
 
 
 Foam::tmp<Foam::fvScalarMatrix>
 Foam::reactionModels::EDC::R(volScalarField& Y) const
 {
-    tmp<fvScalarMatrix> tSu(new fvScalarMatrix(Y, dimMass/dimTime));
+    tmp<fvScalarMatrix> tSu
+    (
+        new fvScalarMatrix(Y, dimensions::mass/dimensions::time)
+    );
     fvScalarMatrix& Su = tSu.ref();
 
     const label speciei = this->thermo().species()[Y.member()];
@@ -215,13 +218,13 @@ Foam::reactionModels::EDC::R(volScalarField& Y) const
 }
 
 
-Foam::tmp<Foam::volScalarField>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::reactionModels::EDC::Qdot() const
 {
-    return volScalarField::New
+    return volInternalScalarField::New
     (
         this->thermo().phasePropertyName(typedName("Qdot")),
-        kappa_*chemistryPtr_->Qdot()
+        kappa_()*chemistryPtr_->Qdot()
     );
 }
 

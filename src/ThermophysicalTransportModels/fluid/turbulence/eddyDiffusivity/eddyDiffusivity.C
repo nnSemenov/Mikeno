@@ -25,7 +25,7 @@ License
 
 #include "eddyDiffusivity.H"
 #include "fvmLaplacian.H"
-#include "fvcLaplacian.H"
+#include "fviLaplacian.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -79,7 +79,8 @@ eddyDiffusivity<TurbulenceThermophysicalTransportModel>::eddyDiffusivity
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        momentumTransport.mesh()
+        momentumTransport.mesh(),
+        dimensions::dynamicDiffusivity
     )
 {}
 
@@ -214,7 +215,7 @@ eddyDiffusivity<TurbulenceThermophysicalTransportModel>::divq
     // Return heat flux source as an implicit energy correction
     // to the temperature gradient flux
     return
-        -fvc::laplacian(this->alpha()*this->kappaEff(), this->thermo().T())
+        -fvi::laplacian(this->alpha()*this->kappaEff(), this->thermo().T())
         -fvm::laplacianCorrection(this->alpha()*this->alphaEff(), he);
 }
 

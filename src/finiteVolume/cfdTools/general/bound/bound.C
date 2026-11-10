@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "bound.H"
-#include "fvcAverage.H"
+#include "fviAverage.H"
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
@@ -47,13 +47,12 @@ bool Foam::bound(volScalarField& vsf, const dimensionedScalar& min)
             max
             (
                 isf,
-                fvc::average(max(vsf, min))().primitiveField()
-               *pos0(-isf)
+                fvi::average(max(vsf, min))().primitiveField()*pos0(-isf)
             ),
             min.value()
         );
 
-        volScalarField::Boundary& bsf = vsf.boundaryFieldRef();
+        volScalarField::BoundaryField& bsf = vsf.boundaryFieldRef();
         forAll(bsf, patchi)
         {
             bsf[patchi] == max

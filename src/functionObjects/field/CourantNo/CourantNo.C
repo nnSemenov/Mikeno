@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "CourantNo.H"
 #include "surfaceFields.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "zeroGradientFvPatchFields.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -49,15 +49,15 @@ namespace functionObjects
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::functionObjects::CourantNo::byRho
 (
-    const tmp<volScalarField::Internal>& Co
+    const tmp<volInternalScalarField>& Co
 ) const
 {
-    if (Co().dimensions() == dimDensity)
+    if (Co().dimensions() == dimensions::density)
     {
-        return Co/obr_.lookupObject<volScalarField>(rhoName_);
+        return Co/obr_.lookupObject<volInternalScalarField>(rhoName_);
     }
     else
     {
@@ -88,7 +88,7 @@ bool Foam::functionObjects::CourantNo::calc()
             byRho
             (
                 (0.5*time_.deltaT())
-               *fvc::surfaceSum(mag(phi))/mesh_.V()
+               *fvi::surfaceSum(mag(phi))/mesh_.V()
             );
 
         tCo->correctBoundaryConditions();

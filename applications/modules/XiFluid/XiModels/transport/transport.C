@@ -28,7 +28,8 @@ License
 #include "XiProfile.H"
 #include "XiGModel.H"
 #include "fvmDiv.H"
-#include "fvcLaplacian.H"
+#include "fviGrad.H"
+#include "fviLaplacian.H"
 #include "fvModels.H"
 #include "fvConstraints.H"
 #include "addToRunTimeSelectionTable.H"
@@ -103,14 +104,14 @@ void Foam::XiModels::transport::correct()
 
     const volScalarField XiEqEta(XiEqModel_->XiEq());
 
-    const volScalarField::Internal GEta(XiGModel_->G());
-    const volScalarField::Internal R(GEta*XiEqEta()/(XiEqEta() - 0.999));
-    const volScalarField::Internal XiEqStar(R/(R - GEta));
-    const volScalarField::Internal XiEq
+    const volInternalScalarField GEta(XiGModel_->G());
+    const volInternalScalarField R(GEta*XiEqEta()/(XiEqEta() - 0.999));
+    const volInternalScalarField XiEqStar(R/(R - GEta));
+    const volInternalScalarField XiEq
     (
-        1 + XiProfile_->profile()()*(XiEqStar - 1)
+        1 + XiProfile_->profile()()()*(XiEqStar - 1)
     );
-    const volScalarField::Internal G(R*(XiEq - 1)/XiEq);
+    const volInternalScalarField G(R*(XiEq - 1)/XiEq);
 
     const surfaceScalarField& phiSt =
         mesh.lookupObject<surfaceScalarField>("phiSt");
@@ -131,26 +132,29 @@ void Foam::XiModels::transport::correct()
     (
         fvm::ddt(rho_, Xi_)
       + fvm::div(phi + phiXi, Xi_, "div(phiXi,Xi)")
-      - fvm::Sp(fvc::div(phiXi), Xi_)
-      - fvc::laplacian(Db, Xi_)
+      - fvm::Sp(fvi::div(phiXi), Xi_)
+      - fvi::laplacian(Db, Xi_)
      ==
-        rho_*R
-      - fvm::Sp(rho_*(R - G), Xi_)
+        rho_()*R
+      - fvm::Sp(rho_()*(R - G), Xi_)
       + fvModels.source(rho_, Xi_)
     );
 
     if (strainReduction_)
     {
-        const tmp<volTensorField> tgradU(fvc::grad(momentumTransport_.U()));
-        const volTensorField::Internal& gradU(tgradU());
-
-        const volScalarField::Internal rhoSigma
+        const tmp<volInternalTensorField> tgradU
         (
-            rho_
+            fvi::grad(momentumTransport_.U())
+        );
+        const volInternalTensorField& gradU(tgradU());
+
+        const volInternalScalarField rhoSigma
+        (
+            rho_()
            *max
             (
-                (n() & n())*tr(gradU) - (n & gradU & n),
-                dimensionedScalar(dimless/dimTime, 0)
+                (n() & n())*tr(gradU) - (n() & gradU & n()),
+                dimensionedScalar(dimless/dimensions::time, 0)
             )
         );
 
@@ -159,16 +163,16 @@ void Foam::XiModels::transport::correct()
 
     if (curvatureReduction_)
     {
-        const tmp<volTensorField> tgradSt(fvc::grad(Su_*Xi_*n));
-        const volTensorField::Internal& gradSt(tgradSt());
+        const tmp<volInternalTensorField> tgradSt(fvi::grad(Su_*Xi_*n));
+        const volInternalTensorField& gradSt(tgradSt());
 
-        const volScalarField::Internal rhoSigmaSt
+        const volInternalScalarField rhoSigmaSt
         (
-            rho_
+            rho_()
            *max
             (
-                (n() & n())*tr(gradSt) - (n & gradSt & n),
-                dimensionedScalar(dimless/dimTime, 0)
+                (n() & n())*tr(gradSt) - (n() & gradSt & n()),
+                dimensionedScalar(dimless/dimensions::time, 0)
             )
         );
 
@@ -184,7 +188,7 @@ void Foam::XiModels::transport::correct()
     fvConstraints.constrain(Xi_);
 
     // Limit range of Xi for realisability and stability
-    Xi_.max(1);
+    Xi_.boundLower(1);
     Xi_ = min(Xi_, 2*XiEqEta);
 }
 

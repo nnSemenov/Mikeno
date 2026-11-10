@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "multiphaseVoFSolver.H"
 #include "fvcSmooth.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "fvcAverage.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -67,9 +67,9 @@ void Foam::solvers::multiphaseVoFSolver::setInterfaceRDeltaT
         // Further limit the reciprocal time-step
         // in the vicinity of the interface
 
-        const volScalarField::Internal alphaCoRdeltaT
+        const volInternalScalarField alphaCoRdeltaT
         (
-            fvc::surfaceSum(mag(phi))/((2*maxAlphaCo)*mesh.V())
+            fvi::surfaceSum(mag(phi))/((2*maxAlphaCo)*mesh.V())
         );
 
         forAll(phases, phasei)

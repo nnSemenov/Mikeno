@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 {
    argList::validArgs.append("patch");
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
 
     const word patchName = args[1];
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
         changedInfo,
         allEdgeInfo,
         allFaceInfo,
-        returnReduce(patch.nEdges(), sumOp<label>())
+        returnReduce(patch.nEdges(), sumOp())
     );
 
 

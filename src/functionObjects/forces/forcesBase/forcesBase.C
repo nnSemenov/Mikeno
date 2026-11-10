@@ -138,7 +138,7 @@ void Foam::functionObjects::forcesBase::writeFileHeader(const label i)
 
             for (label j = 0; j < nBin_; j++)
             {
-                const word jn('(' + Foam::name(j) + ')');
+                const word jn('(', Foam::name(j), ')');
                 const word f("forces" + jn + forceTypes);
                 const word m("moments" + jn + forceTypes);
 
@@ -212,7 +212,7 @@ Foam::scalar Foam::functionObjects::forcesBase::rho
     const volScalarField& p
 ) const
 {
-    if (p.dimensions() == dimPressure)
+    if (p.dimensions() == dimensions::pressure)
     {
         return 1.0;
     }
@@ -596,8 +596,8 @@ bool Foam::functionObjects::forcesBase::read(const dictionary& dict)
                 binMin_ = min(min(d), binMin_);
                 binMax = max(max(d), binMax);
             }
-            reduce(binMin_, minOp<scalar>());
-            reduce(binMax, maxOp<scalar>());
+            reduce(binMin_, minOp());
+            reduce(binMax, maxOp());
 
             // slightly boost binMax so that region of interest is fully
             // within bounds
@@ -743,7 +743,7 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::forcesBase::mu() const
         const dimensionedScalar nu
         (
             "nu",
-            dimKinematicViscosity,
+            dimensions::kinematicViscosity,
             physicalProperties.lookup("nu")
         );
 
@@ -768,7 +768,7 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::forcesBase::rho() const
         (
             "rho",
             mesh_,
-            dimensionedScalar(dimDensity, rhoRef_)
+            dimensionedScalar(dimensions::density, rhoRef_)
         );
     }
     else
@@ -794,7 +794,7 @@ void Foam::functionObjects::forcesBase::calcForcesMoments(const vector& CofR)
     {
         const volVectorField& fD = obr_.lookupObject<volVectorField>(fDName_);
 
-        const surfaceVectorField::Boundary& Sfb =
+        const surfaceVectorField::BoundaryField& Sfb =
             mesh_.Sf().boundaryField();
 
         forAllConstIter(labelHashSet, patchSet_, iter)
@@ -830,14 +830,15 @@ void Foam::functionObjects::forcesBase::calcForcesMoments(const vector& CofR)
     {
         const volScalarField& p = obr_.lookupObject<volScalarField>(pName_);
 
-        const surfaceVectorField::Boundary& Sfb =
+        const surfaceVectorField::BoundaryField& Sfb =
             mesh_.Sf().boundaryField();
 
-        const surfaceScalarField::Boundary& magSfb =
+        const surfaceScalarField::BoundaryField& magSfb =
             mesh_.magSf().boundaryField();
 
         tmp<surfaceVectorField> tdevTau = devTau();
-        const surfaceVectorField::Boundary& devTaub = tdevTau().boundaryField();
+        const surfaceVectorField::BoundaryField& devTaub =
+            tdevTau().boundaryField();
 
         // Scale pRef by density for incompressible simulations
         const scalar pRef = pRef_/rho(p);
@@ -901,8 +902,8 @@ void Foam::functionObjects::forcesBase::calcForcesMoments(const vector& CofR)
         }
     }
 
-    Pstream::listCombineGather(force_, plusEqOp<vectorField>());
-    Pstream::listCombineGather(moment_, plusEqOp<vectorField>());
+    Pstream::listCombineGather(force_, addEqOp());
+    Pstream::listCombineGather(moment_, addEqOp());
     Pstream::listCombineScatter(force_);
     Pstream::listCombineScatter(moment_);
 }

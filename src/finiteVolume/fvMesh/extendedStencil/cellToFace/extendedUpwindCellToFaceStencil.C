@@ -28,6 +28,7 @@ License
 #include "syncTools.H"
 #include "SortableList.H"
 #include "dummyTransform.H"
+#include "emptyPolyPatch.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -317,7 +318,7 @@ void Foam::extendedUpwindCellToFaceStencil::transportStencils
     (
         mesh_,
         neiBndStencil,
-        eqOp<labelList>(),
+        eqOp(),
         dummyTransform()
     );
 

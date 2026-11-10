@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,8 +29,8 @@ License
 #include "fvmSup.H"
 #include "addToRunTimeSelectionTable.H"
 
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -67,20 +67,20 @@ void Foam::fv::waveForcing::readCoeffs(const dictionary& dict)
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::fv::waveForcing::scale() const
+Foam::tmp<Foam::volInternalScalarField> Foam::fv::waveForcing::scale() const
 {
-    return tmp<volScalarField::Internal>(scale_());
+    return tmp<volInternalScalarField>(scale_());
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::waveForcing::forceCoeff() const
 {
     if (lambdaCoeff_ > 0)
     {
         const dimensionedScalar waveSpeed
         (
-            dimVelocity,
+            dimensions::velocity,
             waves_.maxWaveSpeed(mesh().time().deltaTValue())
         );
 
@@ -105,7 +105,7 @@ Foam::fv::waveForcing::waveForcing
     forcing(name, modelType, mesh, dict),
     lambdaCoeff_(0),
     lambdaBoundaryCoeff_(0),
-    regionLength_("regionLength", dimLength, 0),
+    regionLength_("regionLength", dimensions::length, 0),
     waves_(waveSuperposition::New(mesh)),
     liquidPhaseName_(dict.lookup<word>("liquidPhase")),
     alphaName_(IOobject::groupName("alpha", liquidPhaseName_)),
@@ -133,7 +133,7 @@ void Foam::fv::waveForcing::addSup
 {
     if (alpha.name() == alphaName_ && &alpha == &eqn.psi())
     {
-        const volScalarField::Internal forceCoeff(this->forceCoeff());
+        const volInternalScalarField forceCoeff(this->forceCoeff());
 
         eqn -= fvm::Sp(forceCoeff, eqn.psi());
         eqn += forceCoeff*alphaWaves_();
@@ -150,7 +150,7 @@ void Foam::fv::waveForcing::addSup
 {
     if (U.name() == UName_ && &U == &eqn.psi())
     {
-        const volScalarField::Internal forceCoeff(rho*this->forceCoeff());
+        const volInternalScalarField forceCoeff(rho()*this->forceCoeff());
 
         eqn -= fvm::Sp(forceCoeff, eqn.psi());
         eqn += forceCoeff*Uwaves_();
@@ -160,7 +160,7 @@ void Foam::fv::waveForcing::addSup
 
         eqn += fvm::Sp
         (
-            scale()*(fvc::ddt(rho)()() + fvc::div(rhoPhi)()()),
+            scale()*(fvi::ddt(rho) + fvi::div(rhoPhi)),
             eqn.psi()
         );
     }
@@ -209,7 +209,7 @@ void Foam::fv::waveForcing::correct()
     const vectorField uLiq(waves_.ULiquid(t, ccs));
     const vectorField uLiqp(waves_.ULiquid(t, pts));
 
-    alphaWaves_ = volScalarField::Internal::New
+    alphaWaves_ = volInternalScalarField::New
     (
         "alphaWaves",
         mesh(),
@@ -217,11 +217,11 @@ void Foam::fv::waveForcing::correct()
         levelSetFraction(mesh(), h, hp, false)
     );
 
-    Uwaves_ = volVectorField::Internal::New
+    Uwaves_ = volInternalVectorField::New
     (
         "Uwaves",
         mesh(),
-        dimVelocity,
+        dimensions::velocity,
         levelSetAverage(mesh(), h, hp, uGas, uGasp, uLiq, uLiqp)
     );
 }

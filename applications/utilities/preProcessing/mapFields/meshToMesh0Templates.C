@@ -236,8 +236,7 @@ void Foam::meshToMesh0::interpolate
 {
     interpolateInternalField(toVf, fromVf, ord);
 
-    typename VolField<Type>::
-        Boundary& toVfBf = toVf.boundaryFieldRef();
+    typename VolField<Type>::BoundaryField& toVfBf = toVf.boundaryFieldRef();
 
     forAll(toMesh_.poly().boundary(), patchi)
     {
@@ -356,7 +355,7 @@ Foam::meshToMesh0::interpolate
     }
 
     // Create and map the patch field values
-    PtrList<fvPatchField<Type>> patchFields
+    PtrField<fvPatchField<Type>> patchFields
     (
         boundaryAddressing_.size()
     );
@@ -384,7 +383,7 @@ Foam::meshToMesh0::interpolate
         (
             IOobject
             (
-                "interpolated(" + fromVf.name() + ')',
+                word("interpolated(", fromVf.name(), ')'),
                 toMesh_.time().name(),
                 toMesh_,
                 IOobject::NO_READ,

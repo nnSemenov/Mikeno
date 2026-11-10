@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,11 +53,12 @@ void Foam::fv::heatTransferLimitedPhaseChange::readCoeffs
     const dictionary& dict
 )
 {
-    saturationModelPtr_.reset
+    Tsat_.reset
     (
-        saturationTemperatureModel::New
+        DimensionedFunction1<scalar>::New
         (
             "saturationTemperature",
+            {dimPressure, dimTemperature},
             dict
         ).ptr()
     );
@@ -68,7 +69,7 @@ void Foam::fv::heatTransferLimitedPhaseChange::readCoeffs
     {
         dmDotdpPtr_.set
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -79,7 +80,11 @@ void Foam::fv::heatTransferLimitedPhaseChange::readCoeffs
                     IOobject::NO_WRITE
                 ),
                 mesh(),
-                dimensionedScalar(dimDensity/dimTime/dimPressure, 0)
+                dimensionedScalar
+                (
+                    dimensions::density/dimensions::time/dimensions::pressure,
+                    0
+                )
             )
         );
     }
@@ -95,22 +100,22 @@ void Foam::fv::heatTransferLimitedPhaseChange::correctMDot() const
 {
     Info<< type() << ": " << name() << endl << incrIndent;
 
-    const volScalarField::Internal& p = this->p();
-    const volScalarField::Internal& T1 = phase1_.thermo().T();
-    const volScalarField::Internal& T2 = phase2_.thermo().T();
+    const volInternalScalarField& p = this->p();
+    const volInternalScalarField& T1 = phase1_.thermo().T();
+    const volInternalScalarField& T2 = phase2_.thermo().T();
 
     // Saturation temperature
-    const volScalarField::Internal Tsat(saturationModelPtr_->Tsat(p));
+    const volInternalScalarField Tsat(Tsat_->value(p));
     infoField("Tsat", Tsat);
 
     // Latent heat
-    const volScalarField::Internal L(this->L(Tsat));
+    const volInternalScalarField L(this->L(Tsat));
 
     // Heat transfer coefficients
     const Pair<tmp<volScalarField>> Hs =
         solver_.heatTransfer.Hs(phase1_, phase2_, scalar(0));
-    const volScalarField::Internal& H1 = Hs.first();
-    const volScalarField::Internal& H2 = Hs.second();
+    const volInternalScalarField& H1 = Hs.first();
+    const volInternalScalarField& H2 = Hs.second();
 
     // Relaxation factor
     const scalar f = mesh().solution().fieldRelaxationFactor(mDot_.member());
@@ -123,10 +128,7 @@ void Foam::fv::heatTransferLimitedPhaseChange::correctMDot() const
     if (pressureImplicit_)
     {
         // Saturation temperature derivative w.r.t. pressure
-        const volScalarField::Internal TsatPrime
-        (
-            saturationModelPtr_->TsatPrime(p)
-        );
+        const volInternalScalarField TsatPrime(Tsat_->derivative(p));
 
         dmDotdpPtr_() = (1 - f)*dmDotdpPtr_() - f*(H1 + H2)*TsatPrime/L;
     }
@@ -150,7 +152,7 @@ Foam::fv::heatTransferLimitedPhaseChange::heatTransferLimitedPhaseChange
     fluid_(solver_.fluid),
     phase1_(fluid_.phases()[phaseNames().first()]),
     phase2_(fluid_.phases()[phaseNames().second()]),
-    saturationModelPtr_(nullptr),
+    Tsat_(nullptr),
     pressureImplicit_(false),
     pressureEquationIndex_(-1),
     mDot_
@@ -164,7 +166,7 @@ Foam::fv::heatTransferLimitedPhaseChange::heatTransferLimitedPhaseChange
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar(dimDensity/dimTime, 0)
+        dimensionedScalar(dimensions::density/dimensions::time, 0)
     ),
     dmDotdpPtr_(nullptr)
 {
@@ -174,20 +176,20 @@ Foam::fv::heatTransferLimitedPhaseChange::heatTransferLimitedPhaseChange
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::heatTransferLimitedPhaseChange::Lfraction() const
 {
     // Heat transfer coefficients
     const Pair<tmp<volScalarField>> Hs =
         solver_.heatTransfer.Hs(phase1_, phase2_);
-    const volScalarField::Internal& H1 = Hs.first();
-    const volScalarField::Internal& H2 = Hs.second();
+    const volInternalScalarField& H1 = Hs.first();
+    const volInternalScalarField& H2 = Hs.second();
 
     return H2/(H1 + H2);
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::heatTransferLimitedPhaseChange::mDot() const
 {
     return mDot_;

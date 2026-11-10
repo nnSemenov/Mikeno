@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,11 +62,11 @@ static const floatScalar floatScalarSmall
 static const floatScalar floatScalarGreat
     = 1.0/floatScalarSmall;
 
-static const floatScalar floatScalarRootVGreat = ::sqrt(floatScalarVGreat);
-static const floatScalar floatScalarRootVSmall = ::sqrt(floatScalarVSmall);
+static const floatScalar floatScalarRootVGreat = std::sqrt(floatScalarVGreat);
+static const floatScalar floatScalarRootVSmall = std::sqrt(floatScalarVSmall);
 
-static const floatScalar floatScalarRootGreat = ::sqrt(floatScalarGreat);
-static const floatScalar floatScalarRootSmall = ::sqrt(floatScalarSmall);
+static const floatScalar floatScalarRootGreat = std::sqrt(floatScalarGreat);
+static const floatScalar floatScalarRootSmall = std::sqrt(floatScalarSmall);
 
 static const floatScalar floatScalarNaN
     = numeric_limits<floatScalar>::signaling_NaN();
@@ -94,25 +94,35 @@ inline Scalar mag(const Scalar s)
 }
 
 
-#define MAXMINPOW(retType, type1, type2)          \
+MAXMIN(Scalar, Scalar, Scalar)
+MAXMIN(Scalar, Scalar, int32_t)
+MAXMIN(Scalar, int32_t, Scalar)
+MAXMIN(Scalar, Scalar, int64_t)
+MAXMIN(Scalar, int64_t, Scalar)
+
+
+#define POW(type1, type2)                         \
                                                   \
-MAXMIN(retType, type1, type2)                     \
-                                                  \
-inline double pow(const type1 s, const type2 e)   \
+inline Scalar pow(const type1 s, const type2 e)   \
 {                                                 \
-    return ::powf(s, e);                          \
+    return ::powf(Scalar(s), Scalar(e));          \
 }
 
-MAXMINPOW(Scalar, Scalar, Scalar)
-MAXMINPOW(Scalar, Scalar, int)
-MAXMINPOW(Scalar, int, Scalar)
-MAXMINPOW(Scalar, Scalar, long)
-MAXMINPOW(Scalar, long, Scalar)
+POW(Scalar, Scalar)
+POW(Scalar, double)
+POW(int32_t, Scalar)
+POW(int64_t, Scalar)
 
-#undef MAXMINPOW
+#undef POW
 
 
 #define transFunc(func)            \
+inline Scalar func(const Scalar s) \
+{                                  \
+    return ::func##f(s);           \
+}
+
+#define cFunc(func)                \
 inline Scalar func(const Scalar s) \
 {                                  \
     return ::func##f(s);           \
@@ -153,6 +163,12 @@ inline Scalar yn(const int n, const Scalar s)
     return ::ynf(n, s);
 }
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 #undef Scalar
 #undef ScalarVGreat
 #undef ScalarVSmall
@@ -161,13 +177,7 @@ inline Scalar yn(const int n, const Scalar s)
 #undef ScalarNaN
 #undef readScalar
 #undef transFunc
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#undef cFunc
 
 #endif
 

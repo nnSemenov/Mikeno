@@ -30,11 +30,11 @@ License
 #include "zeroGradientFvPatchFields.H"
 #include "alphaOneFvPatchScalarField.H"
 #include "constantSurfaceTension.H"
-#include "fvcVolumeIntegrate.H"
+#include "fviDomainIntegrate.H"
 #include "fvcDdt.H"
 #include "fvcDiv.H"
 #include "fvcFlux.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -81,7 +81,7 @@ bool Foam::solvers::isothermalFilm::initFilmMesh()
             << exit(FatalError);
     }
 
-    if (returnReduce(nWallFaces, sumOp<label>()) == 0)
+    if (returnReduce(nWallFaces, sumOp()) == 0)
     {
         FatalErrorInFunction
             << "There are no filmWall faces in the mesh"
@@ -135,7 +135,8 @@ bool Foam::solvers::isothermalFilm::initFilmMesh()
 
     nHat_.correctBoundaryConditions();
 
-    VbyA_.primitiveFieldRef() = mesh.V()/magSf_;
+    VbyA_.primitiveFieldRef() =
+        mesh.V().primitiveField()/magSf_.primitiveField();
     VbyA_.correctBoundaryConditions();
 
     return true;
@@ -144,7 +145,7 @@ bool Foam::solvers::isothermalFilm::initFilmMesh()
 
 Foam::wordList Foam::solvers::isothermalFilm::alphaTypes() const
 {
-    wordList alphaTypes(delta_.boundaryField().types());
+    wordList alphaTypes(delta_.boundary().types());
 
     forAll(delta_.boundaryField(), patchi)
     {
@@ -170,7 +171,7 @@ Foam::wordList Foam::solvers::isothermalFilm::alphaTypes() const
 
 void Foam::solvers::isothermalFilm::correctCoNum()
 {
-    const scalarField sumPhi(fvc::surfaceSum(mag(phi))().primitiveField());
+    const scalarField sumPhi(fvi::surfaceSum(mag(phi))().primitiveField());
 
     CoNum = 0.5*gMax(sumPhi/mesh.V().primitiveField())*runTime.deltaTValue();
 
@@ -186,22 +187,22 @@ void Foam::solvers::isothermalFilm::correctCoNum()
 
 void Foam::solvers::isothermalFilm::continuityErrors()
 {
-    const dimensionedScalar mass = fvc::domainIntegrate(rho()*delta()*magSf);
+    const dimensionedScalar mass = fvi::domainIntegrate(rho()*delta()*magSf);
 
     correctContinuityError();
 
     if (mass.value() > small)
     {
-        const volScalarField::Internal massContErr
+        const volInternalScalarField massContErr
         (
             runTime.deltaT()*magSf*contErr()
         );
 
         const scalar sumLocalContErr =
-            (fvc::domainIntegrate(mag(massContErr))/mass).value();
+            (fvi::domainIntegrate(mag(massContErr))/mass).value();
 
         const scalar globalContErr =
-            (fvc::domainIntegrate(massContErr)/mass).value();
+            (fvi::domainIntegrate(massContErr)/mass).value();
 
         Info<< "time step continuity errors : sum local = " << sumLocalContErr
             << ", global = " << globalContErr;
@@ -282,7 +283,7 @@ Foam::solvers::isothermalFilm::isothermalFilm
             mesh
         ),
         mesh,
-        dimensionedScalar(dimArea, 0)
+        dimensionedScalar(dimensions::area, 0)
     ),
 
     VbyA_
@@ -294,7 +295,7 @@ Foam::solvers::isothermalFilm::isothermalFilm
             mesh
         ),
         mesh,
-        dimensionedScalar(dimLength, 0),
+        dimensionedScalar(dimensions::length, 0),
         zeroGradientFvPatchField<vector>::typeName
     ),
 
@@ -310,7 +311,8 @@ Foam::solvers::isothermalFilm::isothermalFilm
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::length
     ),
 
     alpha_
@@ -327,7 +329,7 @@ Foam::solvers::isothermalFilm::isothermalFilm
         alphaTypes()
     ),
 
-    deltaWet("deltaWet", dimLength, thermo_.properties()),
+    deltaWet("deltaWet", dimensions::length, thermo_.properties()),
 
     U_
     (
@@ -339,7 +341,8 @@ Foam::solvers::isothermalFilm::isothermalFilm
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     alphaRhoPhi_
@@ -380,7 +383,8 @@ Foam::solvers::isothermalFilm::isothermalFilm
             mesh,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
-        )
+        ),
+        dimensions::acceleration
     ),
 
     nHat(nHat_),

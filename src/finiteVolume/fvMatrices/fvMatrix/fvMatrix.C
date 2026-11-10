@@ -23,6 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include "expressions.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "calculatedFvPatchFields.H"
@@ -30,6 +31,7 @@ License
 #include "coupledFvPatchFields.H"
 #include "UIndirectList.H"
 #include "UCompactListList.H"
+#include "solutionControl.H"
 #include "fvmDdt.H"
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
@@ -120,7 +122,7 @@ void Foam::fvMatrix<Type>::addBoundaryDiag
         addToInternalField
         (
             lduAddr().patchAddr(patchi),
-            internalCoeffs_[patchi].component(solveCmpt),
+            eval(internalCoeffs_[patchi].component(solveCmpt)),
             diag
         );
     }
@@ -135,7 +137,7 @@ void Foam::fvMatrix<Type>::addCmptAvBoundaryDiag(scalarField& diag) const
         addToInternalField
         (
             lduAddr().patchAddr(patchi),
-            cmptAv(internalCoeffs_[patchi]),
+            eval(cmptAv(internalCoeffs_[patchi])),
             diag
         );
     }
@@ -181,7 +183,7 @@ void Foam::fvMatrix<Type>::setValue
     const Type& value
 )
 {
-    const fvMesh& mesh = psi_.mesh();
+    const fvMesh& mesh = this->mesh();
 
     const cellList& cells = mesh.cells();
     const labelUList& own = mesh.owner();
@@ -304,24 +306,16 @@ Foam::fvMatrix<Type>::fvMatrix
     // Initialise coupling coefficients
     forAll(psi.mesh().boundary(), patchi)
     {
-        internalCoeffs_.set
+        internalCoeffs_[patchi].setSize
         (
-            patchi,
-            new Field<Type>
-            (
-                psi.mesh().boundary()[patchi].size(),
-                Zero
-            )
+            psi.mesh().boundary()[patchi].size(),
+            Zero
         );
 
-        boundaryCoeffs_.set
+        boundaryCoeffs_[patchi].setSize
         (
-            patchi,
-            new Field<Type>
-            (
-                psi.mesh().boundary()[patchi].size(),
-                Zero
-            )
+            psi.mesh().boundary()[patchi].size(),
+            Zero
         );
     }
 
@@ -329,7 +323,7 @@ Foam::fvMatrix<Type>::fvMatrix
     VolField<Type>& psiRef = const_cast<VolField<Type>&>(psi_);
 
     const uint64_t currentStatePsi = psiRef.eventNo();
-    psiRef.boundaryFieldRef().updateCoeffs();
+    psiRef.boundaryRef().updateCoeffs();
     psiRef.eventNo() = currentStatePsi;
 }
 
@@ -578,18 +572,18 @@ Foam::scalar Foam::fvMatrix<Type>::relaxationFactor() const
 {
     if
     (
-        solutionControl::finalIteration(psi_.mesh())
-     && psi_.mesh().solution().relaxEquation(psi_.name() + "Final")
+        solutionControl::finalIteration(mesh())
+     && mesh().solution().relaxEquation(psi_.name() + "Final")
     )
     {
-        return psi_.mesh().solution().equationRelaxationFactor
+        return mesh().solution().equationRelaxationFactor
         (
             psi_.name() + "Final"
         );
     }
-    else if (psi_.mesh().solution().relaxEquation(psi_.name()))
+    else if (mesh().solution().relaxEquation(psi_.name()))
     {
-        return psi_.mesh().solution().equationRelaxationFactor(psi_.name());
+        return mesh().solution().equationRelaxationFactor(psi_.name());
     }
     else
     {
@@ -675,27 +669,27 @@ void Foam::fvMatrix<Type>::relax(const scalar alpha)
             }
         }
 
-        reduce(nNon, sumOp<label>(), UPstream::msgType(), psi_.mesh().comm());
+        reduce(nNon, sumOp(), UPstream::msgType(), mesh().comm());
         reduce
         (
             maxNon,
-            maxOp<scalar>(),
+            maxOp(),
             UPstream::msgType(),
-            psi_.mesh().comm()
+            mesh().comm()
         );
         reduce
         (
             sumNon,
-            sumOp<scalar>(),
+            sumOp(),
             UPstream::msgType(),
-            psi_.mesh().comm()
+            mesh().comm()
         );
         sumNon /= returnReduce
         (
             D.size(),
-            sumOp<label>(),
+            sumOp(),
             UPstream::msgType(),
-            psi_.mesh().comm()
+            mesh().comm()
         );
 
         InfoInFunction
@@ -759,8 +753,7 @@ void Foam::fvMatrix<Type>::relax()
 template<class Type>
 void Foam::fvMatrix<Type>::boundaryManipulate
 (
-    typename VolField<Type>::
-        Boundary& bFields
+    typename VolField<Type>::Boundary& bFields
 )
 {
     forAll(bFields, patchi)
@@ -810,14 +803,14 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Type>::A() const
     (
         volScalarField::New
         (
-            "A(" + psi_.name() + ')',
-            psi_.mesh(),
-            dimensions_/psi_.dimensions()/dimVolume,
+            word("A(", psi_.name(), ')'),
+            mesh(),
+            dimensions_/psi_.dimensions()/dimensions::volume,
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 
-    tAphi.ref().primitiveFieldRef() = D()/psi_.mesh().V();
+    tAphi.ref().primitiveFieldRef() = D()/mesh().V().primitiveField();
     tAphi.ref().correctBoundaryConditions();
 
     return tAphi;
@@ -831,10 +824,10 @@ Foam::tmp<Foam::VolInternalField<Type>> Foam::fvMatrix<Type>::Su() const
     (
         VolInternalField<Type>::New
         (
-            "Su(" +psi_.name() + ')',
-            psi_.mesh(),
-            dimensions_/dimVolume,
-            -source()/psi_.mesh().V()
+            word("Su(", psi_.name(), ')'),
+            mesh(),
+            dimensions_/dimensions::volume,
+            -source()/mesh().V().primitiveField()
         )
     );
 
@@ -843,17 +836,17 @@ Foam::tmp<Foam::VolInternalField<Type>> Foam::fvMatrix<Type>::Su() const
 
 
 template<class Type>
-Foam::tmp<Foam::volScalarField::Internal> Foam::fvMatrix<Type>::Sp() const
+Foam::tmp<Foam::volInternalScalarField> Foam::fvMatrix<Type>::Sp() const
 {
-    tmp<volScalarField::Internal> tSp
+    tmp<volInternalScalarField> tSp
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
-            "Sp(" + psi_.name() + ')',
-            psi_.mesh(),
-            dimensions_/psi_.dimensions()/dimVolume,
+            word("Sp(", psi_.name(), ')'),
+            mesh(),
+            dimensions_/psi_.dimensions()/dimensions::volume,
             hasDiag()
-          ? diag()/psi_.mesh().V()
+          ? diag()/mesh().V().primitiveField()
           : tmp<scalarField>(new scalarField(lduAddr().size(), scalar(0)))
         )
     );
@@ -870,9 +863,9 @@ Foam::fvMatrix<Type>::H() const
     (
         VolField<Type>::New
         (
-            "H(" + psi_.name() + ')',
-            psi_.mesh(),
-            dimensions_/dimVolume,
+            word("H(", psi_.name(), ')'),
+            mesh(),
+            dimensions_/dimensions::volume,
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -894,12 +887,12 @@ Foam::fvMatrix<Type>::H() const
     Hphi.primitiveFieldRef() += lduMatrix::H(psi_.primitiveField()) + source_;
     addBoundarySource(Hphi.primitiveFieldRef());
 
-    Hphi.primitiveFieldRef() /= psi_.mesh().V();
+    Hphi.primitiveFieldRef() /= mesh().V().primitiveField();
     Hphi.correctBoundaryConditions();
 
     typename Type::labelType validComponents
     (
-        psi_.mesh().template validComponents<Type>()
+        mesh().template validComponents<Type>()
     );
 
     for (direction cmpt=0; cmpt<Type::nComponents; cmpt++)
@@ -926,8 +919,8 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Type>::H1() const
         volScalarField::New
         (
             "H(1)",
-            psi_.mesh(),
-            dimensions_/(dimVolume*psi_.dimensions()),
+            mesh(),
+            dimensions_/(dimensions::volume*psi_.dimensions()),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -944,13 +937,13 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Type>::H1() const
             addToInternalField
             (
                 lduAddr().patchAddr(patchi),
-                boundaryCoeffs_[patchi].component(0),
+                eval(boundaryCoeffs_[patchi].component(0)),
                 H1_
             );
         }
     }
 
-    H1_.primitiveFieldRef() /= psi_.mesh().V();
+    H1_.primitiveFieldRef() /= mesh().V().primitiveField();
     H1_.correctBoundaryConditions();
 
     return tH1;
@@ -962,7 +955,7 @@ Foam::tmp<Foam::SurfaceField<Type>>
 Foam::fvMatrix<Type>::
 flux() const
 {
-    if (!psi_.mesh().schemes().fluxRequired(psi_.name()))
+    if (!mesh().schemes().fluxRequired(psi_.name()))
     {
         FatalErrorInFunction
             << "flux requested but " << psi_.name()
@@ -976,8 +969,8 @@ flux() const
     (
         SurfaceField<Type>::New
         (
-            "flux(" + psi_.name() + ')',
-            psi_.mesh(),
+            word("flux(", psi_.name(), ')'),
+            mesh(),
             dimensions()
         )
     );
@@ -989,11 +982,11 @@ flux() const
         fieldFlux.primitiveFieldRef().replace
         (
             cmpt,
-            lduMatrix::faceH(psi_.primitiveField().component(cmpt))
+            lduMatrix::faceH(eval(psi_.primitiveField().component(cmpt)))
         );
     }
 
-    FieldField<Field, Type> InternalContrib = internalCoeffs_;
+    Field<Field<Type>> InternalContrib = internalCoeffs_;
 
     forAll(InternalContrib, patchi)
     {
@@ -1005,7 +998,7 @@ flux() const
             );
     }
 
-    FieldField<Field, Type> NeighbourContrib = boundaryCoeffs_;
+    Field<Field<Type>> NeighbourContrib = boundaryCoeffs_;
 
     forAll(NeighbourContrib, patchi)
     {
@@ -1020,8 +1013,8 @@ flux() const
         }
     }
 
-    typename SurfaceField<Type>::
-        Boundary& ffbf = fieldFlux.boundaryFieldRef();
+    typename SurfaceField<Type>::BoundaryField& ffbf =
+        fieldFlux.boundaryFieldRef();
 
     forAll(ffbf, patchi)
     {
@@ -1167,18 +1160,34 @@ void Foam::fvMatrix<Type>::operator-=(const tmp<fvMatrix<Type>>& tfvmv)
 template<class Type>
 void Foam::fvMatrix<Type>::operator+=
 (
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(*this, su, "+=");
-    source() -= su.mesh().V()*su.primitiveField();
+    source() -= su.mesh().V().primitiveField()*su.primitiveField();
+}
+
+
+template<class Type>
+template<class Expression, class>
+void Foam::fvMatrix<Type>::operator+=(const Expression& su)
+{
+    checkMethod(*this, su, "+=");
+    source() -=
+        mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
 }
 
 
 template<class Type>
 void Foam::fvMatrix<Type>::operator+=
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     operator+=(tsu());
@@ -1200,18 +1209,34 @@ void Foam::fvMatrix<Type>::operator+=
 template<class Type>
 void Foam::fvMatrix<Type>::operator-=
 (
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(*this, su, "-=");
-    source() += su.mesh().V()*su.primitiveField();
+    source() += su.mesh().V().primitiveField()*su.primitiveField();
+}
+
+
+template<class Type>
+template<class Expression, class>
+void Foam::fvMatrix<Type>::operator-=(const Expression& su)
+{
+    checkMethod(*this, su, "-=");
+    source() +=
+        mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
 }
 
 
 template<class Type>
 void Foam::fvMatrix<Type>::operator-=
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     operator-=(tsu());
@@ -1236,7 +1261,7 @@ void Foam::fvMatrix<Type>::operator+=
     const dimensioned<Type>& su
 )
 {
-    source() -= psi().mesh().V()*su;
+    source() -= psi().mesh().V().primitiveField()*su.value();
 }
 
 
@@ -1246,7 +1271,7 @@ void Foam::fvMatrix<Type>::operator-=
     const dimensioned<Type>& su
 )
 {
-    source() += psi().mesh().V()*su;
+    source() += psi().mesh().V().primitiveField()*su.value();
 }
 
 
@@ -1269,7 +1294,7 @@ void Foam::fvMatrix<Type>::operator-=
 template<class Type>
 void Foam::fvMatrix<Type>::operator*=
 (
-    const volScalarField::Internal& dsf
+    const volInternalScalarField& dsf
 )
 {
     dimensions_ *= dsf.dimensions();
@@ -1300,9 +1325,46 @@ void Foam::fvMatrix<Type>::operator*=
 
 
 template<class Type>
+template<class Expression, class>
+void Foam::fvMatrix<Type>::operator*=(const Expression& e)
+{
+    dimensions_ *= expression::access(e, dimensions::invalid);
+    const scalarField sf
+    (
+        expression::access
+        (
+            e,
+            expression::Value(),
+            expression::Base()
+        )
+    );
+    lduMatrix::operator*=(sf);
+    source_ *= sf;
+
+    forAll(boundaryCoeffs_, patchi)
+    {
+        const scalarField pisf
+        (
+            mesh().boundary()[patchi].patchInternalField(sf)
+        );
+
+        internalCoeffs_[patchi] *= pisf;
+        boundaryCoeffs_[patchi] *= pisf;
+    }
+
+    if (faceFluxCorrectionPtr_)
+    {
+        FatalErrorInFunction
+            << "cannot scale a matrix containing a faceFluxCorrection"
+            << abort(FatalError);
+    }
+}
+
+
+template<class Type>
 void Foam::fvMatrix<Type>::operator*=
 (
-    const tmp<volScalarField::Internal>& tdsf
+    const tmp<volInternalScalarField>& tdsf
 )
 {
     operator*=(tdsf());
@@ -1343,7 +1405,7 @@ void Foam::fvMatrix<Type>::operator*=
 template<class Type>
 void Foam::fvMatrix<Type>::operator/=
 (
-    const volScalarField::Internal& dsf
+    const volInternalScalarField& dsf
 )
 {
     dimensions_ /= dsf.dimensions();
@@ -1372,11 +1434,47 @@ void Foam::fvMatrix<Type>::operator/=
     }
 }
 
+template<class Type>
+template<class Expression, class>
+void Foam::fvMatrix<Type>::operator/=(const Expression& e)
+{
+    dimensions_ /= expression::access(e, dimensions::invalid);
+    const scalarField sf
+    (
+        expression::access
+        (
+            e,
+            expression::Value(),
+            expression::Base()
+        )
+    );
+    lduMatrix::operator/=(sf);
+    source_ /= sf;
+
+    forAll(boundaryCoeffs_, patchi)
+    {
+        const scalarField pisf
+        (
+            mesh().boundary()[patchi].patchInternalField(sf)
+        );
+
+        internalCoeffs_[patchi] /= pisf;
+        boundaryCoeffs_[patchi] /= pisf;
+    }
+
+    if (faceFluxCorrectionPtr_)
+    {
+        FatalErrorInFunction
+            << "cannot scale a matrix containing a faceFluxCorrection"
+            << abort(FatalError);
+    }
+}
+
 
 template<class Type>
 void Foam::fvMatrix<Type>::operator/=
 (
-    const tmp<volScalarField::Internal>& tdsf
+    const tmp<volInternalScalarField>& tdsf
 )
 {
     operator/=(tdsf());
@@ -1440,9 +1538,11 @@ void Foam::checkMethod
         FatalErrorInFunction
             << "incompatible dimensions for operation "
             << endl << "    "
-            << "[" << fvm1.psi().name() << fvm1.dimensions()/dimVolume << " ] "
+            << "[" << fvm1.psi().name()
+            << fvm1.dimensions()/dimensions::volume << " ] "
             << op
-            << " [" << fvm2.psi().name() << fvm2.dimensions()/dimVolume << " ]"
+            << " [" << fvm2.psi().name()
+            << fvm2.dimensions()/dimensions::volume << " ]"
             << abort(FatalError);
     }
 }
@@ -1452,17 +1552,52 @@ template<class Type>
 void Foam::checkMethod
 (
     const fvMatrix<Type>& fvm,
-    const DimensionedField<Type, fvMesh>& df,
+    const VolInternalField<Type>& df,
     const char* op
 )
 {
-    if (dimensionSet::debug && fvm.dimensions()/dimVolume != df.dimensions())
+    if
+    (
+        dimensionSet::debug
+     && fvm.dimensions()/dimensions::volume != df.dimensions()
+    )
     {
         FatalErrorInFunction
             << endl << "    "
-            << "[" << fvm.psi().name() << fvm.dimensions()/dimVolume << " ] "
+            << "[" << fvm.psi().name()
+            << fvm.dimensions()/dimensions::volume << " ] "
             << op
             << " [" << df.name() << df.dimensions() << " ]"
+            << abort(FatalError);
+    }
+}
+
+
+template<class Type, class Expression, class>
+void Foam::checkMethod
+(
+    const fvMatrix<Type>& fvm,
+    const Expression& e,
+    const char* op
+)
+{
+    if
+    (
+        dimensionSet::debug
+     && fvm.dimensions()/dimensions::volume
+     != expression::access(e, dimensions::invalid)
+    )
+    {
+        FatalErrorInFunction
+            << "incompatible dimensions for operation "
+            << endl << "    "
+            << "[" << fvm.psi().name()
+            << fvm.dimensions()/dimensions::volume << " ] "
+            << op
+            << " ["
+            << expression::name(e)
+            << expression::access(e, dimensions::invalid)
+            << " ]"
             << abort(FatalError);
     }
 }
@@ -1571,12 +1706,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 (
     const fvMatrix<Type>& A,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(A, su, "==");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += su.mesh().V()*su.primitiveField();
+    tC.ref().source() += su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
+(
+    const fvMatrix<Type>& A,
+    const Expression& su
+)
+{
+    checkMethod(A, su, "==");
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref().source() +=
+        A.mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -1584,12 +1739,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 (
     const fvMatrix<Type>& A,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(A, tsu(), "==");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1603,7 +1759,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 {
     checkMethod(A, tsu(), "==");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1612,12 +1769,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 (
     const tmp<fvMatrix<Type>>& tA,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(tA(), su, "==");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += su.mesh().V()*su.primitiveField();
+    tC.ref().source() += su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
+(
+    const tmp<fvMatrix<Type>>& tA,
+    const Expression& su
+)
+{
+    checkMethod(tA(), su, "==");
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref().source() +=
+        tC().mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -1625,12 +1802,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 (
     const tmp<fvMatrix<Type>>& tA,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(tA(), tsu(), "==");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1644,7 +1822,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 {
     checkMethod(tA(), tsu(), "==");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1658,7 +1837,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 {
     checkMethod(A, su, "==");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += A.psi().mesh().V()*su.value();
+    tC.ref().source() += A.psi().mesh().V().primitiveField()*su.value();
     return tC;
 }
 
@@ -1671,7 +1850,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator==
 {
     checkMethod(tA(), su, "==");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += tC().psi().mesh().V()*su.value();
+    tC.ref().source() += tC().psi().mesh().V().primitiveField()*su.value();
     return tC;
 }
 
@@ -1777,12 +1956,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
     const fvMatrix<Type>& A,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(A, su, "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
+(
+    const fvMatrix<Type>& A,
+    const Expression& su
+)
+{
+    checkMethod(A, su, "+");
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref().source() -=
+        A.mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -1790,12 +1989,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
     const fvMatrix<Type>& A,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(A, tsu(), "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1809,7 +2009,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(A, tsu(), "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1818,12 +2019,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
     const tmp<fvMatrix<Type>>& tA,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(tA(), su, "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
+(
+    const tmp<fvMatrix<Type>>& tA,
+    const Expression& su
+)
+{
+    checkMethod(tA(), su, "+");
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref().source() -=
+        tC().mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -1831,12 +2052,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
     const tmp<fvMatrix<Type>>& tA,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(tA(), tsu(), "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1850,7 +2072,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(tA(), tsu(), "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1858,26 +2081,47 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
-    const DimensionedField<Type, fvMesh>& su,
+    const VolInternalField<Type>& su,
     const fvMatrix<Type>& A
 )
 {
     checkMethod(A, su, "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
+(
+    const Expression& su,
+    const fvMatrix<Type>& A
+)
+{
+    checkMethod(A, su, "+");
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref().source() -=
+        A.mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu,
+    const tmp<VolInternalField<Type>>& tsu,
     const fvMatrix<Type>& A
 )
 {
     checkMethod(A, tsu(), "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1891,7 +2135,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(A, tsu(), "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1899,26 +2144,47 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
-    const DimensionedField<Type, fvMesh>& su,
+    const VolInternalField<Type>& su,
     const tmp<fvMatrix<Type>>& tA
 )
 {
     checkMethod(tA(), su, "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
+(
+    const Expression& su,
+    const tmp<fvMatrix<Type>>& tA
+)
+{
+    checkMethod(tA(), su, "+");
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref().source() -=
+        tC().mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu,
+    const tmp<VolInternalField<Type>>& tsu,
     const tmp<fvMatrix<Type>>& tA
 )
 {
     checkMethod(tA(), tsu(), "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1932,7 +2198,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(tA(), tsu(), "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -1996,12 +2263,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
     const fvMatrix<Type>& A,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(A, su, "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += su.mesh().V()*su.primitiveField();
+    tC.ref().source() += su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
+(
+    const fvMatrix<Type>& A,
+    const Expression& su
+)
+{
+    checkMethod(A, su, "-");
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref().source() +=
+        A.mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -2009,12 +2296,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
     const fvMatrix<Type>& A,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(A, tsu(), "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2028,7 +2316,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 {
     checkMethod(A, tsu(), "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2037,12 +2326,32 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
     const tmp<fvMatrix<Type>>& tA,
-    const DimensionedField<Type, fvMesh>& su
+    const VolInternalField<Type>& su
 )
 {
     checkMethod(tA(), su, "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += su.mesh().V()*su.primitiveField();
+    tC.ref().source() += su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
+(
+    const tmp<fvMatrix<Type>>& tA,
+    const Expression& su
+)
+{
+    checkMethod(tA(), su, "-");
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref().source() +=
+        tC().mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
@@ -2050,12 +2359,13 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
     const tmp<fvMatrix<Type>>& tA,
-    const tmp<DimensionedField<Type, fvMesh>>& tsu
+    const tmp<VolInternalField<Type>>& tsu
 )
 {
     checkMethod(tA(), tsu(), "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2069,7 +2379,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 {
     checkMethod(tA(), tsu(), "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() +=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2077,28 +2388,50 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
-    const DimensionedField<Type, fvMesh>& su,
+    const VolInternalField<Type>& su,
     const fvMatrix<Type>& A
 )
 {
     checkMethod(A, su, "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
     tC.ref().negate();
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
+(
+    const Expression& su,
+    const fvMatrix<Type>& A
+)
+{
+    checkMethod(A, su, "-");
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref().negate();
+    tC.ref().source() -=
+        A.mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu,
+    const tmp<VolInternalField<Type>>& tsu,
     const fvMatrix<Type>& A
 )
 {
     checkMethod(A, tsu(), "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
     tC.ref().negate();
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2113,7 +2446,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
     checkMethod(A, tsu(), "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
     tC.ref().negate();
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2121,28 +2455,50 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
-    const DimensionedField<Type, fvMesh>& su,
+    const VolInternalField<Type>& su,
     const tmp<fvMatrix<Type>>& tA
 )
 {
     checkMethod(tA(), su, "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
     tC.ref().negate();
-    tC.ref().source() -= su.mesh().V()*su.primitiveField();
+    tC.ref().source() -= su.mesh().V().primitiveField()*su.primitiveField();
+    return tC;
+}
+
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
+(
+    const Expression& su,
+    const tmp<fvMatrix<Type>>& tA
+)
+{
+    checkMethod(tA(), su, "-");
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref().negate();
+    tC.ref().source() -=
+        tC().mesh().V().primitiveField()
+       *expression::access
+        (
+            su,
+            expression::Value(),
+            expression::Base()
+        );
     return tC;
 }
 
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 (
-    const tmp<DimensionedField<Type, fvMesh>>& tsu,
+    const tmp<VolInternalField<Type>>& tsu,
     const tmp<fvMatrix<Type>>& tA
 )
 {
     checkMethod(tA(), tsu(), "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
     tC.ref().negate();
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2157,7 +2513,8 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
     checkMethod(tA(), tsu(), "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
     tC.ref().negate();
-    tC.ref().source() -= tsu().mesh().V()*tsu().primitiveField();
+    tC.ref().source() -=
+        tsu().mesh().V().primitiveField()*tsu().primitiveField();
     tsu.clear();
     return tC;
 }
@@ -2171,7 +2528,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(A, su, "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= su.value()*A.psi().mesh().V();
+    tC.ref().source() -= su.value()*A.psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2184,7 +2541,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(tA(), su, "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= su.value()*tC().psi().mesh().V();
+    tC.ref().source() -= su.value()*tC().psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2197,7 +2554,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(A, su, "+");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() -= su.value()*A.psi().mesh().V();
+    tC.ref().source() -= su.value()*A.psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2210,7 +2567,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator+
 {
     checkMethod(tA(), su, "+");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() -= su.value()*tC().psi().mesh().V();
+    tC.ref().source() -= su.value()*tC().psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2223,7 +2580,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 {
     checkMethod(A, su, "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
-    tC.ref().source() += su.value()*tC().psi().mesh().V();
+    tC.ref().source() += su.value()*tC().psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2236,7 +2593,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 {
     checkMethod(tA(), su, "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
-    tC.ref().source() += su.value()*tC().psi().mesh().V();
+    tC.ref().source() += su.value()*tC().psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2250,7 +2607,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
     checkMethod(A, su, "-");
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
     tC.ref().negate();
-    tC.ref().source() -= su.value()*A.psi().mesh().V();
+    tC.ref().source() -= su.value()*A.psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2264,7 +2621,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
     checkMethod(tA(), su, "-");
     tmp<fvMatrix<Type>> tC(tA.ptr());
     tC.ref().negate();
-    tC.ref().source() -= su.value()*tC().psi().mesh().V();
+    tC.ref().source() -= su.value()*tC().psi().mesh().V().primitiveField();
     return tC;
 }
 
@@ -2272,7 +2629,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator-
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
 (
-    const volScalarField::Internal& dsf,
+    const volInternalScalarField& dsf,
     const fvMatrix<Type>& A
 )
 {
@@ -2281,10 +2638,22 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
     return tC;
 }
 
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
+(
+    const Expression& e,
+    const fvMatrix<Type>& A
+)
+{
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref() *= e;
+    return tC;
+}
+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
 (
-    const tmp<volScalarField::Internal>& tdsf,
+    const tmp<volInternalScalarField>& tdsf,
     const fvMatrix<Type>& A
 )
 {
@@ -2308,7 +2677,7 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
 (
-    const volScalarField::Internal& dsf,
+    const volInternalScalarField& dsf,
     const tmp<fvMatrix<Type>>& tA
 )
 {
@@ -2317,10 +2686,22 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
     return tC;
 }
 
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
+(
+    const Expression& e,
+    const tmp<fvMatrix<Type>>& tA
+)
+{
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref() *= e;
+    return tC;
+}
+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator*
 (
-    const tmp<volScalarField::Internal>& tdsf,
+    const tmp<volInternalScalarField>& tdsf,
     const tmp<fvMatrix<Type>>& tA
 )
 {
@@ -2370,7 +2751,7 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
 (
     const fvMatrix<Type>& A,
-    const volScalarField::Internal& dsf
+    const volInternalScalarField& dsf
 )
 {
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
@@ -2378,11 +2759,23 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
     return tC;
 }
 
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
+(
+    const fvMatrix<Type>& A,
+    const Expression& e
+)
+{
+    tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
+    tC.ref() /= e;
+    return tC;
+}
+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
 (
     const fvMatrix<Type>& A,
-    const tmp<volScalarField::Internal>& tdsf
+    const tmp<volInternalScalarField>& tdsf
 )
 {
     tmp<fvMatrix<Type>> tC(new fvMatrix<Type>(A));
@@ -2406,7 +2799,7 @@ template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
 (
     const tmp<fvMatrix<Type>>& tA,
-    const volScalarField::Internal& dsf
+    const volInternalScalarField& dsf
 )
 {
     tmp<fvMatrix<Type>> tC(tA.ptr());
@@ -2414,11 +2807,23 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
     return tC;
 }
 
+template<class Type, class Expression, class>
+Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
+(
+    const tmp<fvMatrix<Type>>& tA,
+    const Expression& e
+)
+{
+    tmp<fvMatrix<Type>> tC(tA.ptr());
+    tC.ref() /= e;
+    return tC;
+}
+
 template<class Type>
 Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
 (
     const tmp<fvMatrix<Type>>& tA,
-    const tmp<volScalarField::Internal>& tdsf
+    const tmp<volInternalScalarField>& tdsf
 )
 {
     tmp<fvMatrix<Type>> tC(tA.ptr());
@@ -2464,24 +2869,23 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::operator/
 
 
 template<class Type>
-Foam::tmp<Foam::VolField<Type>>
+Foam::tmp<Foam::VolInternalField<Type>>
 Foam::operator&
 (
     const fvMatrix<Type>& M,
-    const DimensionedField<Type, fvMesh>& psi
+    const VolInternalField<Type>& psi
 )
 {
-    tmp<VolField<Type>> tMphi
+    tmp<VolInternalField<Type>> tMphi
     (
-        VolField<Type>::New
+        VolInternalField<Type>::New
         (
             "M&" + psi.name(),
             psi.mesh(),
-            M.dimensions()/dimVolume,
-            extrapolatedCalculatedFvPatchScalarField::typeName
+            M.dimensions()/dimensions::volume
         )
     );
-    VolField<Type>& Mphi = tMphi.ref();
+    VolInternalField<Type>& Mphi = tMphi.ref();
 
     // Loop over field components
     if (M.hasDiag())
@@ -2503,74 +2907,46 @@ Foam::operator&
         M.lduMatrix::H(psi.primitiveField()) + M.source();
     M.addBoundarySource(Mphi.primitiveFieldRef());
 
-    Mphi.primitiveFieldRef() /= -psi.mesh().V();
-    Mphi.correctBoundaryConditions();
+    Mphi.primitiveFieldRef() /= -psi.mesh().V().primitiveField();
 
     return tMphi;
 }
 
 template<class Type>
-Foam::tmp<Foam::VolField<Type>>
+Foam::tmp<Foam::VolInternalField<Type>>
 Foam::operator&
 (
     const fvMatrix<Type>& M,
-    const tmp<DimensionedField<Type, fvMesh>>& tpsi
+    const tmp<VolInternalField<Type>>& tpsi
 )
 {
-    tmp<VolField<Type>> tMpsi = M & tpsi();
+    tmp<VolInternalField<Type>> tMpsi = M & tpsi();
     tpsi.clear();
     return tMpsi;
 }
 
 template<class Type>
-Foam::tmp<Foam::VolField<Type>>
-Foam::operator&
-(
-    const fvMatrix<Type>& M,
-    const tmp<VolField<Type>>& tpsi
-)
-{
-    tmp<VolField<Type>> tMpsi = M & tpsi();
-    tpsi.clear();
-    return tMpsi;
-}
-
-template<class Type>
-Foam::tmp<Foam::VolField<Type>>
+Foam::tmp<Foam::VolInternalField<Type>>
 Foam::operator&
 (
     const tmp<fvMatrix<Type>>& tM,
-    const DimensionedField<Type, fvMesh>& psi
+    const VolInternalField<Type>& psi
 )
 {
-    tmp<VolField<Type>> tMpsi = tM() & psi;
+    tmp<VolInternalField<Type>> tMpsi = tM() & psi;
     tM.clear();
     return tMpsi;
 }
 
 template<class Type>
-Foam::tmp<Foam::VolField<Type>>
+Foam::tmp<Foam::VolInternalField<Type>>
 Foam::operator&
 (
     const tmp<fvMatrix<Type>>& tM,
-    const tmp<DimensionedField<Type, fvMesh>>& tpsi
+    const tmp<VolInternalField<Type>>& tpsi
 )
 {
-    tmp<VolField<Type>> tMpsi = tM() & tpsi();
-    tM.clear();
-    tpsi.clear();
-    return tMpsi;
-}
-
-template<class Type>
-Foam::tmp<Foam::VolField<Type>>
-Foam::operator&
-(
-    const tmp<fvMatrix<Type>>& tM,
-    const tmp<VolField<Type>>& tpsi
-)
-{
-    tmp<VolField<Type>> tMpsi = tM() & tpsi();
+    tmp<VolInternalField<Type>> tMpsi = tM() & tpsi();
     tM.clear();
     tpsi.clear();
     return tMpsi;

@@ -29,7 +29,7 @@ Description
     multiValveEngine mover from the associated fluid region and uses the motion
     specified for one of the valves.
 
-    Example specification, in constant/<solidRegion>/dynamicMeshDict:
+    Example specification, in constant/\<solidRegion\>/dynamicMeshDict:
     \verbatim
     mover
     {
@@ -131,9 +131,6 @@ public:
 
         //- Return the solid-body motion transformation septernion
         virtual septernion transformation() const;
-
-        //- Update properties from given dictionary
-        virtual bool read(const dictionary& SBMFCoeffs);
 
 
     // Member Operators

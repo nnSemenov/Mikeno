@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,6 +47,115 @@ bool steadyStateDdtScheme<Type>::enabled(const fvMesh &mesh)
 }
 
 template<class Type>
+tmp<VolInternalField<Type>>
+steadyStateDdtScheme<Type>::fviDdt
+(
+    const dimensioned<Type>& dt
+)
+{
+    return VolInternalField<Type>::New
+    (
+        word("ddt(", dt.name(), ')'),
+        mesh(),
+        dimensioned<Type>
+        (
+            "0",
+            dt.dimensions()/dimensions::time,
+            Zero
+        )
+    );
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+steadyStateDdtScheme<Type>::fviDdt
+(
+    const VolInternalField<Type>& vf
+)
+{
+    return VolInternalField<Type>::New
+    (
+        word("ddt(", vf.name(), ')'),
+        mesh(),
+        dimensioned<Type>
+        (
+            "0",
+            vf.dimensions()/dimensions::time,
+            Zero
+        )
+    );
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+steadyStateDdtScheme<Type>::fviDdt
+(
+    const dimensionedScalar& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    return VolInternalField<Type>::New
+    (
+        word("ddt(", rho.name(), ',', vf.name(), ')'),
+        mesh(),
+        dimensioned<Type>
+        (
+            "0",
+            rho.dimensions()*vf.dimensions()/dimensions::time,
+            Zero
+        )
+    );
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+steadyStateDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    return VolInternalField<Type>::New
+    (
+        word("ddt(", rho.name(), ',', vf.name(), ')'),
+        mesh(),
+        dimensioned<Type>
+        (
+            "0",
+            rho.dimensions()*vf.dimensions()/dimensions::time,
+            Zero
+        )
+    );
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+steadyStateDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& alpha,
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    return VolInternalField<Type>::New
+    (
+        word("ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'),
+        mesh(),
+        dimensioned<Type>
+        (
+            "0",
+            rho.dimensions()*vf.dimensions()/dimensions::time,
+            Zero
+        )
+    );
+}
+
+
+template<class Type>
 tmp<VolField<Type>>
 steadyStateDdtScheme<Type>::fvcDdt
 (
@@ -55,12 +164,12 @@ steadyStateDdtScheme<Type>::fvcDdt
 {
     return VolField<Type>::New
     (
-        "ddt("+dt.name()+')',
+        word("ddt(", dt.name(), ')'),
         mesh(),
         dimensioned<Type>
         (
             "0",
-            dt.dimensions()/dimTime,
+            dt.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -76,12 +185,12 @@ steadyStateDdtScheme<Type>::fvcDdt
 {
     return VolField<Type>::New
     (
-        "ddt("+vf.name()+')',
+        word("ddt(", vf.name(), ')'),
         mesh(),
         dimensioned<Type>
         (
             "0",
-            vf.dimensions()/dimTime,
+            vf.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -98,12 +207,12 @@ steadyStateDdtScheme<Type>::fvcDdt
 {
     return VolField<Type>::New
     (
-        "ddt("+rho.name()+','+vf.name()+')',
+        word("ddt(", rho.name(), ',', vf.name(), ')'),
         mesh(),
         dimensioned<Type>
         (
             "0",
-            rho.dimensions()*vf.dimensions()/dimTime,
+            rho.dimensions()*vf.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -120,12 +229,12 @@ steadyStateDdtScheme<Type>::fvcDdt
 {
     return VolField<Type>::New
     (
-        "ddt("+rho.name()+','+vf.name()+')',
+        word("ddt(", rho.name(), ',', vf.name(), ')'),
         mesh(),
         dimensioned<Type>
         (
             "0",
-            rho.dimensions()*vf.dimensions()/dimTime,
+            rho.dimensions()*vf.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -143,12 +252,12 @@ steadyStateDdtScheme<Type>::fvcDdt
 {
     return VolField<Type>::New
     (
-        "ddt("+alpha.name()+','+rho.name()+','+vf.name()+')',
+        word("ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'),
         mesh(),
         dimensioned<Type>
         (
             "0",
-            rho.dimensions()*vf.dimensions()/dimTime,
+            rho.dimensions()*vf.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -167,7 +276,7 @@ steadyStateDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            vf.dimensions()*dimVolume/dimTime
+            vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 }
@@ -186,7 +295,7 @@ steadyStateDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 }
@@ -205,7 +314,7 @@ steadyStateDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 }
@@ -228,8 +337,8 @@ steadyStateDdtScheme<Type>::fvmDdt
             alpha.dimensions()
            *rho.dimensions()
            *vf.dimensions()
-           *dimVolume
-           /dimTime
+           *dimensions::volume
+           /dimensions::time
         )
     );
 }
@@ -245,12 +354,12 @@ steadyStateDdtScheme<Type>::fvcDdtUfCorr
 {
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + Uf.name() + ')',
+        word("ddtCorr(", U.name(), ',', Uf.name(), ')'),
         mesh(),
         dimensioned<typename flux<Type>::type>
         (
             "0",
-            Uf.dimensions()*dimArea/dimTime,
+            Uf.dimensions()*dimensions::area/dimensions::time,
             Zero
         )
     );
@@ -267,12 +376,12 @@ steadyStateDdtScheme<Type>::fvcDdtPhiCorr
 {
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + phi.name() + ')',
+        word("ddtCorr(", U.name(), ',', phi.name(), ')'),
         mesh(),
         dimensioned<typename flux<Type>::type>
         (
             "0",
-            phi.dimensions()/dimTime,
+            phi.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -290,12 +399,12 @@ steadyStateDdtScheme<Type>::fvcDdtUfCorr
 {
     return fluxFieldType::New
     (
-        "ddtCorr(" + rho.name() + ',' + U.name() + ',' + rhoUf.name() + ')',
+        word("ddtCorr(", rho.name(), ',', U.name(), ',', rhoUf.name(), ')'),
         mesh(),
         dimensioned<typename flux<Type>::type>
         (
             "0",
-            rhoUf.dimensions()*dimArea/dimTime,
+            rhoUf.dimensions()*dimensions::area/dimensions::time,
             Zero
         )
     );
@@ -313,12 +422,12 @@ steadyStateDdtScheme<Type>::fvcDdtPhiCorr
 {
     return fluxFieldType::New
     (
-        "ddtCorr(" + rho.name() + ',' + U.name() + ',' + phi.name() + ')',
+        word("ddtCorr(", rho.name(), ',', U.name(), ',', phi.name(), ')'),
         mesh(),
         dimensioned<typename flux<Type>::type>
         (
             "0",
-            phi.dimensions()/dimTime,
+            phi.dimensions()/dimensions::time,
             Zero
         )
     );
@@ -335,7 +444,7 @@ tmp<surfaceScalarField> steadyStateDdtScheme<Type>::meshPhi
     (
         "meshPhi",
         mesh(),
-        dimensionedScalar(dimVolume/dimTime, 0)
+        dimensionedScalar(dimensions::volume/dimensions::time, 0)
     );
 }
 

@@ -139,7 +139,8 @@ ShihQuadraticKE::ShihQuadraticKE
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentKineticEnergy
     ),
 
     epsilon_
@@ -152,7 +153,8 @@ ShihQuadraticKE::ShihQuadraticKE
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentEpsilon
     )
 {
     bound(k_, kMin_);
@@ -199,15 +201,15 @@ void ShihQuadraticKE::correct()
     tmp<volTensorField> tgradU = fvc::grad(U_);
     const volTensorField& gradU = tgradU();
 
-    volScalarField G
+    volInternalScalarField G
     (
         GName(),
-        (nut_*twoSymm(gradU) - nonlinearStress_) && gradU
+        (nut_()*twoSymm(gradU()) - nonlinearStress_()) && gradU()
     );
 
 
     // Update epsilon and G at the wall
-    epsilon_.boundaryFieldRef().updateCoeffs();
+    epsilon_.boundaryRef().updateCoeffs();
 
     // Dissipation equation
     tmp<fvScalarMatrix> epsEqn
@@ -216,12 +218,12 @@ void ShihQuadraticKE::correct()
       + fvm::div(phi_, epsilon_)
       - fvm::laplacian(DepsilonEff(), epsilon_)
       ==
-        Ceps1_*G*epsilon_/k_
-      - fvm::Sp(Ceps2_*epsilon_/k_, epsilon_)
+        Ceps1_*G*epsilon_()/k_()
+      - fvm::Sp(Ceps2_*epsilon_()/k_(), epsilon_)
     );
 
     epsEqn.ref().relax();
-    epsEqn.ref().boundaryManipulate(epsilon_.boundaryFieldRef());
+    epsEqn.ref().boundaryManipulate(epsilon_.boundaryRef());
     solve(epsEqn);
     boundEpsilon();
 
@@ -234,7 +236,7 @@ void ShihQuadraticKE::correct()
       - fvm::laplacian(DkEff(), k_)
       ==
         G
-      - fvm::Sp(epsilon_/k_, k_)
+      - fvm::Sp(epsilon_()/k_(), k_)
     );
 
     kEqn.ref().relax();

@@ -41,6 +41,39 @@ namespace fv
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
+tmp<volInternalScalarField> CoEulerDdtScheme<Type>::fviCorDeltaT() const
+{
+    const surfaceScalarField cofrDeltaT(CofrDeltaT());
+
+    tmp<volInternalScalarField> tcorDeltaT
+    (
+        volInternalScalarField::New
+        (
+            "CorDeltaT",
+            mesh(),
+            dimensionedScalar(cofrDeltaT.dimensions(), 0)
+        )
+    );
+
+    volInternalScalarField& corDeltaT = tcorDeltaT.ref();
+
+    const labelUList& owner = mesh().owner();
+    const labelUList& neighbour = mesh().neighbour();
+
+    forAll(owner, facei)
+    {
+        corDeltaT[owner[facei]] =
+            max(corDeltaT[owner[facei]], cofrDeltaT[facei]);
+
+        corDeltaT[neighbour[facei]] =
+            max(corDeltaT[neighbour[facei]], cofrDeltaT[facei]);
+    }
+
+    return tcorDeltaT;
+}
+
+
+template<class Type>
 tmp<volScalarField> CoEulerDdtScheme<Type>::CorDeltaT() const
 {
     const surfaceScalarField cofrDeltaT(CofrDeltaT());
@@ -70,7 +103,7 @@ tmp<volScalarField> CoEulerDdtScheme<Type>::CorDeltaT() const
             max(corDeltaT[neighbour[facei]], cofrDeltaT[facei]);
     }
 
-    const surfaceScalarField::Boundary& cofrDeltaTbf =
+    const surfaceScalarField::BoundaryField& cofrDeltaTbf =
         cofrDeltaT.boundaryField();
 
     forAll(cofrDeltaTbf, patchi)
@@ -142,6 +175,179 @@ tmp<surfaceScalarField> CoEulerDdtScheme<Type>::CofrDeltaT() const
 
 
 template<class Type>
+tmp<VolInternalField<Type>>
+CoEulerDdtScheme<Type>::fviDdt
+(
+    const dimensioned<Type>& dt
+)
+{
+    const volInternalScalarField rDeltaT(fviCorDeltaT());
+
+    const word ddtName("ddt(", dt.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*dt*(1.0 - mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            mesh(),
+            dimensioned<Type>
+            (
+                "0",
+                dt.dimensions()/dimensions::time,
+                Zero
+            )
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+CoEulerDdtScheme<Type>::fviDdt
+(
+    const VolInternalField<Type>& vf
+)
+{
+    const volInternalScalarField rDeltaT(fviCorDeltaT());
+
+    const word ddtName("ddt(", vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(vf - vf.oldTime()*mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(vf - vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+CoEulerDdtScheme<Type>::fviDdt
+(
+    const dimensionedScalar& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const volInternalScalarField rDeltaT(fviCorDeltaT());
+
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*rho*(vf - vf.oldTime()*mesh().Vsc0()/mesh().Vsc())
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*rho*(vf - vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+CoEulerDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const volInternalScalarField rDeltaT(fviCorDeltaT());
+
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*
+            (
+                rho*vf
+                - rho.oldTime()*vf.oldTime()*mesh().Vsc0()/mesh().Vsc()
+            )
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT*(rho*vf - rho.oldTime()*vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
+tmp<VolInternalField<Type>>
+CoEulerDdtScheme<Type>::fviDdt
+(
+    const volInternalScalarField& alpha,
+    const volInternalScalarField& rho,
+    const VolInternalField<Type>& vf
+)
+{
+    const volInternalScalarField rDeltaT(fviCorDeltaT());
+
+    const word ddtName
+    (
+        "ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'
+    );
+
+    if (mesh().moving())
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT
+           *(
+               alpha*rho*vf
+             - alpha.oldTime()*rho.oldTime()
+              *vf.oldTime()*mesh().Vsc0()/mesh().Vsc()
+            )
+        );
+    }
+    else
+    {
+        return VolInternalField<Type>::New
+        (
+            ddtName,
+            rDeltaT
+           *(alpha*rho*vf - alpha.oldTime()*rho.oldTime()*vf.oldTime())
+        );
+    }
+}
+
+
+template<class Type>
 tmp<VolField<Type>>
 CoEulerDdtScheme<Type>::fvcDdt
 (
@@ -150,7 +356,7 @@ CoEulerDdtScheme<Type>::fvcDdt
 {
     const volScalarField rDeltaT(CorDeltaT());
 
-    const word ddtName("ddt("+dt.name()+')');
+    const word ddtName("ddt(", dt.name(), ')');
 
     if (mesh().moving())
     {
@@ -163,7 +369,7 @@ CoEulerDdtScheme<Type>::fvcDdt
                 dimensioned<Type>
                 (
                     "0",
-                    dt.dimensions()/dimTime,
+                    dt.dimensions()/dimensions::time,
                     Zero
                 )
             )
@@ -171,26 +377,26 @@ CoEulerDdtScheme<Type>::fvcDdt
 
         tdtdt.ref().primitiveFieldRef() =
             rDeltaT.primitiveField()*dt.value()
-           *(1.0 - mesh().Vsc0()/mesh().Vsc());
+           *(
+                1.0
+              - mesh().Vsc0()().primitiveField()/mesh().Vsc()().primitiveField()
+            );
 
         return tdtdt;
     }
     else
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
+            ddtName,
+            mesh(),
+            dimensioned<Type>
             (
-                ddtName,
-                mesh(),
-                dimensioned<Type>
-                (
-                    "0",
-                    dt.dimensions()/dimTime,
-                    Zero
-                ),
-                calculatedFvPatchField<Type>::typeName
-            )
+                "0",
+                dt.dimensions()/dimensions::time,
+                Zero
+            ),
+            calculatedFvPatchField<Type>::typeName
         );
     }
 }
@@ -205,36 +411,30 @@ CoEulerDdtScheme<Type>::fvcDdt
 {
     const volScalarField rDeltaT(CorDeltaT());
 
-    const word ddtName("ddt("+vf.name()+')');
+    const word ddtName("ddt(", vf.name(), ')');
 
     if (mesh().moving())
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
+            ddtName,
+            rDeltaT()*
             (
-                ddtName,
-                rDeltaT()*
-                (
-                    vf()
-                  - vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
-                ),
-                rDeltaT.boundaryField()*
-                (
-                    vf.boundaryField() - vf.oldTime().boundaryField()
-                )
+                vf()
+              - vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
+            ),
+            rDeltaT.boundaryField()*
+            (
+                vf.boundaryField() - vf.oldTime().boundaryField()
             )
         );
     }
     else
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
-            (
-                ddtName,
-                rDeltaT*(vf - vf.oldTime())
-            )
+            ddtName,
+            rDeltaT*(vf - vf.oldTime())
         );
     }
 }
@@ -250,36 +450,30 @@ CoEulerDdtScheme<Type>::fvcDdt
 {
     const volScalarField rDeltaT(CorDeltaT());
 
-    const word ddtName("ddt("+rho.name()+','+vf.name()+')');
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
 
     if (mesh().moving())
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
+            ddtName,
+            rDeltaT()*rho*
             (
-                ddtName,
-                rDeltaT()*rho.value()*
-                (
-                    vf()
-                  - vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
-                ),
-                rDeltaT.boundaryField()*rho.value()*
-                (
-                    vf.boundaryField() - vf.oldTime().boundaryField()
-                )
+                vf()
+              - vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
+            ),
+            rDeltaT.boundaryField()*rho.value()*
+            (
+                vf.boundaryField() - vf.oldTime().boundaryField()
             )
         );
     }
     else
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
-            (
-                ddtName,
-                rDeltaT*rho*(vf - vf.oldTime())
-            )
+            ddtName,
+            rDeltaT*rho*(vf - vf.oldTime())
         );
     }
 }
@@ -295,39 +489,33 @@ CoEulerDdtScheme<Type>::fvcDdt
 {
     const volScalarField rDeltaT(CorDeltaT());
 
-    const word ddtName("ddt("+rho.name()+','+vf.name()+')');
+    const word ddtName("ddt(", rho.name(), ',', vf.name(), ')');
 
     if (mesh().moving())
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
-            (
-                ddtName,
-                rDeltaT()*
-                (
-                    rho()*vf()
-                  - rho.oldTime()()
-                   *vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
-                ),
-                rDeltaT.boundaryField()*
-                (
-                    rho.boundaryField()*vf.boundaryField()
-                  - rho.oldTime().boundaryField()
-                   *vf.oldTime().boundaryField()
-                )
+            ddtName,
+            rDeltaT()
+           *(
+               rho()*vf()
+             - rho.oldTime()()
+              *vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
+            ),
+            rDeltaT.boundaryField()
+           *(
+                rho.boundaryField()*vf.boundaryField()
+              - rho.oldTime().boundaryField()
+               *vf.oldTime().boundaryField()
             )
         );
     }
     else
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
-            (
-                ddtName,
-                rDeltaT*(rho*vf - rho.oldTime()*vf.oldTime())
-            )
+            ddtName,
+            rDeltaT*(rho*vf - rho.oldTime()*vf.oldTime())
         );
     }
 }
@@ -344,50 +532,47 @@ CoEulerDdtScheme<Type>::fvcDdt
 {
     const volScalarField rDeltaT(CorDeltaT());
 
-    const word ddtName("ddt("+alpha.name()+','+rho.name()+','+vf.name()+')');
+    const word ddtName
+    (
+        "ddt(", alpha.name(), ',', rho.name(), ',', vf.name(), ')'
+    );
 
     if (mesh().moving())
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
+            ddtName,
+            rDeltaT()*
             (
-                ddtName,
-                rDeltaT()*
-                (
-                    alpha()
-                   *rho()
-                   *vf()
+                alpha()
+               *rho()
+               *vf()
 
-                  - alpha.oldTime()()
-                   *rho.oldTime()()
-                   *vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
-                ),
-                rDeltaT.boundaryField()*
-                (
-                    alpha.boundaryField()
-                   *rho.boundaryField()
-                   *vf.boundaryField()
+              - alpha.oldTime()()
+               *rho.oldTime()()
+               *vf.oldTime()()*mesh().Vsc0()/mesh().Vsc()
+            ),
+            rDeltaT.boundaryField()*
+            (
+                alpha.boundaryField()
+               *rho.boundaryField()
+               *vf.boundaryField()
 
-                  - alpha.oldTime().boundaryField()
-                   *rho.oldTime().boundaryField()
-                   *vf.oldTime().boundaryField()
-                )
+              - alpha.oldTime().boundaryField()
+               *rho.oldTime().boundaryField()
+               *vf.oldTime().boundaryField()
             )
         );
     }
     else
     {
-        return tmp<VolField<Type>>
+        return VolField<Type>::New
         (
-            VolField<Type>::New
-            (
-                ddtName,
-                rDeltaT
-               *(
-                   alpha*rho*vf
-                 - alpha.oldTime()*rho.oldTime()*vf.oldTime()
-                )
+            ddtName,
+            rDeltaT
+           *(
+               alpha*rho*vf
+             - alpha.oldTime()*rho.oldTime()*vf.oldTime()
             )
         );
     }
@@ -406,7 +591,7 @@ CoEulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            vf.dimensions()*dimVolume/dimTime
+            vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
 
@@ -414,15 +599,19 @@ CoEulerDdtScheme<Type>::fvmDdt
 
     const scalarField rDeltaT(CorDeltaT()().primitiveField());
 
-    fvm.diag() = rDeltaT*mesh().Vsc();
+    fvm.diag() = rDeltaT*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
-        fvm.source() = rDeltaT*vf.oldTime().primitiveField()*mesh().Vsc0();
+        fvm.source() =
+            rDeltaT*vf.oldTime().primitiveField()
+           *mesh().Vsc0()().primitiveField();
     }
     else
     {
-        fvm.source() = rDeltaT*vf.oldTime().primitiveField()*mesh().Vsc();
+        fvm.source() =
+            rDeltaT*vf.oldTime().primitiveField()
+           *mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -442,24 +631,26 @@ CoEulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
 
     const scalarField rDeltaT(CorDeltaT()().primitiveField());
 
-    fvm.diag() = rDeltaT*rho.value()*mesh().Vsc();
+    fvm.diag() = rDeltaT*rho.value()*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
-        fvm.source() = rDeltaT
-            *rho.value()*vf.oldTime().primitiveField()*mesh().Vsc0();
+        fvm.source() =
+            rDeltaT*rho.value()*vf.oldTime().primitiveField()
+           *mesh().Vsc0()().primitiveField();
     }
     else
     {
-        fvm.source() = rDeltaT
-            *rho.value()*vf.oldTime().primitiveField()*mesh().Vsc();
+        fvm.source() =
+            rDeltaT*rho.value()*vf.oldTime().primitiveField()
+           *mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -479,26 +670,26 @@ CoEulerDdtScheme<Type>::fvmDdt
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume/dimTime
+            rho.dimensions()*vf.dimensions()*dimensions::volume/dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
 
     const scalarField rDeltaT(CorDeltaT()().primitiveField());
 
-    fvm.diag() = rDeltaT*rho.primitiveField()*mesh().Vsc();
+    fvm.diag() = rDeltaT*rho.primitiveField()*mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
         fvm.source() = rDeltaT
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc0();
+            *vf.oldTime().primitiveField()*mesh().Vsc0()().primitiveField();
     }
     else
     {
         fvm.source() = rDeltaT
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc();
+            *vf.oldTime().primitiveField()*mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -522,8 +713,8 @@ CoEulerDdtScheme<Type>::fvmDdt
             alpha.dimensions()
            *rho.dimensions()
            *vf.dimensions()
-           *dimVolume
-           /dimTime
+           *dimensions::volume
+           /dimensions::time
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
@@ -531,21 +722,22 @@ CoEulerDdtScheme<Type>::fvmDdt
     const scalarField rDeltaT(CorDeltaT()().primitiveField());
 
     fvm.diag() =
-        rDeltaT*alpha.primitiveField()*rho.primitiveField()*mesh().Vsc();
+        rDeltaT*alpha.primitiveField()*rho.primitiveField()
+       *mesh().Vsc()().primitiveField();
 
     if (mesh().moving())
     {
         fvm.source() = rDeltaT
             *alpha.oldTime().primitiveField()
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc0();
+            *vf.oldTime().primitiveField()*mesh().Vsc0()().primitiveField();
     }
     else
     {
         fvm.source() = rDeltaT
             *alpha.oldTime().primitiveField()
             *rho.oldTime().primitiveField()
-            *vf.oldTime().primitiveField()*mesh().Vsc();
+            *vf.oldTime().primitiveField()*mesh().Vsc()().primitiveField();
     }
 
     return tfvm;
@@ -570,7 +762,7 @@ CoEulerDdtScheme<Type>::fvcDdtUfCorr
 
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + Uf.name() + ')',
+        word("ddtCorr(", U.name(), ',', Uf.name(), ')'),
         this->fvcDdtPhiCoeff(U.oldTime(), phiUf0, phiCorr)*rDeltaT*phiCorr
     );
 }
@@ -593,7 +785,7 @@ CoEulerDdtScheme<Type>::fvcDdtPhiCorr
 
     return fluxFieldType::New
     (
-        "ddtCorr(" + U.name() + ',' + phi.name() + ')',
+        word("ddtCorr(", U.name(), ',', phi.name(), ')'),
         this->fvcDdtPhiCoeff(U.oldTime(), phi.oldTime(), phiCorr)
        *rDeltaT*phiCorr
     );
@@ -613,8 +805,8 @@ CoEulerDdtScheme<Type>::fvcDdtUfCorr
 
     if
     (
-        U.dimensions() == dimVelocity
-     && rhoUf.dimensions() == dimDensity*dimVelocity
+        U.dimensions() == dimensions::velocity
+     && rhoUf.dimensions() == dimensions::momentumDensity
     )
     {
         VolField<Type> rhoU0
@@ -627,15 +819,15 @@ CoEulerDdtScheme<Type>::fvcDdtUfCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + rhoUf.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', rhoUf.name(), ')'),
             this->fvcDdtPhiCoeff(rhoU0, phiUf0, phiCorr, rho.oldTime())
            *rDeltaT*phiCorr
         );
     }
     else if
     (
-        U.dimensions() == dimDensity*dimVelocity
-     && rhoUf.dimensions() == dimDensity*dimVelocity
+        U.dimensions() == dimensions::momentumDensity
+     && rhoUf.dimensions() == dimensions::momentumDensity
     )
     {
         fluxFieldType phiUf0(mesh().Sf() & rhoUf.oldTime());
@@ -646,7 +838,7 @@ CoEulerDdtScheme<Type>::fvcDdtUfCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + rhoUf.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', rhoUf.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 U.oldTime(),
@@ -680,8 +872,8 @@ CoEulerDdtScheme<Type>::fvcDdtPhiCorr
 
     if
     (
-        U.dimensions() == dimVelocity
-     && phi.dimensions() == rho.dimensions()*dimVolumetricFlux
+        U.dimensions() == dimensions::velocity
+     && phi.dimensions() == rho.dimensions()*dimensions::volumetricFlux
     )
     {
         VolField<Type> rhoU0
@@ -696,7 +888,7 @@ CoEulerDdtScheme<Type>::fvcDdtPhiCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + phi.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', phi.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 rhoU0,
@@ -708,8 +900,8 @@ CoEulerDdtScheme<Type>::fvcDdtPhiCorr
     }
     else if
     (
-        U.dimensions() == rho.dimensions()*dimVelocity
-     && phi.dimensions() == rho.dimensions()*dimVolumetricFlux
+        U.dimensions() == rho.dimensions()*dimensions::velocity
+     && phi.dimensions() == rho.dimensions()*dimensions::volumetricFlux
     )
     {
         fluxFieldType phiCorr
@@ -719,7 +911,7 @@ CoEulerDdtScheme<Type>::fvcDdtPhiCorr
 
         return fluxFieldType::New
         (
-            "ddtCorr(" + rho.name() + ',' + U.name() + ',' + phi.name() + ')',
+            word("ddtCorr(", rho.name(), ',', U.name(), ',', phi.name(), ')'),
             this->fvcDdtPhiCoeff
             (
                 U.oldTime(),
@@ -750,7 +942,7 @@ tmp<surfaceScalarField> CoEulerDdtScheme<Type>::meshPhi
     (
         "meshPhi",
         mesh(),
-        dimensionedScalar(dimVolume/dimTime, 0)
+        dimensionedScalar(dimensions::volume/dimensions::time, 0)
     );
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -88,19 +88,19 @@ Foam::fv::reactionDrivenPhaseChange::reactionDrivenPhaseChange
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::fv::reactionDrivenPhaseChange::mDot(const label mDoti) const
 {
-    const volScalarField::Internal& alpha1 = phase1_, alpha2 = phase2_;
+    const volInternalScalarField& alpha1 = phase1_, alpha2 = phase2_;
 
     const labelPair specieis = this->specieis(mDoti);
 
-    tmp<volScalarField::Internal> tResult =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tResult =
+        volInternalScalarField::New
         (
-            name() + ":mDot_" + species()[mDoti],
+            word(name(), ":mDot_", species()[mDoti]),
             mesh(),
-            dimensionedScalar(dimDensity/dimTime, 0)
+            dimensionedScalar(dimensions::density/dimensions::time, 0)
         );
 
     tResult.ref() += alpha1*phase1_.R(specieis.first());

@@ -24,7 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "qZeta.H"
-#include "fvcMagSqrGradGrad.H"
+#include "fviGrad.H"
+#include "fviMagSqrGradGrad.H"
 #include "bound.H"
 #include "makeMomentumTransportModel.H"
 
@@ -135,7 +136,8 @@ qZeta::qZeta
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentKineticEnergy
     ),
 
     epsilon_
@@ -148,7 +150,8 @@ qZeta::qZeta
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh_,
+        dimensions::turbulentEpsilon
     ),
 
     q_
@@ -162,7 +165,7 @@ qZeta::qZeta
             IOobject::AUTO_WRITE
         ),
         sqrt(max(k_, kMin_)),
-        k_.boundaryField().types()
+        k_.boundary().types()
     ),
 
     zeta_
@@ -176,7 +179,7 @@ qZeta::qZeta
             IOobject::AUTO_WRITE
         ),
         epsilon_/(2.0*q_),
-        epsilon_.boundaryField().types()
+        epsilon_.boundary().types()
     )
 {
     boundZeta();
@@ -215,8 +218,15 @@ void qZeta::correct()
 
     eddyViscosity<incompressible::RASModel>::correct();
 
-    volScalarField G(GName(), nut_/(2.0*q_)*2*magSqr(symm(fvc::grad(U_))));
-    const volScalarField E(nu()*nut_/q_*fvc::magSqrGradGrad(U_));
+    volInternalScalarField G
+    (
+        GName(),
+        nut_()/(2.0*q_())*2*magSqr(symm(fvi::grad(U_)))
+    );
+    const volInternalScalarField E
+    (
+        nu()()()*nut_()/q_()*fvi::magSqrGradGrad(U_)
+    );
 
     // Zeta equation
     tmp<fvScalarMatrix> zetaEqn
@@ -225,8 +235,12 @@ void qZeta::correct()
       + fvm::div(phi_, zeta_)
       - fvm::laplacian(DzetaEff(), zeta_)
      ==
-        (2.0*C1_ - 1)*G*zeta_/q_
-      - fvm::SuSp((2.0*C2_*f2() - dimensionedScalar(1.0))*zeta_/q_, zeta_)
+        (2.0*C1_ - 1)*G*zeta_()/q_()
+      - fvm::SuSp
+        (
+            (2.0*C2_*f2()()() - dimensionedScalar(1.0))*zeta_()/q_(),
+            zeta_
+        )
       + E
     );
 
@@ -242,7 +256,7 @@ void qZeta::correct()
       + fvm::div(phi_, q_)
       - fvm::laplacian(DqEff(), q_)
      ==
-        G - fvm::Sp(zeta_/q_, q_)
+        G - fvm::Sp(zeta_()/q_(), q_)
     );
 
     qEqn.ref().relax();

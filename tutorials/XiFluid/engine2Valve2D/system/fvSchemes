@@ -30,23 +30,21 @@ divSchemes
 
     div(phi,U)          Gauss limitedLinearV 1;
 
-    div(phi,b)          Gauss limitedLinear01 1;
+    div(phi,b)          Gauss limitedLinear 1;
     div(phiXi,Xi)       Gauss limitedLinear 1;
 
-    div(phib,fu.u)      Gauss limitedLinear01 1;
-    div(phib,egr.u)     Gauss limitedLinear01 1;
-    div(phib,h.u)       Gauss limitedLinear 1;
-    div(phib,K)         Gauss limitedLinear 1;
-    div(phi,(p|rho))    Gauss limitedLinear 1;
+    div(alphaPhi,fu)    Gauss limitedLinear 1;
+    div(alphaPhi,ft)    Gauss limitedLinear 1;
+    div(alphaPhi,egr)   Gauss limitedLinear 1;
+    div(alphaPhi,h)     Gauss limitedLinear 1;
+    div(alphaPhi,K)     Gauss limitedLinear 1;
 
-    div(phic,ft.b)      Gauss limitedLinear01 1;
-    div(phic,h.b)       Gauss limitedLinear 1;
-    div(phic,K)         Gauss limitedLinear 1;
+    div(phi,p|rho)     Gauss limitedLinear 1;
 
     div(phi,k)          Gauss limitedLinear 1;
     div(phi,omega)      Gauss limitedLinear 1;
 
-    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(rho*nuEff*dev2(T(grad(U)))) Gauss linear;
 }
 
 laplacianSchemes

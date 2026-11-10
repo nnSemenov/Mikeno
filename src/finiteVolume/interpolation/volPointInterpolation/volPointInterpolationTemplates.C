@@ -78,10 +78,7 @@ void Foam::volPointInterpolation::interpolateUnconstrained
     }
 
     // Get the boundary neighbour field
-    const PtrList<Field<Type>> vfBnf
-    (
-        vf.boundaryField().coupledNeighbourField()
-    );
+    const PtrList<Field<Type>> vfBnf(vf.boundary().coupledNeighbourField());
 
     // Interpolate from the boundary faces
     forAll(boundaryPointWeights_, bPointi)
@@ -128,7 +125,7 @@ void Foam::volPointInterpolation::interpolateUnconstrained
     }
 
     // Synchronise
-    syncTools::syncPointList(mesh(), pf, plusEqOp<Type>(), pTraits<Type>::zero);
+    syncTools::syncPointList(mesh(), pf, addEqOp(), pTraits<Type>::zero);
 }
 
 
@@ -241,7 +238,7 @@ Foam::volPointInterpolation::interpolate
     const VolField<Type>& vf
 ) const
 {
-    return interpolate(vf, "volPointInterpolate(" + vf.name() + ')', false);
+    return interpolate(vf, word("volPointInterpolate(", vf.name(), ')'), false);
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -70,22 +70,27 @@ void Foam::fv::phaseTurbulenceStabilisation::addAlphaRhoSup
     const phaseSystem::phaseModelPartialList& movingPhases =
         phase_.fluid().movingPhases();
 
-    volScalarField::Internal transferRate
+    volInternalScalarField transferRate
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "transferRate",
             mesh,
-            dimensionedScalar(dimless/dimTime, 0)
+            dimensionedScalar(dimless/dimensions::time, 0)
         )
     );
-    volScalarField::Internal psiTransferRate
+    volInternalScalarField psiTransferRate
     (
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "psiTransferRate",
             mesh,
-            dimensionedScalar((turbulence_.*psi)()().dimensions()/dimTime, 0)
+            dimensionedScalar
+            (
+                (turbulence_.*psi)()().dimensions()
+               /dimensions::time,
+                0
+            )
         )
     );
 
@@ -101,23 +106,24 @@ void Foam::fv::phaseTurbulenceStabilisation::addAlphaRhoSup
 
             if (notNull(otherTurbulence))
             {
-                const volScalarField::Internal phaseTransferRate
+                const volInternalScalarField phaseTransferRate
                 (
-                    movingPhases[phasei]
+                    movingPhases[phasei].alpha()()
                    *min
                     (
-                        otherTurbulence.epsilon()/otherTurbulence.k(),
+                        otherTurbulence.epsilon()()()/otherTurbulence.k()()(),
                         1.0/phase_.time().deltaT()
                     )
                 );
 
                 transferRate += phaseTransferRate;
-                psiTransferRate += phaseTransferRate*(otherTurbulence.*psi)()();
+                psiTransferRate +=
+                    phaseTransferRate*(otherTurbulence.*psi)()()();
             }
         }
     }
 
-    const volScalarField::Internal transferCoeff
+    const volInternalScalarField transferCoeff
     (
         max(alphaInversion_ - alpha(), scalar(0))*rho()
     );

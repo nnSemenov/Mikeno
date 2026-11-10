@@ -106,7 +106,7 @@ class MRFZone
         void makeRelativeRhoFlux
         (
             const RhoFieldType& rho,
-            FieldField<surfaceMesh::PatchField, scalar>& phi
+            SurfaceBoundaryField<scalar>& phi
         ) const;
 
         //- Make the given absolute mass/vol flux relative within the MRF region
@@ -185,7 +185,7 @@ public:
         //  within the MRF region
         void makeRelative
         (
-            FieldField<surfaceMesh::PatchField, scalar>& phi
+            SurfaceBoundaryField<scalar>& phi
         ) const;
 
         //- Make the given absolute patch flux relative
@@ -224,14 +224,23 @@ public:
         template<class Type>
         void zero(SurfaceField<Type>& phi) const;
 
-        //- Update MRFZone faces if the mesh topology changes
-        void update();
+
+        // Mesh changes
+
+            //- Update topology using the given map
+            void topoChange(const polyTopoChangeMap&);
+
+            //- Update from another mesh using the given map
+            void mapMesh(const polyMeshMap&);
+
+            //- Redistribute or update using the given distribution map
+            void distribute(const polyDistributionMap&);
 
 
-    // I-O
+        // I-O
 
-        //- Read MRF dictionary
-        bool read(const dictionary& dict);
+            //- Read MRF dictionary
+            bool read(const dictionary& dict);
 
 
     // Member Operators

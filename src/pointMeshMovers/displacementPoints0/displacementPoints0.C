@@ -67,7 +67,8 @@ Foam::pointVectorField Foam::pointMeshMovers::displacementPoints0::readPoints0
                 IOobject::NO_WRITE,
                 false
             ),
-            pointMesh::New(mesh)
+            pointMesh::New(mesh),
+            dimensions::length
         );
     }
     else
@@ -100,7 +101,7 @@ Foam::pointVectorField Foam::pointMeshMovers::displacementPoints0::readPoints0
                 false
             ),
             pointMesh::New(mesh),
-            dimensionedVector(dimLength, Zero)
+            dimensionedVector(dimensions::length, Zero)
         );
 
         points0.primitiveFieldRef() = points;
@@ -172,7 +173,7 @@ void Foam::pointMeshMovers::displacementPoints0::mapMesh(const polyMeshMap& map)
     // The processor boundaries may have changed, so we need to update the
     // boundary field. There is no data in this field, so we don't need to map
     // anything. We can just reset it to a freshly created calculated field.
-    points0_.boundaryFieldRef().reset
+    points0_.boundaryRef().reset
     (
         pointVectorField::Boundary
         (
@@ -192,7 +193,7 @@ void Foam::pointMeshMovers::displacementPoints0::distribute
     map.distributePointData(points0_.primitiveFieldRef());
 
     // See above
-    points0_.boundaryFieldRef().reset
+    points0_.boundaryRef().reset
     (
         pointVectorField::Boundary
         (
@@ -204,14 +205,15 @@ void Foam::pointMeshMovers::displacementPoints0::distribute
 }
 
 
-bool Foam::pointMeshMovers::displacementPoints0::write() const
+bool Foam::pointMeshMovers::displacementPoints0::write
+(
+    const bool updateInstance
+) const
 {
-    if (points0_.writeOpt() == IOobject::AUTO_WRITE)
-    {
-        points0_.write();
-    }
-
-    return pointMeshMover::write();
+    return
+        points0_.writeOpt() == IOobject::AUTO_WRITE
+      ? pointMeshMover::write(updateInstance) && points0_.write(updateInstance)
+      : pointMeshMover::write(updateInstance);
 }
 
 

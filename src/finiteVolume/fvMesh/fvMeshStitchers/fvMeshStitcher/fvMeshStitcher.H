@@ -303,14 +303,14 @@ private:
 
             //- Disconnect the mesh by removing faces from the
             //  nonConformalCyclics
-            bool disconnectThis
+            void disconnectThis
             (
                 const bool changing,
                 const bool geometric
             );
 
             //- Connect the mesh by adding faces into the nonConformalCyclics
-            bool connectThis
+            void connectThis
             (
                 const bool changing,
                 const bool geometric,
@@ -453,14 +453,14 @@ public:
         bool stitches() const;
 
         //- Disconnect the mesh by removing faces from the nonConformalCyclics
-        bool disconnect
+        void disconnect
         (
             const bool changing,
             const bool geometric
         );
 
         //- Connect the mesh by adding faces into the nonConformalCyclics
-        bool connect
+        void connect
         (
             const bool changing,
             const bool geometric,
@@ -481,7 +481,7 @@ public:
         virtual void distribute(const polyDistributionMap&);
 
         //- Write the stitcher state
-        virtual bool write(const bool write = true) const
+        virtual bool write(const bool updateInstance = true) const
         {
             return true;
         }

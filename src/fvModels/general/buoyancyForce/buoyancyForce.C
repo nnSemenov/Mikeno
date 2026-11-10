@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -82,7 +82,8 @@ Foam::fv::buoyancyForce::buoyancyForce
             mesh,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
-        )
+        ),
+        dimensions::acceleration
     )
 {
     readCoeffs(coeffs(dict));
@@ -114,7 +115,7 @@ void Foam::fv::buoyancyForce::addSup
     fvMatrix<vector>& eqn
 ) const
 {
-    eqn += rho*g_;
+    eqn += rho()*g_;
 }
 
 
@@ -126,7 +127,7 @@ void Foam::fv::buoyancyForce::addSup
     fvMatrix<vector>& eqn
 ) const
 {
-    eqn += alpha*rho*g_;
+    eqn += alpha()*rho()*g_;
 }
 
 

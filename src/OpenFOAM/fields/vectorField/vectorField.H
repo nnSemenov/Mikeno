@@ -36,23 +36,26 @@ SourceFiles
 #define vectorField_H
 
 #include "scalarField.H"
-#include "vector.H"
+#include "vectorExpressions.H"
 
-#define TEMPLATE
-#include "FieldFunctionsM.H"
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+template<class Type>
+inline auto Foam::Field<Type>::component(const direction& d) const
+{
+    return Foam::component(*this, d);
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 typedef Field<vector> vectorField;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-UNARY_FUNCTION(vector, vector, normalised)
-UNARY_FUNCTION(vector, vector, perpendicular)
-
 
 tmp<vectorField> zip
 (
@@ -61,14 +64,9 @@ tmp<vectorField> zip
     const tmp<scalarField>& z
 );
 
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

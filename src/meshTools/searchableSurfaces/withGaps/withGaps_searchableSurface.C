@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -194,7 +194,7 @@ Foam::searchableSurfaces::withGaps::withGaps
 )
 :
     searchableSurface(io),
-    gap_(dict.lookup<scalar>("gap", dimLength)),
+    gap_(dict.lookup<scalar>("gap", dimensions::length)),
     subGeom_(1)
 {
     const word subGeomName(dict.lookup("surface"));
@@ -233,7 +233,7 @@ void Foam::searchableSurfaces::withGaps::findLine
     labelList compactMap;
     label nMiss = countMisses(info, compactMap);
 
-    if (returnReduce(nMiss, sumOp<label>()) > 0)
+    if (returnReduce(nMiss, sumOp()) > 0)
     {
         // Pout<< "** retesting with offset0 " << nMiss << " misses out of "
         //    << start.size() << endl;
@@ -288,7 +288,7 @@ void Foam::searchableSurfaces::withGaps::findLine
         labelList plusMissMap;
         nMiss = countMisses(plusInfo, minInfo, plusMissMap);
 
-        if (returnReduce(nMiss, sumOp<label>()) > 0)
+        if (returnReduce(nMiss, sumOp()) > 0)
         {
             // Pout<< "** retesting with offset1 " << nMiss << " misses out of "
             //    << start.size() << endl;

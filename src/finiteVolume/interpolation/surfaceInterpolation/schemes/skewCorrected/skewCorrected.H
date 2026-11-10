@@ -135,7 +135,7 @@ public:
             (
                 SurfaceField<Type>::New
                 (
-                    "skewCorrected::skewCorrection(" + vf.name() + ')',
+                    word("skewCorrected::skewCorrection(", vf.name(), ')'),
                     mesh,
                     dimensioned<Type>
                     (
@@ -161,7 +161,7 @@ public:
                     > (mesh).interpolate
                     (
                         fv::gaussGrad<typename pTraits<Type>::cmptType>
-                        (mesh).grad(vf.component(cmpt))
+                        (mesh).fvcGrad(vf.component(cmpt))
                     )
                 );
             }

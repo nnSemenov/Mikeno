@@ -133,7 +133,7 @@ Foam::reactionModels::singleStepReaction::singleStepReaction
     reaction_(thermo_.species(), this->subDict("reaction")),
     stoicRatio_(dimensionedScalar("stoicRatio", dimless, 0)),
     s_(dimensionedScalar("s", dimless, 0)),
-    qFuel_(dimensionedScalar("qFuel", sqr(dimVelocity), 0)),
+    qFuel_(dimensionedScalar("qFuel", sqr(dimensions::velocity), 0)),
     specieStoichCoeffs_(thermo_.species().size(), 0.0),
     Yprod0_(thermo_.species().size(), 0.0),
     fres_(Yprod0_.size()),
@@ -150,7 +150,7 @@ Foam::reactionModels::singleStepReaction::singleStepReaction
             IOobject::NO_WRITE
         ),
         this->mesh(),
-        dimensionedScalar(dimMass/dimVolume/dimTime, 0)
+        dimensionedScalar(dimensions::density/dimensions::time, 0)
     ),
     semiImplicit_(readBool(this->coeffs_.lookup("semiImplicit")))
 {
@@ -200,10 +200,10 @@ Foam::reactionModels::singleStepReaction::~singleStepReaction()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::reactionModels::singleStepReaction::R(const label speciei) const
 {
-    return wFuel_()*specieStoichCoeffs()[speciei];
+    return wFuel_*specieStoichCoeffs()[speciei];
 }
 
 
@@ -212,7 +212,7 @@ Foam::reactionModels::singleStepReaction::R(volScalarField& Y) const
 {
     const label specieI = thermo_.species()[Y.member()];
 
-    volScalarField wSpecie
+    volInternalScalarField wSpecie
     (
         wFuel_*specieStoichCoeffs()[specieI]
     );
@@ -221,9 +221,9 @@ Foam::reactionModels::singleStepReaction::R(volScalarField& Y) const
     {
         const label fNorm = specieProd()[specieI];
         const volScalarField fres(this->fres(specieI));
-        wSpecie /= max(fNorm*(Y - fres), scalar(1e-2));
+        wSpecie /= max(fNorm*(Y() - fres()), scalar(1e-2));
 
-        return -fNorm*wSpecie*fres + fNorm*fvm::Sp(wSpecie, Y);
+        return -fNorm*wSpecie*fres() + fNorm*fvm::Sp(wSpecie, Y);
     }
     else
     {
@@ -232,14 +232,14 @@ Foam::reactionModels::singleStepReaction::R(volScalarField& Y) const
 }
 
 
-Foam::tmp<Foam::volScalarField>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::reactionModels::singleStepReaction::Qdot() const
 {
     const label fuelI = fuelIndex();
     volScalarField& YFuel =
         const_cast<volScalarField&>(this->thermo().Y(fuelI));
 
-    return -qFuel()*(R(YFuel) & YFuel);
+    return -qFuel()*(R(YFuel) & YFuel());
 }
 
 

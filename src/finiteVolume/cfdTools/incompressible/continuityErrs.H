@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,13 +30,14 @@ Description
 \*---------------------------------------------------------------------------*/
 
 {
-    volScalarField contErr(fvc::div(phi));
+    volInternalScalarField contErr(fvi::div(phi));
 
-    scalar sumLocalContErr = runTime.deltaTValue()*
-        mag(contErr)().weightedAverage(mesh.V()).value();
+    scalar sumLocalContErr =
+        runTime.deltaTValue()
+       *weightedAverage(mag(contErr), mesh.V()).value();
 
-    scalar globalContErr = runTime.deltaTValue()*
-        contErr.weightedAverage(mesh.V()).value();
+    scalar globalContErr =
+        runTime.deltaTValue()*weightedAverage(contErr, mesh.V()).value();
     cumulativeContErr += globalContErr;
 
     Info<< "time step continuity errors : sum local = " << sumLocalContErr

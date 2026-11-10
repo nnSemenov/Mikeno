@@ -28,12 +28,8 @@ Description
     Generic templated field type.
 
 SourceFiles
-    FieldFunctions.H
-    FieldFunctionsM.H
-    FieldM.H
     Field.C
-    FieldFunctions.C
-    FieldFunctionsM.C
+    FieldExpression.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -45,6 +41,7 @@ SourceFiles
 #include "VectorSpace.H"
 #include "scalarList.H"
 #include "labelList.H"
+#include "expressionExpressionable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -63,14 +60,37 @@ class SubField;
 template<class Type>
 void writeEntry(Ostream& os, const Field<Type>&);
 
-template<class Type>
-Ostream& operator<<(Ostream&, const Field<Type>&);
-
-template<class Type>
-Ostream& operator<<(Ostream&, const tmp<Field<Type>>&);
-
 class unitSet;
 class dictionary;
+
+//- Field types
+template<class Type>
+struct FieldTraits
+{
+    //- Primitive element type
+    using pType = Type;
+
+    //- Primitive element component type
+    using pCmptType = typename pTraits<Type>::cmptType;
+
+    //- Element component type (pCmptType)
+    using cmptType = pCmptType;
+};
+
+//- Field<Field> types
+template<class Type>
+struct FieldTraits<Field<Type>>
+{
+    //- Primitive element type
+    using pType = Type;
+
+    //- Primitive element component type
+    using pCmptType = typename pTraits<Type>::cmptType;
+
+    //- Element component type (Field of pCmptType)
+    using cmptType = Field<pCmptType>;
+};
+
 
 /*---------------------------------------------------------------------------*\
                             Class Field Declaration
@@ -95,11 +115,22 @@ class Field
 
 public:
 
-    //- Component type
-    typedef typename pTraits<Type>::cmptType cmptType;
+    // Public Types
 
-    //- Declare type of subField
-    typedef SubField<Type> subField;
+        //- Primitive type
+        using pType = typename FieldTraits<Type>::pType;
+
+        //- Primitive component type
+        using pCmptType = typename FieldTraits<Type>::pCmptType;
+
+        //- Component type
+        using cmptType = typename FieldTraits<Type>::cmptType;
+
+        //- Component Field type
+        using cmptField = Field<cmptType>;
+
+        //- subField type
+        using subField = SubField<Type>;
 
 
     // Static Data Members
@@ -198,16 +229,18 @@ public:
             const label size
         );
 
+        //- Construct from an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        Field(const Expression& e);
+
         //- Clone
         tmp<Field<Type>> clone() const;
 
-        //- Return a pointer to a new calculatedFvPatchFieldField created on
-        //  freestore without setting patchField values
-        template<class Type2>
-        static tmp<Field<Type>> NewCalculatedType(const Field<Type2>& f)
-        {
-            return tmp<Field<Type>>(new Field<Type>(f.size()));
-        }
+        static tmp<Field<Type>> New
+        (
+            const tmp<Field<Type>>& tf1,
+            const bool initRet = true
+        );
 
 
     // Member Functions
@@ -283,8 +316,8 @@ public:
         //- Negate this field
         void negate();
 
-        //- Return a component field of the field
-        tmp<Field<cmptType>> component(const direction) const;
+        //- Return a component field expression of the field
+        inline auto component(const direction& d) const;
 
         //- Replace a component field of the field
         void replace(const direction, const UList<cmptType>&);
@@ -292,14 +325,41 @@ public:
         //- Replace a component field of the field
         void replace(const direction, const tmp<Field<cmptType>>&);
 
+        //- Replace a component field of the field from an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void replace(const direction, const Expression&);
+
         //- Replace a component field of the field
         void replace(const direction, const cmptType&);
 
         template<class VSForm>
         VSForm block(const label start) const;
 
-        //- Return the field transpose (only defined for second rank tensors)
-        tmp<Field<Type>> T() const;
+        //- Return the field transpose expression
+        //  (only defined for second rank tensors)
+        inline auto T() const;
+
+        //- Bound the field to the given lower bound
+        void boundLower(const Type& lower);
+
+        //- Bound the field to the given upper bound
+        void boundUpper(const Type& upper);
+
+        //- Bound the field within the given lower and upper bounds
+        void bound(const Type& lower, const Type& upper);
+
+        //- Append an element at the end of the Field
+        void append(const Type& t);
+
+        //- Append a Field at the end of the Field
+        void append(const Field<Type>& f);
+
+        //- Append a Field at the end of the Field
+        void append(const tmp<Field<Type>>& tf);
+
+        //- Append a Field evaluated from an expression at the end of this Field
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void append(const Expression& e);
 
 
     // Member Operators
@@ -309,39 +369,56 @@ public:
         void operator=(const UList<Type>&);
         void operator=(List<Type>&&);
         void operator=(const tmp<Field<Type>>&);
-        void operator=(const Type&);
+        void operator=(const pType&);
         void operator=(const zero);
 
         template<class Form, class Cmpt, direction nCmpt>
         void operator=(const VectorSpace<Form,Cmpt,nCmpt>&);
 
+        //- Assign to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator=(const Expression& e);
+
         void operator+=(const UList<Type>&);
+        void operator+=(const Field<Type>&);
         void operator+=(const tmp<Field<Type>>&);
+        void operator+=(const pType&);
+
+        //- Assign-add to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator+=(const Expression& e);
 
         void operator-=(const UList<Type>&);
+        void operator-=(const Field<Type>&);
         void operator-=(const tmp<Field<Type>>&);
+        void operator-=(const pType&);
 
-        void operator*=(const UList<scalar>&);
-        void operator*=(const tmp<Field<scalar>>&);
+        //- Assign-subtract to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator-=(const Expression& e);
 
-        void operator/=(const UList<scalar>&);
-        void operator/=(const tmp<Field<scalar>>&);
+        void operator*=(const UList<cmptType>&);
+        void operator*=(const Field<cmptType>&);
+        void operator*=(const tmp<Field<cmptType>>&);
+        void operator*=(const pCmptType&);
 
-        void operator+=(const Type&);
-        void operator-=(const Type&);
+        //- Assign-multiply to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator*=(const Expression& e);
 
-        void operator*=(const scalar&);
-        void operator/=(const scalar&);
+        void operator/=(const UList<cmptType>&);
+        void operator/=(const Field<cmptType>&);
+        void operator/=(const tmp<Field<cmptType>>&);
+        void operator/=(const pCmptType&);
 
-
-    // IOstream Operators
-
-        friend Ostream& operator<< <Type>
-        (Ostream&, const Field<Type>&);
-
-        friend Ostream& operator<< <Type>
-        (Ostream&, const tmp<Field<Type>>&);
+        //- Assign-divide to an expression
+        template<class Expression, class = EnableIfExpressionable<Expression>>
+        void operator/=(const Expression& e);
 };
+
+
+template<class Type>
+Ostream& operator<<(Ostream&, const Field<Type>&);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -350,8 +427,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "FieldFunctions.H"
-#include "FieldReductionFunctions.H"
+#include "FieldExpression.H"
 #include "scalarField.H"
 
 #ifdef NoRepository

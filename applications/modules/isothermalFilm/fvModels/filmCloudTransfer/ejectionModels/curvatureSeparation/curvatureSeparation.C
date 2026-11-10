@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "curvatureSeparation.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 #include "zeroGradientFvPatchFields.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -96,7 +96,10 @@ tmp<scalarField> curvatureSeparation::calcCosAngle
     const scalar magg(mag(film_.g.value()));
     const vector gHat(film_.g.value()/magg);
 
-    const vectorField nf(mesh.Sf()/mesh.magSf());
+    const vectorField nf
+    (
+        mesh.Sf().primitiveField()/mesh.magSf().primitiveField()
+    );
     const labelUList& own = mesh.owner();
     const labelUList& nbr = mesh.neighbour();
 
@@ -162,7 +165,7 @@ curvatureSeparation::curvatureSeparation
 )
 :
     ejectionModel(dict, film),
-    gradNHat_(fvc::grad(film_.nHat)),
+    gradNHat_(fvi::grad(film_.nHat)),
     deltaByR1Min_
     (
         dict.optionalTypeDict(typeName)
@@ -176,7 +179,7 @@ curvatureSeparation::curvatureSeparation
 {
     const List<Tuple2<word, scalar>> prIn
     (
-        dict.lookupOrDefault("patchRadii", List<Tuple2<word, scalar>>::null())
+        dict.lookupOrDefault("patchRadii", List<Tuple2<word, scalar>>{})
     );
     const wordList& allPatchNames = film_.mesh.poly().boundary().names();
 
@@ -220,7 +223,7 @@ void curvatureSeparation::correct()
     const vectorField& U = film_.U();
 
     const tmp<volScalarField> tsigma = film_.sigma();
-    const volScalarField::Internal& sigma = tsigma();
+    const volInternalScalarField& sigma = tsigma();
 
     const scalarField invR1(calcInvR1(film_.U));
     const scalarField cosAngle(calcCosAngle(film_.alphaRhoPhi));
@@ -277,28 +280,28 @@ void curvatureSeparation::correct()
 void curvatureSeparation::topoChange(const polyTopoChangeMap& map)
 {
     ejectionModel::topoChange(map);
-    gradNHat_ = fvc::grad(film_.nHat);
+    gradNHat_ = fvi::grad(film_.nHat);
 }
 
 
 void curvatureSeparation::mapMesh(const polyMeshMap& map)
 {
     ejectionModel::mapMesh(map);
-    gradNHat_ = fvc::grad(film_.nHat);
+    gradNHat_ = fvi::grad(film_.nHat);
 }
 
 
 void curvatureSeparation::distribute(const polyDistributionMap& map)
 {
     ejectionModel::distribute(map);
-    gradNHat_ = fvc::grad(film_.nHat);
+    gradNHat_ = fvi::grad(film_.nHat);
 }
 
 
 bool curvatureSeparation::movePoints()
 {
     ejectionModel::movePoints();
-    gradNHat_ = fvc::grad(film_.nHat);
+    gradNHat_ = fvi::grad(film_.nHat);
 
     return true;
 }

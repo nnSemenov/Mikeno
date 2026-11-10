@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -51,7 +51,7 @@ EulerD2dt2Scheme<Type>::fvcD2dt2
         4.0/sqr(mesh().time().deltaT() + mesh().time().deltaT0())
     );
 
-    const word d2dt2name("d2dt2("+vf.name()+')');
+    const word d2dt2name("d2dt2(", vf.name(), ')');
 
     const scalar deltaT = mesh().time().deltaTValue();
     const scalar deltaT0 = mesh().time().deltaT0Value();
@@ -64,8 +64,8 @@ EulerD2dt2Scheme<Type>::fvcD2dt2
     {
         const dimensionedScalar halfRdeltaT2(rDeltaT2/2.0);
 
-        const volScalarField::Internal VV0(mesh().V() + mesh().V0());
-        const volScalarField::Internal V0V00(mesh().V0() + mesh().V00());
+        const volInternalScalarField VV0(mesh().V() + mesh().V0());
+        const volInternalScalarField V0V00(mesh().V0() + mesh().V00());
 
         return VolField<Type>::New
         (
@@ -116,7 +116,7 @@ EulerD2dt2Scheme<Type>::fvcD2dt2
         4.0/sqr(mesh().time().deltaT() + mesh().time().deltaT0())
     );
 
-    const word d2dt2name("d2dt2("+rho.name()+','+vf.name()+')');
+    const word d2dt2name("d2dt2(", rho.name(), ',', vf.name(), ')');
 
     const scalar deltaT = mesh().time().deltaTValue();
     const scalar deltaT0 = mesh().time().deltaT0Value();
@@ -129,12 +129,12 @@ EulerD2dt2Scheme<Type>::fvcD2dt2
         const dimensionedScalar halfRdeltaT2(0.5*rDeltaT2);
         const dimensionedScalar quarterRdeltaT2(0.25*rDeltaT2);
 
-        const volScalarField::Internal VV0rhoRho0
+        const volInternalScalarField VV0rhoRho0
         (
             (mesh().V() + mesh().V0())*(rho() + rho.oldTime()())
         );
 
-        const volScalarField::Internal V0V00rho0Rho00
+        const volInternalScalarField V0V00rho0Rho00
         (
             (mesh().V0() + mesh().V00())
            *(
@@ -216,7 +216,7 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
         new fvMatrix<Type>
         (
             vf,
-            vf.dimensions()*dimVolume/dimTime/dimTime
+            vf.dimensions()*dimensions::volume/sqr(dimensions::time)
         )
     );
 
@@ -235,8 +235,14 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
     {
         const scalar halfRdeltaT2 = rDeltaT2/2.0;
 
-        const scalarField VV0(mesh().V() + mesh().V0());
-        const scalarField V0V00(mesh().V0() + mesh().V00());
+        const scalarField VV0
+        (
+            mesh().V().primitiveField() + mesh().V0().primitiveField()
+        );
+        const scalarField V0V00
+        (
+            mesh().V0().primitiveField() + mesh().V00().primitiveField()
+        );
 
         fvm.diag() = (coefft*halfRdeltaT2)*VV0;
 
@@ -250,9 +256,9 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
     }
     else
     {
-        fvm.diag() = (coefft*rDeltaT2)*mesh().V();
+        fvm.diag() = (coefft*rDeltaT2)*mesh().V().primitiveField();
 
-        fvm.source() = rDeltaT2*mesh().V()*
+        fvm.source() = rDeltaT2*mesh().V().primitiveField()*
         (
             coefft0*vf.oldTime().primitiveField()
           - coefft00*vf.oldTime().oldTime().primitiveField()
@@ -276,8 +282,8 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume
-            /dimTime/dimTime
+            rho.dimensions()*vf.dimensions()
+           *dimensions::volume/sqr(dimensions::time)
         )
     );
 
@@ -295,8 +301,14 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
     {
         const scalar halfRdeltaT2 = 0.5*rDeltaT2;
 
-        const scalarField VV0(mesh().V() + mesh().V0());
-        const scalarField V0V00(mesh().V0() + mesh().V00());
+        const scalarField VV0
+        (
+            mesh().V().primitiveField() + mesh().V0().primitiveField()
+        );
+        const scalarField V0V00
+        (
+            mesh().V0().primitiveField() + mesh().V00().primitiveField()
+        );
 
         fvm.diag() = rho.value()*(coefft*halfRdeltaT2)*VV0;
 
@@ -310,9 +322,9 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
     }
     else
     {
-        fvm.diag() = (coefft*rDeltaT2)*mesh().V()*rho.value();
+        fvm.diag() = (coefft*rDeltaT2)*mesh().V().primitiveField()*rho.value();
 
-        fvm.source() = rDeltaT2*mesh().V()*rho.value()*
+        fvm.source() = rDeltaT2*mesh().V().primitiveField()*rho.value()*
         (
             (coefft + coefft00)*vf.oldTime().primitiveField()
           - coefft00*vf.oldTime().oldTime().primitiveField()
@@ -336,8 +348,8 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
         new fvMatrix<Type>
         (
             vf,
-            rho.dimensions()*vf.dimensions()*dimVolume
-            /dimTime/dimTime
+            rho.dimensions()*vf.dimensions()
+           *dimensions::volume/sqr(dimensions::time)
         )
     );
 
@@ -357,13 +369,13 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
 
         const scalarField VV0rhoRho0
         (
-            (mesh().V() + mesh().V0())
+            (mesh().V().primitiveField() + mesh().V0().primitiveField())
            *(rho.primitiveField() + rho.oldTime().primitiveField())
         );
 
         const scalarField V0V00rho0Rho00
         (
-            (mesh().V0() + mesh().V00())
+            (mesh().V0().primitiveField() + mesh().V00().primitiveField())
            *(
                rho.oldTime().primitiveField()
              + rho.oldTime().oldTime().primitiveField()
@@ -397,9 +409,9 @@ EulerD2dt2Scheme<Type>::fvmD2dt2
           + rho.oldTime().oldTime().primitiveField()
         );
 
-        fvm.diag() = (coefft*halfRdeltaT2)*mesh().V()*rhoRho0;
+        fvm.diag() = (coefft*halfRdeltaT2)*mesh().V().primitiveField()*rhoRho0;
 
-        fvm.source() = halfRdeltaT2*mesh().V()*
+        fvm.source() = halfRdeltaT2*mesh().V().primitiveField()*
         (
             (coefft*rhoRho0 + coefft00*rho0Rho00)
            *vf.oldTime().primitiveField()

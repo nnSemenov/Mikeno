@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -195,7 +195,7 @@ labelList findIndices
     const label start=0
 );
 
-//- Select all occurrences given a boolean critera. Linear search.
+//- Select all occurrences given a boolean criteria. Linear search.
 template<class ListType, class BoolOp>
 labelList selectIndices
 (
@@ -222,6 +222,21 @@ ListType createWithValues
     const labelUList& indices,
     typename ListType::const_reference setValue
 );
+
+//- Return the largest element of the list
+// or pTraits<ListType::value_type>::min if the list is empty
+template<class Type>
+Type max(const UList<Type>&);
+
+//- Return the smallest element of the list
+// or pTraits<ListType::value_type>::max if the list is empty
+template<class Type>
+Type min(const UList<Type>&);
+
+//- Return the sum of the element of the list
+// or zero if the list is empty
+template<class Type>
+Type sum(const UList<Type>&);
 
 //- Find index of max element (and larger than given element).
 //  return -1 if not found. Linear search.
@@ -308,9 +323,9 @@ struct ListEqOp
 };
 
 //- List operator to append one list onto another
-template<class T>
 struct ListAppendEqOp
 {
+    template<class T>
     void operator()(List<T>& x, const List<T>& y) const;
 };
 

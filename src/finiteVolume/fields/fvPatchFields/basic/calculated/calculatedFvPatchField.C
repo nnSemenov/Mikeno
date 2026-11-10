@@ -109,49 +109,6 @@ Foam::calculatedFvPatchField<Type>::calculatedFvPatchField
 {}
 
 
-template<class Type>
-Foam::tmp<Foam::fvPatchField<Type>>
-Foam::fvPatchField<Type>::NewCalculatedType
-(
-    const fvPatch& p
-)
-{
-    typename patchConstructorTable::iterator patchTypeCstrIter =
-        patchConstructorTablePtr_->find(p.type());
-
-    if (patchTypeCstrIter != patchConstructorTablePtr_->end())
-    {
-        return patchTypeCstrIter()
-        (
-            p,
-            DimensionedField<Type, fvMesh>::null()
-        );
-    }
-    else
-    {
-        return tmp<fvPatchField<Type>>
-        (
-            new calculatedFvPatchField<Type>
-            (
-                p,
-                DimensionedField<Type, fvMesh>::null()
-            )
-        );
-    }
-}
-
-
-template<class Type>
-template<class Type2>
-Foam::tmp<Foam::fvPatchField<Type>> Foam::fvPatchField<Type>::NewCalculatedType
-(
-    const fvPatchField<Type2>& pf
-)
-{
-    return NewCalculatedType(pf.patch());
-}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
@@ -174,9 +131,9 @@ Foam::calculatedFvPatchField<Type>::valueInternalCoeffs
 {
     FatalErrorInFunction
         << "cannot be called for a calculatedFvPatchField"
-        << "\n    on patch " << this->patch().name()
-        << " of field " << this->internalField().name()
-        << " in file " << this->internalField().objectPath()
+        << "\n    on patch " << patch().name()
+        << " of field " << internalField().name()
+        << " in file " << internalField().objectPath()
         << "\n    You are probably trying to solve for a field with a "
            "default boundary condition."
         << abort(FatalError);
@@ -194,9 +151,9 @@ Foam::calculatedFvPatchField<Type>::valueBoundaryCoeffs
 {
     FatalErrorInFunction
         << "cannot be called for a calculatedFvPatchField"
-        << "\n    on patch " << this->patch().name()
-        << " of field " << this->internalField().name()
-        << " in file " << this->internalField().objectPath()
+        << "\n    on patch " << patch().name()
+        << " of field " << internalField().name()
+        << " in file " << internalField().objectPath()
         << "\n    You are probably trying to solve for a field with a "
            "default boundary condition."
         << abort(FatalError);
@@ -211,9 +168,9 @@ Foam::calculatedFvPatchField<Type>::gradientInternalCoeffs() const
 {
     FatalErrorInFunction
         << "cannot be called for a calculatedFvPatchField"
-        << "\n    on patch " << this->patch().name()
-        << " of field " << this->internalField().name()
-        << " in file " << this->internalField().objectPath()
+        << "\n    on patch " << patch().name()
+        << " of field " << internalField().name()
+        << " in file " << internalField().objectPath()
         << "\n    You are probably trying to solve for a field with a "
            "default boundary condition."
         << abort(FatalError);
@@ -228,9 +185,9 @@ Foam::calculatedFvPatchField<Type>::gradientBoundaryCoeffs() const
 {
     FatalErrorInFunction
         << "cannot be called for a calculatedFvPatchField"
-        << "\n    on patch " << this->patch().name()
-        << " of field " << this->internalField().name()
-        << " in file " << this->internalField().objectPath()
+        << "\n    on patch " << patch().name()
+        << " of field " << internalField().name()
+        << " in file " << internalField().objectPath()
         << "\n    You are probably trying to solve for a field with a "
            "default boundary condition."
         << abort(FatalError);

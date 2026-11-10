@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,8 +28,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 
 #include "fvmDdt.H"
-
-#include "fvcDdt.H"
+#include "fviDdt.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -71,7 +70,7 @@ Foam::solvers::incompressibleDriftFlux::surfaceTensionForce() const
     (
         "surfaceTensionForce",
         mesh,
-        dimensionedScalar(dimForce/dimVolume, 0)
+        dimensionedScalar(dimensions::forceDensity, 0)
     );
 }
 
@@ -145,7 +144,7 @@ Foam::solvers::incompressibleDriftFlux::incompressibleDriftFlux(fvMesh& mesh)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar(dimTime/dimDensity, 1)
+            dimensionedScalar(dimensions::time/dimensions::density, 1)
         );
     }
 
@@ -159,7 +158,7 @@ Foam::solvers::incompressibleDriftFlux::incompressibleDriftFlux(fvMesh& mesh)
             U,
             p_rgh,
             rAU,
-            autoPtr<volScalarField>(),
+            autoPtr<volInternalScalarField>(),
             pressureReference(),
             pimple
         );
@@ -193,7 +192,7 @@ void Foam::solvers::incompressibleDriftFlux::prePredictor()
 
         fvScalarMatrix alpha1Eqn
         (
-            fvm::ddt(alpha1) - fvc::ddt(alpha1)
+            fvm::ddt(alpha1) - fvi::ddt(alpha1)
           - fvm::laplacian(nuEff, alpha1)
         );
 
@@ -205,7 +204,7 @@ void Foam::solvers::incompressibleDriftFlux::prePredictor()
         alphaPhi2 = phi - alphaPhi1;
 
         Info<< "Phase-1 volume fraction = "
-            << alpha1.weightedAverage(mesh.Vsc()).value()
+            << weightedAverage(alpha1(), mesh.Vsc()()).value()
             << "  Min(" << alpha1.name() << ") = " << min(alpha1).value()
             << "  Max(" << alpha1.name() << ") = " << max(alpha1).value()
             << endl;

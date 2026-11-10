@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,8 @@ License
 
 #include "compressibleVoF.H"
 #include "localEulerDdtScheme.H"
-#include "fvcDdt.H"
-#include "fvcDiv.H"
+#include "fviDdt.H"
+#include "fviDiv.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -83,7 +83,7 @@ Foam::solvers::compressibleVoF::compressibleVoF(fvMesh& mesh)
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        alpha1()*fvc::div(phi)()()
+        alpha1()*fvi::div(phi)
     ),
 
     pressureReference_
@@ -140,7 +140,7 @@ Foam::solvers::compressibleVoF::compressibleVoF(fvMesh& mesh)
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar(dimTime/dimDensity, 1)
+            dimensionedScalar(dimensions::time/dimensions::density, 1)
         );
     }
 }
@@ -168,14 +168,14 @@ void Foam::solvers::compressibleVoF::prePredictor()
 
     contErr1 =
     (
-        fvc::ddt(alpha1, rho1)()() + fvc::div(alphaRhoPhi1)()()
-      - (fvModels().source(alpha1, rho1)&rho1)()
+        fvi::ddt(alpha1, rho1) + fvi::div(alphaRhoPhi1)
+      - (fvModels().source(alpha1, rho1)&rho1())
     );
 
     contErr2 =
     (
-        fvc::ddt(alpha2, rho2)()() + fvc::div(alphaRhoPhi2)()()
-      - (fvModels().source(alpha2, rho2)&rho2)()
+        fvi::ddt(alpha2, rho2) + fvi::div(alphaRhoPhi2)
+      - (fvModels().source(alpha2, rho2)&rho2())
     );
 }
 

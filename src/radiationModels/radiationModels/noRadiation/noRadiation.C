@@ -90,7 +90,7 @@ Foam::tmp<Foam::volScalarField> Foam::radiationModels::noRadiation::Rp() const
         mesh_,
         dimensionedScalar
         (
-            constant::physicoChemical::sigma.dimensions()/dimLength,
+            constant::physicoChemical::sigma.dimensions()/dimensions::length,
             0
         )
     );
@@ -100,11 +100,11 @@ Foam::tmp<Foam::volScalarField> Foam::radiationModels::noRadiation::Rp() const
 Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::fvMesh>>
 Foam::radiationModels::noRadiation::Ru() const
 {
-    return volScalarField::Internal::New
+    return volInternalScalarField::New
     (
         "Ru",
         mesh_,
-        dimensionedScalar(dimMass/dimLength/pow3(dimTime), 0)
+        dimensionedScalar(dimensions::powerDensity, 0)
     );
 }
 

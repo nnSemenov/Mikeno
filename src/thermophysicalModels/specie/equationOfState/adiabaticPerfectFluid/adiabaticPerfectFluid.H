@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -129,6 +129,17 @@ class adiabaticPerfectFluid
         scalar B_;
 
 
+    // Private Constructors
+
+        //- Construct from name and parent dictionary and dictionary
+        adiabaticPerfectFluid
+        (
+            const word& name,
+            const dictionary& dict,
+            const dictionary& subDict
+        );
+
+
 public:
 
     // Constructors
@@ -162,7 +173,10 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return "adiabaticPerfectFluid<" + word(Specie::typeName_()) + '>';
+            return word
+            (
+                "adiabaticPerfectFluid<", word(Specie::typeName_()), '>'
+            );
         }
 
 

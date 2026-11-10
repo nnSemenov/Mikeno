@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,8 +52,8 @@ Foam::porosityModels::DarcyForchheimer::DarcyForchheimer
 )
 :
     porosityModel(name, mesh, dict, coeffDict, cellZoneName),
-    dXYZ_("d", dimless/sqr(dimLength), coeffDict),
-    fXYZ_("f", dimless/dimLength, coeffDict),
+    dXYZ_("d", dimless/sqr(dimensions::length), coeffDict),
+    fXYZ_("f", dimless/dimensions::length, coeffDict),
     rhoName_(coeffDict.lookupOrDefault<word>("rho", "rho")),
     muName_(coeffDict.lookupOrDefault<word>("mu", "mu")),
     nuName_(coeffDict.lookupOrDefault<word>("nu", "nu"))
@@ -177,7 +177,7 @@ void Foam::porosityModels::DarcyForchheimer::calcForce
 
     apply(Udiag, Usource, V, rho, mu, U);
 
-    force = Udiag*U - Usource;
+    force = Udiag*U.primitiveField() - Usource;
 }
 
 
@@ -195,7 +195,7 @@ void Foam::porosityModels::DarcyForchheimer::correct
     word muName(IOobject::groupName(muName_, U.group()));
     word nuName(IOobject::groupName(nuName_, U.group()));
 
-    if (UEqn.dimensions() == dimForce)
+    if (UEqn.dimensions() == dimensions::force)
     {
         const volScalarField& rho = mesh_.lookupObject<volScalarField>(rhoName);
 
@@ -211,7 +211,7 @@ void Foam::porosityModels::DarcyForchheimer::correct
             const volScalarField& nu =
                 mesh_.lookupObject<volScalarField>(nuName);
 
-            apply(Udiag, Usource, V, rho, rho*nu, U);
+            apply(Udiag, Usource, V, rho, eval(rho*nu), U);
         }
     }
     else
@@ -230,7 +230,7 @@ void Foam::porosityModels::DarcyForchheimer::correct
             const volScalarField& mu =
                 mesh_.lookupObject<volScalarField>(muName);
 
-            apply(Udiag, Usource, V, geometricOneField(), mu/rho, U);
+            apply(Udiag, Usource, V, geometricOneField(), eval(mu/rho), U);
         }
     }
 }
@@ -248,7 +248,7 @@ void Foam::porosityModels::DarcyForchheimer::correct
     word muName(IOobject::groupName(muName_, U.group()));
     word nuName(IOobject::groupName(nuName_, U.group()));
 
-    if (UEqn.dimensions() == dimForce)
+    if (UEqn.dimensions() == dimensions::force)
     {
         const volScalarField& rho = mesh_.lookupObject<volScalarField>(rhoName);
         const volScalarField& mu = mesh_.lookupObject<volScalarField>(muName);
@@ -271,7 +271,7 @@ void Foam::porosityModels::DarcyForchheimer::correct
             const volScalarField& mu =
                 mesh_.lookupObject<volScalarField>(muName);
 
-            apply(AU, geometricOneField(), mu/rho, U);
+            apply(AU, geometricOneField(), eval(mu/rho), U);
         }
     }
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -130,7 +130,7 @@ class fluxLimitedLangmuirHinshelwoodReactionRate
         const objectRegistry& ob_;
 
         //- Surface area per unit volume field
-        mutable tmp<volScalarField::Internal> tAv_;
+        mutable tmp<volInternalScalarField> tAv_;
 
 
     // Private Member Functions
@@ -167,32 +167,17 @@ public:
         //- Post-evaluation hook
         inline void postEvaluate() const;
 
-        inline scalar operator()
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        //- Return the rate constant
+        inline scalar k(const reaction::state& s) const;
 
-        inline scalar ddT
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li
-        ) const;
+        //- The derivative of the rate w.r.t. temperatur
+        inline scalar ddT(const reaction::state& s) const;
 
+        //- Is the rate a function of concentration?
         inline bool hasDdc() const;
 
-        inline void ddc
-        (
-            const scalar p,
-            const scalar T,
-            const scalarField& c,
-            const label li,
-            scalarField& ddc
-        ) const;
+        //- The derivative of the rate w.r.t. concentration
+        inline void ddc(const reaction::state& s, scalarField& ddc) const;
 
         //- Write to stream
         inline void write(Ostream& os) const;

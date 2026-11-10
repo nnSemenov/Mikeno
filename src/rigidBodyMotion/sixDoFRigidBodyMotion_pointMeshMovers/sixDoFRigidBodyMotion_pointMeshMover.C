@@ -174,7 +174,7 @@ Foam::pointMeshMovers::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion
     test_(dict.lookupOrDefault<Switch>("test", false)),
     rhoInf_(1.0),
     rhoName_(dict.lookupOrDefault<word>("rho", "rho")),
-    g_("g", dimAcceleration, dict, vector::zero),
+    g_("g", dimensions::acceleration, dict, vector::zero),
     curTimeIndex_(-1)
 {
     if (rhoName_ == "rhoInf")
@@ -192,7 +192,10 @@ Foam::pointMeshMovers::sixDoFRigidBodyMotion::~sixDoFRigidBodyMotion()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::pointMeshMovers::sixDoFRigidBodyMotion::write() const
+bool Foam::pointMeshMovers::sixDoFRigidBodyMotion::write
+(
+    const bool updateInstance
+) const
 {
     timeIOdictionary dict
     (
@@ -211,13 +214,13 @@ bool Foam::pointMeshMovers::sixDoFRigidBodyMotion::write() const
     state().write(dict);
 
     return
-        pointMeshMovers::multiRigidBody::write()
+        pointMeshMovers::multiRigidBody::write(updateInstance)
      && dict.regIOobject::writeObject
         (
             IOstream::ASCII,
             IOstream::currentVersion,
             poly().time().writeCompression(),
-            true
+            updateInstance
         );
 }
 

@@ -171,19 +171,24 @@ namespace fvc
         const tmp<VolField<Type>>& tvf
     );
 
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto interpolate(const Expression& e)
+    {
+        return interpolate(eval(e));
+    }
 
     //- Interpolate boundary field onto faces (simply a type conversion)
     template<class Type>
-    static tmp<FieldField<surfaceMesh::PatchField, Type>> interpolate
+    static tmp<SurfaceBoundaryField<Type>> interpolate
     (
-        const FieldField<fvMesh::PatchField, Type>& fvpff
+        const VolBoundaryField<Type>& fvpff
     );
 
     //- Interpolate boundary field onto faces (simply a type conversion)
     template<class Type>
-    static tmp<FieldField<surfaceMesh::PatchField, Type>> interpolate
+    static tmp<SurfaceBoundaryField<Type>> interpolate
     (
-        const tmp<FieldField<fvMesh::PatchField, Type>>& tfvpff
+        const tmp<VolBoundaryField<Type>>& tfvpff
     );
 
     //- Interpolate 'one' returning 'one'
@@ -212,6 +217,17 @@ namespace fvc
         const surfaceVectorField& Sf,
         const tmp<VolField<Type>>& tvf
     );
+
+    template<class Expression, class = EnableIfExpression<Expression>>
+    inline auto dotInterpolate
+    (
+        const surfaceVectorField& Sf,
+        const Expression& e
+    )
+    {
+        return dotInterpolate(Sf, eval(e));
+    }
+
 }
 
 

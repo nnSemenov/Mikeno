@@ -175,7 +175,7 @@ void Foam::medialAxisMeshMover::smoothPatchNormals
             scalar resid = meshRefinement::gAverage
             (
                 isPatchMasterPoint,
-                mag(normals-average)()
+                eval(mag(normals - average))()
             );
             Info<< "    Iteration " << iter << "   residual " << resid << endl;
         }
@@ -220,7 +220,7 @@ void Foam::medialAxisMeshMover::smoothNormals
 
     // Make sure that points that are coupled to meshPoints but not on a patch
     // are fixed as well
-    syncTools::syncPointList(mesh(), isFixedPoint, maxEqOp<unsigned int>(), 0);
+    syncTools::syncPointList(mesh(), isFixedPoint, maxEqOp(), 0);
 
 
     // Correspondence between local edges/points and mesh edges/points
@@ -261,7 +261,7 @@ void Foam::medialAxisMeshMover::smoothNormals
             scalar resid = meshRefinement::gAverage
             (
                 isMeshMasterPoint,
-                mag(normals-average)()
+                eval(mag(normals.primitiveField() - average))()
             );
             Info<< "    Iteration " << iter << "   residual " << resid << endl;
         }
@@ -490,7 +490,7 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
         label nUnvisit = returnReduce
         (
             wallDistCalc.getUnsetPoints(),
-            sumOp<label>()
+            sumOp()
         );
 
         if (nUnvisit > 0)
@@ -899,7 +899,7 @@ void Foam::medialAxisMeshMover::syncPatchDisplacement
             mesh(),
             meshPoints,
             patchDisp,
-            minMagSqrEqOp<vector>(),
+            minMagSqrEqOp(),
             point::rootMax           // null value
         );
 
@@ -915,7 +915,7 @@ void Foam::medialAxisMeshMover::syncPatchDisplacement
             }
         }
 
-        if (!returnReduce(nChanged, sumOp<label>()))
+        if (!returnReduce(nChanged, sumOp()))
         {
             break;
         }
@@ -989,7 +989,7 @@ void Foam::medialAxisMeshMover::minSmoothField
             scalar resid = meshRefinement::gAverage
             (
                 isPatchMasterPoint,
-                mag(field-average)()
+                eval(mag(field-average))()
             );
             Info<< "    Iteration " << iter << "   residual " << resid << endl;
         }
@@ -1064,7 +1064,7 @@ handleFeatureAngleLayerTerminations
         mesh(),
         meshEdges,
         edgeFaceNormals,
-        globalMeshData::ListPlusEqOp<List<point>>(),   // combine operator
+        globalMeshData::ListPlusEqOp(),   // combine operator
         List<point>()               // null value
     );
 
@@ -1073,7 +1073,7 @@ handleFeatureAngleLayerTerminations
         mesh(),
         meshEdges,
         edgeFaceExtrude,
-        globalMeshData::ListPlusEqOp<List<bool>>(),    // combine operator
+        globalMeshData::ListPlusEqOp(),    // combine operator
         List<bool>()                // null value
     );
 
@@ -1123,7 +1123,7 @@ handleFeatureAngleLayerTerminations
     }
 
     // Info<< "Added "
-    //    << returnReduce(nPointCounter-nOldPointCounter, sumOp<label>())
+    //    << returnReduce(nPointCounter-nOldPointCounter, sumOp())
     //    << " point not to extrude." << endl;
 }
 
@@ -1295,7 +1295,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
             mesh(),
             meshPoints,
             keptPoints,
-            orEqOp<bool>(),
+            orEqOp(),
             false               // null value
         );
 
@@ -1319,7 +1319,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         }
 
 
-        if (returnReduce(nChanged, sumOp<label>()) == 0)
+        if (returnReduce(nChanged, sumOp()) == 0)
         {
             break;
         }
@@ -1358,7 +1358,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         mesh(),
         meshPoints,
         isolatedPoint,
-        plusEqOp<label>(),
+        addEqOp(),
         label(0)        // null value
     );
 
@@ -1414,7 +1414,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         }
     }
 
-    reduce(nPointCounter, sumOp<label>());
+    reduce(nPointCounter, sumOp());
     Info<< typeName
         << " : Number of isolated points extrusion stopped : "<< nPointCounter
         << endl;
@@ -1505,7 +1505,7 @@ void Foam::medialAxisMeshMover::smoothLambdaMuDisplacement
             scalar resid = meshRefinement::gAverage
             (
                 isMeshMasterPoint,
-                mag(displacement-average)()
+                eval(mag(displacement - average))()
             );
             Info<< "    Iteration " << iter << "   residual " << resid << endl;
         }
@@ -1562,7 +1562,7 @@ Foam::medialAxisMeshMover::medialAxisMeshMover
             false
         ),
         pMesh(),
-        dimensionedVector(dimLength, Zero)
+        dimensionedVector(dimensions::length, Zero)
     ),
     medialRatio_
     (
@@ -1590,7 +1590,7 @@ Foam::medialAxisMeshMover::medialAxisMeshMover
             false
         ),
         pMesh(),
-        dimensionedScalar(dimLength, 0)
+        dimensionedScalar(dimensions::length, 0)
     ),
     medialVec_
     (
@@ -1604,7 +1604,7 @@ Foam::medialAxisMeshMover::medialAxisMeshMover
             false
         ),
         pMesh(),
-        dimensionedVector(dimLength, Zero)
+        dimensionedVector(dimensions::length, Zero)
     )
 {
     update(dict);
@@ -1829,7 +1829,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
         }
     }
 
-    reduce(numThicknessRatioExclude, sumOp<label>());
+    reduce(numThicknessRatioExclude, sumOp());
     Info<< typeName << " : Reducing layer thickness at "
         << numThicknessRatioExclude
         << " nodes where thickness to medial axis distance is large " << endl;

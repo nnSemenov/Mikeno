@@ -110,12 +110,12 @@ fvScalarMatrix solvers::porousMediaFluid::TEqnCore(
         TEqn += fvm::div(phiCpv, T) - fvm::SuSp(fvc::div(phiCpv), T) +
             TEqnNonIdealityPressureTerm(dhedp_T);
         TEqn += alphaF * fvc::ddt(rho_, K) + fvc::div(phi_, K);
-        TEqn += alphaF *
-            pressureWork(internalEnergy ? fvc::div(phi_, p_() / rho_)()
-                                        : -dpdt);
+        TEqn += alphaF.internalField() *
+            pressureWork(internalEnergy ? fvi::div(phi_, p_() / rho_)
+                                        : eval(-dpdt));
 
         if (buoyancy.valid()) {
-            TEqn -= rho_ * (U_ & buoyancy->g);
+            TEqn -= rho_.internalField() * (U_.internalField() & buoyancy->g);
         }
     }
     // add phasewise heat transfer
@@ -126,14 +126,14 @@ fvScalarMatrix solvers::porousMediaFluid::TEqnCore(
         const volScalarField &Tdest = getTFieldRef(phaseDest);
         const volScalarField &Tsrc = getTFieldRef(phaseSrc);
         const auto &htInfo = htSource.heatTransferInfo;
-        const auto hsAs = getAlpha(phaseSrc) * getAlpha(phaseDest) *
+        const volInternalScalarField hsAs(getAlpha(phaseSrc) * getAlpha(phaseDest) *
             htInfo.heatTransferCoefficient *
-            htInfo.effectiveSpecificSurfaceArea;
+            htInfo.effectiveSpecificSurfaceArea);
         if (htInfo.explicitTerm) {
-            TEqn -= hsAs * (Tsrc - Tdest);
+            TEqn -= hsAs * (Tsrc - Tdest).internalField();
         }
         else {
-            TEqn -= hsAs.ref() * Tsrc;
+            TEqn -= hsAs * Tsrc;
             TEqn += fvm::Sp(hsAs, Tdest);
         }
     }

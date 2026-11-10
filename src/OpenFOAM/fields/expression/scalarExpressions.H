@@ -1,0 +1,260 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2026 OpenFOAM Foundation
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+License
+    This file is part of OpenFOAM.
+
+    OpenFOAM is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+Description
+    Unary and binary scalar functions and operators used by the expression
+    templating system
+
+\*---------------------------------------------------------------------------*/
+
+#ifndef scalarExpressions_H
+#define scalarExpressions_H
+
+#include "scalar.H"
+#include "expressions.H"
+#include "dimensionSet.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
+{
+
+/*---------------------------------------------------------------------------*\
+                           Class powOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct powOp
+{
+    inline static const char* prefix = "pow(";
+    static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return pow(a, b);
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                        Class integerPowOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct integerPowOp
+{
+    inline static const char* prefix = "integerPow(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return pow(a, b);
+    }
+};
+
+/*---------------------------------------------------------------------------*\
+                        Class integerRootOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct integerRootOp
+{
+    inline static const char* prefix = "integerRoot(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    static scalar value(const scalar a, const int32_t b)
+    {
+        return integerRoot(a, b);
+    }
+
+    static scalar value(const scalar a, const int64_t b)
+    {
+        return integerRoot(a, b);
+    }
+
+    template<class A, class B>
+    static auto value(const A& a, const B& b)
+    {
+        return root(a, b);
+    }
+};
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Unary scalar functions
+
+UnaryOpFunction(pow3)
+UnaryOpFunction(pow4)
+UnaryOpFunction(pow5)
+UnaryOpFunction(pow6)
+UnaryOpFunction(pow025)
+UnaryOpFunction(sqrt)
+UnaryOpFunction(sign)
+UnaryOpFunction(pos)
+UnaryOpFunction(pos0)
+UnaryOpFunction(neg)
+UnaryOpFunction(neg0)
+UnaryOpFunction(posPart)
+UnaryOpFunction(negPart)
+
+// Eager unary scalar functions pre-evaluated and cached as tmp fields
+// to avoid interference with loop optimisation
+// Benefit demonstrated on x86 processors with sse2 and avx512
+
+// Note: for some expressions exp, sin and cos are slightly faster
+// without eager evaluation on processors without avx512
+// or without avx512 optimisation i.e. without the native option
+UnaryOpEagerFunction(exp)
+UnaryOpEagerFunction(sin)
+UnaryOpEagerFunction(cos)
+
+UnaryOpEagerFunction(tan)
+UnaryOpEagerFunction(log)
+UnaryOpEagerFunction(log10)
+UnaryOpEagerFunction(asin)
+UnaryOpEagerFunction(acos)
+UnaryOpEagerFunction(atan)
+UnaryOpEagerFunction(cbrt)
+UnaryOpEagerFunction(sinh)
+UnaryOpEagerFunction(cosh)
+UnaryOpEagerFunction(tanh)
+UnaryOpEagerFunction(asinh)
+UnaryOpEagerFunction(acosh)
+UnaryOpEagerFunction(atanh)
+UnaryOpEagerFunction(erf)
+UnaryOpEagerFunction(erfc)
+UnaryOpEagerFunction(lgamma)
+UnaryOpEagerFunction(j0)
+UnaryOpEagerFunction(j1)
+UnaryOpEagerFunction(y0)
+UnaryOpEagerFunction(y1)
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Binary scalar functions
+
+BinaryFunction(stabilise);
+BinaryFunction(integerPow);
+BinaryFunction(integerRoot);
+
+// Eager pow binary function pre-evaluated and cached as tmp field
+// to avoid interference with loop optimisation
+// Benefit demonstrated on x86 processors with sse2 and avx512
+BinaryEagerFunction(pow);
+
+/*---------------------------------------------------------------------------*\
+                            Class atan2Op Declaration
+\*---------------------------------------------------------------------------*/
+
+struct atan2Op
+{
+    inline static const char* prefix = "atan2(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    static scalar value(const scalar a, const scalar b)
+    {
+        return atan2(a, b);
+    }
+};
+
+// Atan2 function
+BinaryEagerFunction(atan2);
+
+/*---------------------------------------------------------------------------*\
+                            Class jnOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct jnOp
+{
+    inline static const char* prefix = "jn(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    static scalar value(const int n, const scalar s)
+    {
+        return jn(n, s);
+    }
+};
+
+// Bessel function jn
+BinaryFunction(jn);
+
+/*---------------------------------------------------------------------------*\
+                            Class ynOp Declaration
+\*---------------------------------------------------------------------------*/
+
+struct ynOp
+{
+    inline static const char* prefix = "yn(";
+    inline static constexpr char infix = ',';
+    static constexpr char postfix = ')';
+
+    static constexpr signed char precedence =
+        expression::Operation<void>::precedence;
+
+    static constexpr bool associative = false;
+
+    static scalar value(const int n, const scalar s)
+    {
+        return yn(n, s);
+    }
+};
+
+// Bessel function yn
+BinaryEagerFunction(yn);
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
+
+// ************************************************************************* //

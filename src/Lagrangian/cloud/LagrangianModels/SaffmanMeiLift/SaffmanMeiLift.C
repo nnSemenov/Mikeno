@@ -66,15 +66,16 @@ Foam::Lagrangian::SaffmanMeiLift::calcL
     tmp<LagrangianSubScalarSubField> td = sCloud.d(model, subMesh);
     const LagrangianSubScalarSubField& d = td();
     const LagrangianSubScalarField& v = sCloud.v(model, subMesh);
-    const LagrangianSubScalarField& nuc = cplCloud.nuc(model, subMesh);
+    tmp<LagrangianSubScalarField> tnuc = cplCloud.nuc(subMesh);
+    const LagrangianSubScalarField& nuc = tnuc();
     const LagrangianSubScalarField& Re = scCloud.Re(model, subMesh);
     const LagrangianSubVectorField& curlUc = cCloud.curlUc(model, subMesh);
 
     const LagrangianSubScalarField mcByMOrMc
     (
         isCloud<clouds::coupledToConstantDensityFluid>()
-      ? v/cloud<clouds::coupledToConstantDensityFluid>().rhoByRhoc
-      : v*cloud<clouds::coupledToFluid>().rhoc(model, subMesh)
+      ? eval(v/cloud<clouds::coupledToConstantDensityFluid>().rhoByRhoc)
+      : eval(v*cloud<clouds::coupledToFluid>().rhoc(model, subMesh))
     );
 
     const LagrangianSubScalarField Rew(mag(curlUc)*sqr(d)/nuc);
@@ -107,13 +108,13 @@ void Foam::Lagrangian::SaffmanMeiLift::addUSup
 
     if (eqn.isPsi(U))
     {
-        eqn.Su += L & Uc;
+        eqn.Su += eval(L & Uc);
         eqn -= Lagrangianm::Sp(L, U);
     }
     else
     {
         eqn += Lagrangianm::Sp(L, Uc);
-        eqn.Su -= L & U;
+        eqn.Su -= eval(L & U);
     }
 }
 

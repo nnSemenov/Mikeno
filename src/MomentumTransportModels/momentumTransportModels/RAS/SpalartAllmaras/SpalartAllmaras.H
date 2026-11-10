@@ -115,23 +115,26 @@ protected:
 
         tmp<volScalarField> chi() const;
 
-        tmp<volScalarField> fv1(const volScalarField& chi) const;
-
-        tmp<volScalarField::Internal> fv2
+        tmp<volScalarField> fv1
         (
-            const volScalarField::Internal& chi,
-            const volScalarField::Internal& fv1
+            const volScalarField& chi
         ) const;
 
-        tmp<volScalarField::Internal> Stilda
+        tmp<volInternalScalarField> fv2
         (
-            const volScalarField::Internal& chi,
-            const volScalarField::Internal& fv1
+            const volInternalScalarField& chi,
+            const volInternalScalarField& fv1
         ) const;
 
-        tmp<volScalarField::Internal> fw
+        tmp<volInternalScalarField> Stilda
         (
-            const volScalarField::Internal& Stilda
+            const volInternalScalarField& chi,
+            const volInternalScalarField& fv1
+        ) const;
+
+        tmp<volInternalScalarField> fw
+        (
+            const volInternalScalarField& Stilda
         ) const;
 
         void correctNut(const volScalarField& fv1);

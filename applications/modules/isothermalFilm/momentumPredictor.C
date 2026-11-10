@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,9 +26,10 @@ License
 #include "isothermalFilm.H"
 #include "surfaceTensionModel.H"
 #include "fvmDiv.H"
+#include "fviGrad.H"
 #include "fvcSnGrad.H"
 #include "fvcLaplacian.H"
-#include "fvcReconstruct.H"
+#include "fviReconstruct.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
@@ -79,7 +80,11 @@ Foam::solvers::isothermalFilm::pe() const
     // Add the pressure caused normal momentum sources (e.g., parcels impinging
     // with a normal velocity)
     p.internalFieldRef() +=
-        VbyA.v()*(nHat.v() & (fvModels().source(alpha, rho, U) & U)->v());
+        max
+        (
+            VbyA()*(nHat() & fvModels().source(alpha, rho, U)().Su()),
+            dimensionedScalar(p.dimensions(), 0)
+        );
 
     return p;
 }
@@ -94,7 +99,9 @@ void Foam::solvers::isothermalFilm::momentumPredictor()
 
     // Get the momentum source and remove any normal components
     fvVectorMatrix alphaRhoUsource(fvModels().source(alpha, rho, U));
-    alphaRhoUsource.source() -= nHat*(nHat & alphaRhoUsource.source());
+    alphaRhoUsource.source() -=
+        nHat.primitiveField()
+       *(nHat.primitiveField() & alphaRhoUsource.source());
 
     tUEqn =
     (
@@ -110,7 +117,7 @@ void Foam::solvers::isothermalFilm::momentumPredictor()
     // Thermocapillary force
     if (thermocapillary)
     {
-        UEqn -= fvc::grad(sigma)/VbyA;
+        UEqn -= fvi::grad(sigma)/VbyA();
     }
 
     UEqn.relax();
@@ -125,7 +132,7 @@ void Foam::solvers::isothermalFilm::momentumPredictor()
         (
             UEqn
          ==
-            fvc::reconstruct
+            fvi::reconstruct
             (
                 constrainedField
                 (

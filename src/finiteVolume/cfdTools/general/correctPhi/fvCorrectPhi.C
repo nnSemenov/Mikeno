@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,7 @@ void Foam::fv::correctPhi
     const volVectorField& U,
     const volScalarField& p,
     const autoPtr<volScalarField>& rAU,
-    const autoPtr<volScalarField>& divU,
+    const autoPtr<volInternalScalarField>& divU,
     const pressureReference& pressureReference,
     nonOrthogonalSolutionControl& pcorrControl
 )
@@ -62,7 +62,7 @@ void Foam::fv::correctPhi
             dimensionedScalar
             (
                 "rAU",
-                phi.dimensions()/p.dimensions()/dimLength,
+                phi.dimensions()/p.dimensions()/dimensions::length,
                 1
             ),
             divU,
@@ -79,7 +79,7 @@ void Foam::fv::correctPhi
     const volScalarField& p,
     const volScalarField& psi,
     const autoPtr<volScalarField>& rAU,
-    const volScalarField& divRhoU,
+    const volInternalScalarField& divRhoU,
     nonOrthogonalSolutionControl& pcorrControl
 )
 {
@@ -105,7 +105,7 @@ void Foam::fv::correctPhi
             dimensionedScalar
             (
                 "rAU",
-                phi.dimensions()/p.dimensions()/dimLength,
+                phi.dimensions()/p.dimensions()/dimensions::length,
                 1
             ),
             divRhoU,

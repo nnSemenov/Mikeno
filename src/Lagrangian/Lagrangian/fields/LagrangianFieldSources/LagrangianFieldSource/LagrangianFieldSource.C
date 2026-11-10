@@ -41,7 +41,7 @@ Foam::LagrangianFieldSource<Type>::LagrangianFieldSource
 )
 :
     LagrangianFieldSourceBase(iIo),
-    libs_(fileNameList::null()),
+    libs_(fileNameList{}),
     internalField_
     (
         refCastNull<const LagrangianInternalDynamicField<Type>>(iIo)
@@ -61,7 +61,7 @@ Foam::LagrangianFieldSource<Type>::LagrangianFieldSource
 )
 :
     LagrangianFieldSourceBase(iIo),
-    libs_(dict.lookupOrDefault("libs", fileNameList::null())),
+    libs_(dict.lookupOrDefault("libs", fileNameList{})),
     internalField_
     (
         refCastNull<const LagrangianInternalDynamicField<Type>>(iIo)
@@ -244,18 +244,6 @@ Foam::LagrangianFieldSource<Type>::internalCoeff
 
 template<class Type>
 Foam::tmp<Foam::LagrangianSubField<Type>>
-Foam::LagrangianFieldSource<Type>::sourceCoeff
-(
-    const LagrangianSource& source,
-    const LagrangianSubMesh& subMesh
-) const
-{
-    return (1 - internalCoeff(source, subMesh))*sourceValue(source, subMesh);
-}
-
-
-template<class Type>
-Foam::tmp<Foam::LagrangianSubField<Type>>
 Foam::LagrangianFieldSource<Type>::value
 (
     const LagrangianSource& source,
@@ -263,7 +251,7 @@ Foam::LagrangianFieldSource<Type>::value
 ) const
 {
     return
-        sourceCoeff(source, subMesh)
+        (1 - internalCoeff(source, subMesh))*sourceValue(source, subMesh)
       + internalCoeff(source, subMesh)*subMesh.sub(internalField());
 }
 

@@ -111,7 +111,11 @@ bool Foam::functionObjects::phaseForces::execute()
                             mesh_
                         ),
                         mesh_,
-                        dimensionedVector(dimForce/dimVolume, Zero)
+                        dimensionedVector
+                        (
+                            dimensions::forceDensity,
+                            Zero
+                        )
                     )
                 );
             }
@@ -134,7 +138,11 @@ bool Foam::functionObjects::phaseForces::execute()
                             mesh_
                         ),
                         mesh_,
-                        dimensionedVector(dimForce/dimVolume, Zero)
+                        dimensionedVector
+                        (
+                            dimensions::forceDensity,
+                            Zero
+                        )
                     )
                 );
             }
@@ -153,7 +161,11 @@ bool Foam::functionObjects::phaseForces::execute()
                             mesh_
                         ),
                         mesh_,
-                        dimensionedVector(dimForce/dimVolume, Zero)
+                        dimensionedVector
+                        (
+                            dimensions::forceDensity,
+                            Zero
+                        )
                     )
                 );
             }
@@ -182,7 +194,11 @@ bool Foam::functionObjects::phaseForces::execute()
                             mesh_
                         ),
                         mesh_,
-                        dimensionedVector(dimForce/dimVolume, Zero)
+                        dimensionedVector
+                        (
+                            dimensions::forceDensity,
+                            Zero
+                        )
                     )
                 );
             }
@@ -211,7 +227,11 @@ bool Foam::functionObjects::phaseForces::execute()
                             mesh_
                         ),
                         mesh_,
-                        dimensionedVector(dimForce/dimVolume, Zero)
+                        dimensionedVector
+                        (
+                            dimensions::forceDensity,
+                            Zero
+                        )
                     )
                 );
             }
@@ -293,8 +313,12 @@ bool Foam::functionObjects::phaseForces::execute()
                 >(interface).D()
                *fvc::grad
                 (
-                    otherPhase
-                   /max(phase + otherPhase, otherPhase.residualAlpha())
+                    otherPhase.alpha()
+                   /max
+                    (
+                        phase.alpha() + otherPhase.alpha(),
+                        otherPhase.residualAlpha()
+                    )
                 );
         }
     }

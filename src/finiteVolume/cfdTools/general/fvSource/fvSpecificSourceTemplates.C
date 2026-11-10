@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,45 +40,23 @@ void Foam::fvSpecificSource::addSupType
         << "field=" << field.name()
         << ", eqnField=" << eqn.psi().name() << endl;
 
-    tmp<volScalarField::Internal> tS(S(field.name()));
+    tmp<volInternalScalarField> tS(S(field.name()));
 
     if (&field == &eqn.psi())
     {
-        // Get the field source coefficients
-        tmp<typename VolField<Type>::Internal> sourceCoeff =
-            VolField<Type>::Internal::New
+        // Apply the linearised source
+        eqn +=
+            field.sources()[name()].sourceTerm(*this, tS())
+          + fvm::Sp
             (
-                "sourceCoeff",
-                mesh(),
-                field.dimensions(),
-                field.sources()[name()].sourceCoeff(*this, tS())
+                tS()*field.sources()[name()].internalCoeff(*this, tS()),
+                eqn.psi()
             );
-        tmp<typename volScalarField::Internal> internalCoeff =
-            volScalarField::Internal::New
-            (
-                "internalCoeff",
-                mesh(),
-                dimless,
-                field.sources()[name()].internalCoeff(*this, tS())
-            );
-
-        // Apply the source
-        eqn += tS()*sourceCoeff + fvm::Sp(tS()*internalCoeff, eqn.psi());
     }
     else
     {
-        // Get the field source value
-        tmp<typename VolField<Type>::Internal> value =
-            VolField<Type>::Internal::New
-            (
-                "value",
-                mesh(),
-                field.dimensions(),
-                field.sources()[name()].value(*this, tS())
-            );
-
         // Apply the source
-        eqn += tS*value;
+        eqn += field.sources()[name()].term(*this, tS());
     }
 }
 

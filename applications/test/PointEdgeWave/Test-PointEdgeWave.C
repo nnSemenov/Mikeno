@@ -32,6 +32,7 @@ Description
 #include "pointMesh.H"
 #include "OSspecific.H"
 #include "IFstream.H"
+#include "pointFields.H"
 #include "pointEdgePoint.H"
 #include "PointEdgeWave.H"
 
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
 {
     argList::validArgs.append("(patches)");
 
-    #include "setRootCase.H"
+    #include "setRootCaseFunctionObjects.H"
     #include "createTime.H"
     #include "createPolyMesh.H"
 
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
         nPoints += pbm[patchIDs[i]].nPoints();
     }
 
-    Info<< "Seeding " << returnReduce(nPoints, sumOp<label>())
+    Info<< "Seeding " << returnReduce(nPoints, sumOp())
         << " patch points" << nl << endl;
 
 
@@ -117,7 +118,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE
         ),
         pointMesh::New(mesh),
-        dimensionedScalar(dimLength, 0)
+        dimensionedScalar(dimensions::length, 0)
     );
 
     forAll(allPointInfo, pointi)

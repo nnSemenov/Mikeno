@@ -60,7 +60,7 @@ public:
     // Public Typedefs
 
         typedef oneField Internal;
-        typedef oneField Patch;
+        typedef oneField PatchField;
         typedef oneFieldField Boundary;
         typedef one cmptType;
 
@@ -84,12 +84,20 @@ public:
 
         inline Internal internalField() const;
 
-        inline Internal v() const;
-
         inline typename Internal::FieldType primitiveField() const;
 
         inline Boundary boundaryField() const;
 };
+
+
+namespace expression
+{
+    template<>
+    struct Expressionable<geometricOneField>
+    :
+        public notExpressionable
+    {};
+}
 
 
 inline const geometricOneField& operator*

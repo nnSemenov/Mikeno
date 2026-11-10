@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -70,7 +70,8 @@ Foam::solvers::incompressibleFluid::incompressibleFluid(fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::kinematicPressure
     ),
 
     pressureReference(p_, pimple.dict()),
@@ -85,7 +86,8 @@ Foam::solvers::incompressibleFluid::incompressibleFluid(fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimensions::velocity
     ),
 
     phi_
@@ -113,8 +115,7 @@ Foam::solvers::incompressibleFluid::incompressibleFluid(fvMesh& mesh)
         )
     ),
 
-    MRF(mesh)
-
+    MRF(MRFZones::New(mesh))
 //    p(p_),
 //    U(U_),
 //    phi(phi_)
@@ -144,7 +145,7 @@ Foam::solvers::incompressibleFluid::incompressibleFluid(fvMesh& mesh)
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar(dimless/dimTime, 1),
+                dimensionedScalar(dimless/dimensions::time, 1),
                 extrapolatedCalculatedFvPatchScalarField::typeName
             )
         );

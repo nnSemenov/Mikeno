@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -602,6 +602,63 @@ ListType Foam::createWithValues
 }
 
 
+template<class Type>
+Type Foam::max(const UList<Type>& l)
+{
+    if (l.size())
+    {
+        Type m = pTraits<Type>::min;
+        forAll(l, i)
+        {
+            m = max(l[i], m);
+        }
+        return m;
+    }
+    else
+    {
+        return pTraits<Type>::min;
+    }
+}
+
+
+template<class Type>
+Type Foam::min(const UList<Type>& l)
+{
+    if (l.size())
+    {
+        Type m = pTraits<Type>::max;
+        forAll(l, i)
+        {
+            m = min(l[i], m);
+        }
+        return m;
+    }
+    else
+    {
+        return pTraits<Type>::max;
+    }
+}
+
+
+template<class Type>
+Type Foam::sum(const UList<Type>& l)
+{
+    if (l.size())
+    {
+        Type s = Zero;
+        forAll(l, i)
+        {
+            s += l[i];
+        }
+        return s;
+    }
+    else
+    {
+        return Zero;
+    }
+}
+
+
 template<class ListType>
 Foam::label Foam::findMax(const ListType& l, const label start)
 {
@@ -741,7 +798,7 @@ Foam::label Foam::findLower
     const label start
 )
 {
-    return findLower(l, t, start, lessOp<typename ListType::value_type>());
+    return findLower(l, t, start, lessOp());
 }
 
 
@@ -888,7 +945,7 @@ void Foam::ListEqOp<BinaryEqOp>::operator()
 
 
 template<class T>
-void Foam::ListAppendEqOp<T>::operator()(List<T>& x, const List<T>& y) const
+void Foam::ListAppendEqOp::operator()(List<T>& x, const List<T>& y) const
 {
     if (y.size())
     {

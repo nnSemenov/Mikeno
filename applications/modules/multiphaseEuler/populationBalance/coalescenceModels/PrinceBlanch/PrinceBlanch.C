@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2018-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "PrinceBlanch.H"
-#include "fvcGrad.H"
+#include "fviGrad.H"
 #include "phaseCompressibleMomentumTransportModel.H"
 #include "uniformDimensionedFields.H"
 #include "addToRunTimeSelectionTable.H"
@@ -59,8 +59,8 @@ Foam::populationBalance::coalescenceModels::PrinceBlanch::PrinceBlanch
 :
     coalescenceModel(popBal, dict),
     C1_("C1", dimless, dict, 0.356),
-    h0_("h0", dimLength, dict, 1e-4),
-    hf_("hf", dimLength, dict, 1e-8),
+    h0_("h0", dimensions::length, dict, 1e-4),
+    hf_("hf", dimensions::length, dict, 1e-8),
     turbulence_(dict.lookup("turbulence")),
     buoyancy_(dict.lookup("buoyancy")),
     laminarShear_(dict.lookup("laminarShear"))
@@ -69,7 +69,7 @@ Foam::populationBalance::coalescenceModels::PrinceBlanch::PrinceBlanch
     {
         shearStrainRate_.set
         (
-            new volScalarField::Internal
+            new volInternalScalarField
             (
                 IOobject
                 (
@@ -81,7 +81,7 @@ Foam::populationBalance::coalescenceModels::PrinceBlanch::PrinceBlanch
                 dimensionedScalar
                 (
                     "shearStrainRate",
-                    dimVelocity/dimLength,
+                    dimensions::rate,
                     Zero
                 )
             )
@@ -97,12 +97,12 @@ void Foam::populationBalance::coalescenceModels::PrinceBlanch::precompute()
     if (laminarShear_)
     {
         shearStrainRate_() =
-            sqrt(2.0)*mag(symm(fvc::grad(popBal_.continuousPhase().U())));
+            sqrt(2.0)*mag(symm(fvi::grad(popBal_.continuousPhase().U())));
     }
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::coalescenceModels::PrinceBlanch::rate
 (
     const label i,
@@ -114,20 +114,20 @@ Foam::populationBalance::coalescenceModels::PrinceBlanch::rate
     const dimensionedScalar& dSphi = popBal_.dSph(i);
     const dimensionedScalar& dSphj = popBal_.dSph(j);
 
-    const volScalarField::Internal& rhoc = popBal_.continuousPhase().rho();
+    const volInternalScalarField& rhoc = popBal_.continuousPhase().rho();
 
     tmp<volScalarField> tsigma(popBal_.sigmaWithContinuousPhase(i));
-    const volScalarField::Internal& sigma = tsigma();
+    const volInternalScalarField& sigma = tsigma();
 
     tmp<volScalarField> tepsilonc(popBal_.continuousTurbulence().epsilon());
-    const volScalarField::Internal& epsilonc = tepsilonc();
+    const volInternalScalarField& epsilonc = tepsilonc();
 
     const uniformDimensionedVectorField& g =
         popBal_.mesh().lookupObject<uniformDimensionedVectorField>("g");
 
     const dimensionedScalar rij(1/(1/dSphi + 1/dSphj));
 
-    const volScalarField::Internal collisionEfficiency
+    const volInternalScalarField collisionEfficiency
     (
         exp
         (
@@ -138,14 +138,14 @@ Foam::populationBalance::coalescenceModels::PrinceBlanch::rate
         )
     );
 
-    tmp<volScalarField::Internal> tcoalescenceRate =
-        volScalarField::Internal::New
+    tmp<volInternalScalarField> tcoalescenceRate =
+        volInternalScalarField::New
         (
             "coalescenceRate",
             popBal_.mesh(),
-            dimensionedScalar(dimVolume/dimTime, scalar(0))
+            dimensionedScalar(dimensions::volume/dimensions::time, scalar(0))
         );
-    volScalarField::Internal& coalescenceRate = tcoalescenceRate.ref();
+    volInternalScalarField& coalescenceRate = tcoalescenceRate.ref();
 
     if (turbulence_)
     {

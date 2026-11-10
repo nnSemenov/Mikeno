@@ -48,11 +48,10 @@ void Foam::PatchCollisionDensity<CloudType>::write()
             this->owner().mesh()
         ),
         this->owner().mesh(),
-        dimless/dimArea,
+        inv(dimensions::area),
         z,
         numberCollisionDensity_
-    )
-   .write();
+    ).write();
 
     volScalarField
     (
@@ -63,12 +62,14 @@ void Foam::PatchCollisionDensity<CloudType>::write()
             this->owner().mesh()
         ),
         this->owner().mesh(),
-        dimless/dimArea/dimTime,
+        inv(dimensions::area*dimensions::time),
         z,
-        (numberCollisionDensity_ - numberCollisionDensity0_)
+        (
+            numberCollisionDensity_.boundaryField()
+          - numberCollisionDensity0_.boundaryField()
+        )
        /(this->owner().mesh().time().value() - time0_)
-    )
-   .write();
+    ).write();
 
     volScalarField
     (
@@ -79,11 +80,10 @@ void Foam::PatchCollisionDensity<CloudType>::write()
             this->owner().mesh()
         ),
         this->owner().mesh(),
-        dimMass/dimArea,
+        dimensions::mass/dimensions::area,
         z,
         massCollisionDensity_
-    )
-   .write();
+    ).write();
 
     volScalarField
     (
@@ -94,12 +94,14 @@ void Foam::PatchCollisionDensity<CloudType>::write()
             this->owner().mesh()
         ),
         this->owner().mesh(),
-        dimMass/dimArea/dimTime,
+        dimensions::massFluxDensity,
         z,
-        (massCollisionDensity_ - massCollisionDensity0_)
+        (
+            massCollisionDensity_.boundaryField()
+          - massCollisionDensity0_.boundaryField()
+        )
        /(this->owner().mesh().time().value() - time0_)
-    )
-   .write();
+    ).write();
 
     numberCollisionDensity0_ == numberCollisionDensity_;
     massCollisionDensity0_ == massCollisionDensity_;
@@ -122,25 +124,25 @@ Foam::PatchCollisionDensity<CloudType>::PatchCollisionDensity
     numberCollisionDensity_
     (
         this->owner().mesh().boundary(),
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         calculatedFvPatchField<scalar>::typeName
     ),
     numberCollisionDensity0_
     (
         this->owner().mesh().boundary(),
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         calculatedFvPatchField<scalar>::typeName
     ),
     massCollisionDensity_
     (
         this->owner().mesh().boundary(),
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         calculatedFvPatchField<scalar>::typeName
     ),
     massCollisionDensity0_
     (
         this->owner().mesh().boundary(),
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         calculatedFvPatchField<scalar>::typeName
     ),
     time0_(this->owner().mesh().time().value())
@@ -202,22 +204,22 @@ Foam::PatchCollisionDensity<CloudType>::PatchCollisionDensity
     minSpeed_(ppm.minSpeed_),
     numberCollisionDensity_
     (
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         ppm.numberCollisionDensity_
     ),
     numberCollisionDensity0_
     (
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         ppm.numberCollisionDensity0_
     ),
     massCollisionDensity_
     (
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         ppm.massCollisionDensity_
     ),
     massCollisionDensity0_
     (
-        volScalarField::Internal::null(),
+        volInternalScalarField::null(),
         ppm.massCollisionDensity0_
     ),
     time0_(ppm.time0_)

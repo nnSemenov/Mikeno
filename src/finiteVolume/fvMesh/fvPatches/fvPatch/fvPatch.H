@@ -38,6 +38,7 @@ SourceFiles
 
 #include "polyPatch.H"
 #include "fvPatchFieldsFwd.H"
+#include "GeometricFieldFwd.H"
 #include "SlicedDimensionedField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -47,6 +48,7 @@ namespace Foam
 
 class fvMesh;
 class fvBoundaryMesh;
+class surfaceMesh;
 class faceZone;
 
 /*---------------------------------------------------------------------------*\
@@ -249,14 +251,14 @@ public:
 
             //- Return the corresponding patchField of the named field
             template<class GeometricField, class Type>
-            const typename GeometricField::Patch& patchField
+            const typename GeometricField::PatchField& patchField
             (
                 const GeometricField&
             ) const;
 
             //- Return the corresponding patchField reference of the named field
             template<class GeometricField, class Type>
-            typename GeometricField::Patch& patchField
+            typename GeometricField::PatchField& patchField
             (
                 GeometricField&
             ) const;
@@ -264,10 +266,14 @@ public:
             //- Lookup and return the patchField of the named field from the
             //  local objectRegistry.
             template<class GeometricField, class Type>
-            const typename GeometricField::Patch& lookupPatchField
+            const typename GeometricField::PatchField& lookupPatchField
             (
                 const word& name
             ) const;
+
+            //- Lookup a dimensioned field for this geometry
+            template<class Type>
+            tmp<DimensionedField<Type, fvPatch>> lookupField(const word&) const;
 
 
     // Member Operators

@@ -293,7 +293,7 @@ void evaluateNonConformalProcessorCyclics(const fvMesh& mesh)
 
         forAll(mesh.boundary(), patchi)
         {
-            typename VolField<Type>::Patch& pf =
+            typename VolField<Type>::PatchField& pf =
                 fields[i].boundaryFieldRef()[patchi];
 
             if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().poly()))
@@ -313,7 +313,7 @@ void evaluateNonConformalProcessorCyclics(const fvMesh& mesh)
 
         forAll(mesh.boundary(), patchi)
         {
-            typename VolField<Type>::Patch& pf =
+            typename VolField<Type>::PatchField& pf =
                 fields[i].boundaryFieldRef()[patchi];
 
             if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().poly()))
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
         );
     }
 
-    #include "setRootCaseNoFunctionObjects.H"
+    #include "setRootCase.H"
     #include "setMeshPath.H"
     #include "createTimeNoFunctionObjects.H"
 
@@ -431,7 +431,11 @@ int main(int argc, char *argv[])
             // If we are creating couples on a mesh within a mesh path
             // sub-directory then these couples will not be stitched so loading
             // the neighbouring regions is optional
-            if (haveMeshPath && !polyMesh::found(regionMeshIo)) continue;
+            if
+            (
+                haveMeshPath
+             && polyMesh::meshDirInstance(regionMeshIo) == fileName::null
+            ) continue;
 
             regionNames.append(regionName);
             regionMeshes.append(new fvMesh(regionMeshIo, false));

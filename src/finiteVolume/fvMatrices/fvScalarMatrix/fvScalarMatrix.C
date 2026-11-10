@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -82,7 +82,7 @@ Foam::fvMatrix<Foam::scalar>::solver
                 *this,
                 boundaryCoeffs_,
                 internalCoeffs_,
-                psi_.boundaryField().scalarInterfaces(),
+                psi_.boundary().scalarInterfaces(),
                 solverControls
             )
         )
@@ -165,7 +165,7 @@ Foam::solverPerformance Foam::fvMatrix<Foam::scalar>::solveSegregated
         *this,
         boundaryCoeffs_,
         internalCoeffs_,
-        psi_.boundaryField().scalarInterfaces(),
+        psi_.boundary().scalarInterfaces(),
         solverControls
     )->solve(psi.primitiveFieldRef(), totalSource);
 
@@ -197,7 +197,7 @@ Foam::tmp<Foam::scalarField> Foam::fvMatrix<Foam::scalar>::residual() const
             psi_.primitiveField(),
             source_ - boundaryDiag*psi_.primitiveField(),
             boundaryCoeffs_,
-            psi_.boundaryField().scalarInterfaces(),
+            psi_.boundary().scalarInterfaces(),
             0
         )
     );
@@ -215,9 +215,9 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Foam::scalar>::H() const
     (
         volScalarField::New
         (
-            "H("+psi_.name()+')',
+            word("H(", psi_.name(), ')'),
             psi_.mesh(),
-            dimensions_/dimVolume,
+            dimensions_/dimensions::volume,
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -226,7 +226,7 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Foam::scalar>::H() const
     Hphi.primitiveFieldRef() = (lduMatrix::H(psi_.primitiveField()) + source_);
     addBoundarySource(Hphi.primitiveFieldRef());
 
-    Hphi.primitiveFieldRef() /= psi_.mesh().V();
+    Hphi.primitiveFieldRef() /= psi_.mesh().V().primitiveField();
     Hphi.correctBoundaryConditions();
 
     return tHphi;
@@ -242,7 +242,7 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Foam::scalar>::H1() const
         (
             "H(1)",
             psi_.mesh(),
-            dimensions_/(dimVolume*psi_.dimensions()),
+            dimensions_/(dimensions::volume*psi_.dimensions()),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -251,7 +251,7 @@ Foam::tmp<Foam::volScalarField> Foam::fvMatrix<Foam::scalar>::H1() const
     H1_.primitiveFieldRef() = lduMatrix::H1();
     // addBoundarySource(Hphi.primitiveField());
 
-    H1_.primitiveFieldRef() /= psi_.mesh().V();
+    H1_.primitiveFieldRef() /= psi_.mesh().V().primitiveField();
     H1_.correctBoundaryConditions();
 
     return tH1;

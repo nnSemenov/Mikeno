@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,7 +54,7 @@ Foam::scalar Foam::targetVolumeToCell::volumeOfSet
             sumVol += mesh_.cellVolumes()[celli];
         }
     }
-    return returnReduce(sumVol, sumOp<scalar>());
+    return returnReduce(sumVol, sumOp());
 }
 
 
@@ -80,7 +80,7 @@ Foam::label Foam::targetVolumeToCell::selectCells
             nSelected++;
         }
     }
-    return returnReduce(nSelected, sumOp<label>());
+    return returnReduce(nSelected, sumOp());
 }
 
 
@@ -109,7 +109,7 @@ void Foam::targetVolumeToCell::combine(topoSet& set, const bool add) const
             maskSet[iter.key()] = 1;
         }
 
-        nTotCells = returnReduce(subset.size(), sumOp<label>());
+        nTotCells = returnReduce(subset.size(), sumOp());
     }
 
 
@@ -274,7 +274,7 @@ Foam::targetVolumeToCell::targetVolumeToCell
 )
 :
     topoSetSource(mesh),
-    vol_(dict.lookup<scalar>("volume", pow3(dimLength))),
+    vol_(dict.lookup<scalar>("volume", pow3(dimensions::length))),
     n_(dict.lookup<vector>("normal", dimless)),
     maskSetName_(dict.lookupOrDefault<word>("set", ""))
 {}

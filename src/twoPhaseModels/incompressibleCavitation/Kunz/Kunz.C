@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,8 +47,8 @@ Foam::cavitationModels::Kunz::Kunz
 :
     cavitationModel(dict, phases),
 
-    UInf_("UInf", dimVelocity, dict),
-    tInf_("tInf", dimTime, dict),
+    UInf_("UInf", dimensions::velocity, dict),
+    tInf_("tInf", dimensions::time, dict),
     Cv_("Cv", dimless, dict),
     Cc_("Cc", dimless, dict),
 
@@ -63,18 +63,18 @@ Foam::cavitationModels::Kunz::Kunz
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
+Foam::Pair<Foam::tmp<Foam::volInternalScalarField>>
 Foam::cavitationModels::Kunz::mDotcvAlpha() const
 {
-    const volScalarField::Internal& p =
+    const volInternalScalarField& p =
         phases_.mesh().lookupObject<volScalarField>("p");
 
-    const volScalarField::Internal limitedAlphal
+    const volInternalScalarField limitedAlphal
     (
         min(max(alphal(), scalar(0)), scalar(1))
     );
 
-    return Pair<tmp<volScalarField::Internal>>
+    return Pair<tmp<volInternalScalarField>>
     (
         mcCoeff_*sqr(limitedAlphal)
        *max(p - pSat(), p0_)/max(p - pSat(), 0.01*pSat()),
@@ -83,18 +83,18 @@ Foam::cavitationModels::Kunz::mDotcvAlpha() const
 }
 
 
-Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
+Foam::Pair<Foam::tmp<Foam::volInternalScalarField>>
 Foam::cavitationModels::Kunz::mDotcvP() const
 {
-    const volScalarField::Internal& p =
+    const volInternalScalarField& p =
         phases_.mesh().lookupObject<volScalarField>("p");
 
-    const volScalarField::Internal limitedAlphal
+    const volInternalScalarField limitedAlphal
     (
         min(max(alphal(), scalar(0)), scalar(1))
     );
 
-    return Pair<tmp<volScalarField::Internal>>
+    return Pair<tmp<volInternalScalarField>>
     (
         mcCoeff_*sqr(limitedAlphal)*(1.0 - limitedAlphal)
        *pos0(p - pSat())/max(p - pSat(), 0.01*pSat()),

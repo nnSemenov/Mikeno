@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,7 +23,6 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "LagrangianSubFieldsFwd.H"
 #include "constantFluxCarrierTransfer.H"
 #include "addToRunTimeSelectionTable.H"
 #include "coupledToConstantDensityFluid.H"
@@ -86,7 +85,11 @@ Foam::Lagrangian::constantFluxCarrierTransfer::Sp
     tmp<LagrangianSubScalarField> tSByV =
         cloud<clouds::shaped>().aByV(subMesh)*flux_;
 
-    if (flux_.dimensions() == dimMass/dimArea/dimTime)
+    if
+    (
+        flux_.dimensions()
+     == dimensions::massFluxDensity
+    )
     {
         assertCloud
         <
@@ -140,11 +143,14 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::addSupType
         tmp<LagrangianSubScalarField> Su = Sp*vOrM;
 
         // Modify the rate of consumption to fully consume removed particles
-        forAll(subMesh, subi)
+        if (sumDeltaTSp_.valid())
         {
-            if (subStates[subi] == LagrangianState::toBeRemoved)
+            forAll(subMesh, subi)
             {
-                Su.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                if (subStates[subi] == LagrangianState::toBeRemoved)
+                {
+                    Su.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                }
             }
         }
 
@@ -187,7 +193,7 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::addSupType
     if (eqn.isPsi(field))
     {
         // Add an implicit source to the cloud
-        eqn.Sp -= Sp*vOrM;
+        eqn.Sp -= eval(Sp*vOrM);
     }
     else
     {
@@ -195,11 +201,14 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::addSupType
         tmp<LagrangianSubField<Type>> Su = Sp*vOrM*field;
 
         // Modify the rate of consumption to fully consume removed particles
-        forAll(subMesh, subi)
+        if (sumDeltaTSp_.valid())
         {
-            if (subStates[subi] == LagrangianState::toBeRemoved)
+            forAll(subMesh, subi)
             {
-                Su.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                if (subStates[subi] == LagrangianState::toBeRemoved)
+                {
+                    Su.ref()[subi] *= 1 + 1/max(sumDeltaTSp_()[subi], small);
+                }
             }
         }
 
@@ -224,9 +233,19 @@ Foam::Lagrangian::constantFluxCarrierTransfer::constantFluxCarrierTransfer
     flux_
     (
         modelDict.found("volumeFlux")
-      ? dimensionedScalar("volumeFlux", dimVolume/dimArea/dimTime, modelDict)
+      ? dimensionedScalar
+        (
+            "volumeFlux",
+            dimensions::volumetricFluxDensity,
+            modelDict
+        )
       : modelDict.found("massFlux")
-      ? dimensionedScalar("massFlux", dimMass/dimArea/dimTime, modelDict)
+      ? dimensionedScalar
+        (
+            "massFlux",
+            dimensions::massFluxDensity,
+            modelDict
+        )
       : dimensionedScalar()
     ),
     sumDeltaTSp_()
@@ -274,7 +293,6 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::calculate
     if (!final) return;
 
     const LagrangianSubMesh& subMesh = deltaT.mesh();
-    SubList<LagrangianState> subStates = subMesh.sub(mesh().states());
 
     // Surface area divided by volume to the power of two-thirds. Could/should
     // be made a virtual function of the shaped cloud if non-spherical
@@ -287,27 +305,23 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::calculate
        *cbrt(cloud<clouds::shaped>().v(subMesh))
        /aByVPowTwoThirds
        /flux_;
-    if (flux_.dimensions() == dimMass/dimArea/dimTime)
+    if (flux_.dimensions() == dimensions::massFluxDensity)
     {
-        assertCloud
-        <
-            clouds::coupledToConstantDensityFluid,
-            clouds::massive
-        >();
+        assertCloud<clouds::coupledToConstantDensityFluid, clouds::massive>();
 
         if (isCloud<clouds::coupledToConstantDensityFluid>())
         {
-            tlifetime =
-                tlifetime/cloud<clouds::coupledToConstantDensityFluid>().rho();
+            tlifetime.ref() *=
+                cloud<clouds::coupledToConstantDensityFluid>().rho();
         }
         else
         {
-            tlifetime =
-                tlifetime/cloud<clouds::massive>().rho(subMesh);
+            tlifetime.ref() *= cloud<clouds::massive>().rho(subMesh);
         }
     }
 
     // Remove any particles with a lifetime shorter than the time-step
+    SubList<LagrangianState> subStates = subMesh.sub(mesh().states());
     forAll(subMesh, subi)
     {
         if (tlifetime()[subi] < deltaT[subi])
@@ -355,7 +369,7 @@ void Foam::Lagrangian::constantFluxCarrierTransfer::preAddSup
         (
             IOobject
             (
-                "sumDeltaTSpvOrM",
+                "sumDeltaTSp",
                 mesh().time().name(),
                 mesh()
             ),

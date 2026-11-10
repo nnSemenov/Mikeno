@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -56,13 +56,13 @@ constantCoalescence
 )
 :
     coalescenceModel(popBal, dict),
-    rate_("rate", dimVolume/dimTime, dict)
+    rate_("rate", dimensions::volume/dimensions::time, dict)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::populationBalance::coalescenceModels::constantCoalescence::rate
 (
     const label i,
@@ -70,7 +70,7 @@ Foam::populationBalance::coalescenceModels::constantCoalescence::rate
 ) const
 {
     return
-        volScalarField::Internal::New
+        volInternalScalarField::New
         (
             "coalescenceRate",
             popBal_.mesh(),

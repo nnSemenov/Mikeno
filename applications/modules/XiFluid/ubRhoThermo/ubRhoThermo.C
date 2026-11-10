@@ -51,7 +51,8 @@ Foam::ubRhoThermo::ubRhoThermo(const fvMesh& mesh)
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        mesh
+        mesh,
+        dimless
     ),
     c_("c", scalar(1) - b_),
     uThermo_(uRhoMulticomponentThermo::New(mesh, unburntPhaseName)),
@@ -147,10 +148,10 @@ Foam::word Foam::ubRhoThermo::thermoName() const
 }
 
 
-void Foam::ubRhoThermo::correct()
+void Foam::ubRhoThermo::correct(const bool correctBCs)
 {
-    uThermo_->correct();
-    bThermo_->correct();
+    uThermo_->correct(correctBCs);
+    bThermo_->correct(correctBCs);
 
     rho_ = 1.0/(b_/uThermo_->rho() + c_/bThermo_->rho());
     psi_ = 1.0/(b_/uThermo_->psi() + c_/bThermo_->psi());
@@ -162,7 +163,7 @@ void Foam::ubRhoThermo::correct()
 }
 
 
-Foam::PtrList<Foam::volScalarField::Internal> Foam::ubRhoThermo::prompt() const
+Foam::PtrList<Foam::volInternalScalarField> Foam::ubRhoThermo::prompt() const
 {
     return ubMixtureMap_->prompt(uThermo_->Y());
 }
@@ -316,10 +317,10 @@ Foam::tmp<Foam::volScalarField> Foam::ubRhoThermo::he
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::ubRhoThermo::he
+Foam::tmp<Foam::volInternalScalarField> Foam::ubRhoThermo::he
 (
-    const Foam::volScalarField::Internal& p,
-    const Foam::volScalarField::Internal& T
+    const Foam::volInternalScalarField& p,
+    const Foam::volInternalScalarField& T
 ) const
 {
     NotImplemented;
@@ -349,11 +350,11 @@ Foam::tmp<Foam::scalarField> Foam::ubRhoThermo::he
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::ubRhoThermo::he
+Foam::tmp<Foam::volInternalScalarField> Foam::ubRhoThermo::he
 (
-    const Foam::volScalarField::Internal& T,
+    const Foam::volInternalScalarField& T,
     const fvSource& model,
-    const Foam::volScalarField::Internal& source
+    const Foam::volInternalScalarField& source
 ) const
 {
     NotImplemented;
@@ -391,10 +392,10 @@ Foam::tmp<Foam::volScalarField> Foam::ubRhoThermo::hs
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::ubRhoThermo::hs
+Foam::tmp<Foam::volInternalScalarField> Foam::ubRhoThermo::hs
 (
-    const Foam::volScalarField::Internal& p,
-    const Foam::volScalarField::Internal& T
+    const Foam::volInternalScalarField& p,
+    const Foam::volInternalScalarField& T
 ) const
 {
     NotImplemented;
@@ -442,10 +443,10 @@ Foam::tmp<Foam::volScalarField> Foam::ubRhoThermo::ha
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal> Foam::ubRhoThermo::ha
+Foam::tmp<Foam::volInternalScalarField> Foam::ubRhoThermo::ha
 (
-    const Foam::volScalarField::Internal& p,
-    const Foam::volScalarField::Internal& T
+    const Foam::volInternalScalarField& p,
+    const Foam::volInternalScalarField& T
 ) const
 {
     NotImplemented;

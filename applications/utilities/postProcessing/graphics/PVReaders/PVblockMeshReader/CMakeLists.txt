@@ -1,3 +1,4 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 project(PVblockMeshReader)
 
 find_package(ParaView REQUIRED)

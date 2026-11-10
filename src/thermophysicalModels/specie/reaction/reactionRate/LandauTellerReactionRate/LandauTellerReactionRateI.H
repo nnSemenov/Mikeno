@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,16 +53,16 @@ inline Foam::LandauTellerReactionRate::LandauTellerReactionRate
 )
 :
     beta_(dict.lookup<scalar>("beta", dimless)),
-    A_(dict.lookup<scalar>("A", dims/pow(dimTemperature, beta_))),
+    A_(dict.lookup<scalar>("A", dims/pow(dimensions::temperature, beta_))),
     Ta_
     (
         dict.found("Ta") || !dict.found("Ea")
-      ? dict.lookup<scalar>("Ta", dimTemperature)
-      : dict.lookup<scalar>("Ea", dimEnergy/dimMoles)
+      ? dict.lookup<scalar>("Ta", dimensions::temperature)
+      : dict.lookup<scalar>("Ea", dimensions::energy/dimensions::moles)
        /constant::physicoChemical::RR.value()
     ),
-    B_(dict.lookup<scalar>("B", cbrt(dimTemperature))),
-    C_(dict.lookup<scalar>("C", sqr(cbrt(dimTemperature))))
+    B_(dict.lookup<scalar>("B", cbrt(dimensions::temperature))),
+    C_(dict.lookup<scalar>("C", sqr(cbrt(dimensions::temperature))))
 {}
 
 
@@ -76,92 +76,25 @@ inline void Foam::LandauTellerReactionRate::postEvaluate() const
 {}
 
 
-inline Foam::scalar Foam::LandauTellerReactionRate::operator()
+inline Foam::scalar Foam::LandauTellerReactionRate::k
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar lta = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        lta *= pow(T, beta_);
-    }
-
-    scalar expArg = 0;
-
-    if (mag(Ta_) > vSmall)
-    {
-        expArg -= Ta_/T;
-    }
-
-    if (mag(B_) > vSmall)
-    {
-        expArg += B_/cbrt(T);
-    }
-
-    if (mag(C_) > vSmall)
-    {
-        expArg += C_/sqr(cbrt(T));
-    }
-
-    if (mag(expArg) > vSmall)
-    {
-        lta *= exp(expArg);
-    }
-
-    return lta;
+    const scalar cbrtT = cbrt(s.T);
+    return A_*exp(beta_*s.lnT - Ta_*s.rT + B_/cbrtT + C_/sqr(cbrtT));
 }
 
 
 inline Foam::scalar Foam::LandauTellerReactionRate::ddT
 (
-    const scalar p,
-    const scalar T,
-    const scalarField&,
-    const label
+    const reaction::state& s
 ) const
 {
-    scalar lta = A_;
-
-    if (mag(beta_) > vSmall)
-    {
-        lta *= pow(T, beta_);
-    }
-
-    scalar expArg = 0;
-    scalar deriv = 0;
-
-    if (mag(Ta_) > vSmall)
-    {
-        scalar TaT = Ta_/T;
-        expArg -= TaT;
-        deriv += TaT;
-    }
-
-    if (mag(B_) > vSmall)
-    {
-        scalar BT = B_/cbrt(T);
-        expArg += BT;
-        deriv -= BT/3;
-    }
-
-    if (mag(C_) > vSmall)
-    {
-        scalar CT = C_/sqr(cbrt(T));
-        expArg += CT;
-        deriv -= 2*CT/3;
-    }
-
-    if (mag(expArg) > vSmall)
-    {
-        lta *= exp(expArg);
-    }
-
-    return lta*(beta_ + deriv)/T;
+    const scalar cbrtT = cbrt(s.T);
+    const scalar k = A_*exp(beta_*s.lnT - Ta_*s.rT + B_/cbrtT + C_/sqr(cbrtT));
+    const scalar deriv = beta_ + Ta_*s.rT - B_/(3*cbrtT) - 2*C_/(3*sqr(cbrtT));
+    return k*deriv*s.rT;
 }
 
 
@@ -173,14 +106,11 @@ inline bool Foam::LandauTellerReactionRate::hasDdc() const
 
 inline void Foam::LandauTellerReactionRate::ddc
 (
-    const scalar p,
-    const scalar T,
-    const scalarField& c,
-    const label li,
+    const reaction::state& s,
     scalarField& ddc
 ) const
 {
-    ddc = 0;
+    NotImplemented;
 }
 
 

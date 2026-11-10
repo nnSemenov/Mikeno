@@ -82,7 +82,7 @@ private:
         thermoType oxidant_;
 
         //- List of specie active flags
-        boolList active_;
+        boolList activeSpecies_;
 
         //- Mutable storage for the mixed thermodynamic model
         mutable thermoType mixture_;
@@ -113,9 +113,11 @@ public:
         //- Return the instantiated type name
         static word typeName()
         {
-            return
-                uInhomogeneousMixture::typeName
-              + '<' + ThermoType::typeName() + '>';
+            return word
+            (
+                uInhomogeneousMixture::typeName,
+                '<', ThermoType::typeName(), '>'
+            );
         }
 
         inline const ThermoType& specieThermo(const label speciei) const

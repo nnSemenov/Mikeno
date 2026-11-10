@@ -78,18 +78,35 @@ thermalBaffle1DFvPatchScalarField
 
     if (dict.found("thickness"))
     {
-        thickness_ = scalarField("thickness", dimLength, dict, p.size());
+        thickness_ = scalarField
+        (
+            "thickness",
+            dimensions::length,
+            dict,
+            p.size()
+        );
     }
 
     if (dict.found("qs"))
     {
-        qs_ = scalarField("qs", dimPower/dimArea, dict, p.size());
+        qs_ = scalarField
+        (
+            "qs",
+            dimensions::heatFluxDensity,
+            dict,
+            p.size()
+        );
     }
 
     if (dict.found("qrPrevious"))
     {
-        qrPrevious_ =
-            scalarField("qrPrevious", dimPower/dimArea, dict, p.size());
+        qrPrevious_ = scalarField
+        (
+            "qrPrevious",
+            dimensions::heatFluxDensity,
+            dict,
+            p.size()
+        );
     }
 
     if (dict.found("refValue") && baffleActivated_)
@@ -100,7 +117,7 @@ thermalBaffle1DFvPatchScalarField
             scalarField
             (
                 "refGradient",
-                iF.dimensions()/dimLength,
+                iF.dimensions()/dimensions::length,
                 dict,
                 p.size()
             );
@@ -370,9 +387,9 @@ void thermalBaffle1DFvPatchScalarField<solidType>::updateCoeffs()
                 << this->internalField().name() << " :"
                 << " heat[W]:" << Q
                 << " walltemperature "
-                << " min:" << gMin(*this)
-                << " max:" << gMax(*this)
-                << " avg:" << gAverage(*this)
+                << " min:" << gMin(field())
+                << " max:" << gMax(field())
+                << " avg:" << gAverage(field())
                 << endl;
         }
     }

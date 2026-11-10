@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -108,15 +108,10 @@ protected:
         fileMonitor& monitor() const;
 
         //- Sort directory entries according to time value
-        static instantList sortTimes(const fileNameList&, const word&);
+        static instantList sortTimes(const fileNameList&);
 
         //- Merge two times
-        static void mergeTimes
-        (
-            const instantList& extraTimes,
-            const word& constantName,
-            instantList& times
-        );
+        static void mergeTimes(const instantList&, instantList&);
 
         //- Helper: check for file (isFile) or directory (!isFile)
         static bool isFileOrDir(const bool isFile, const fileName&);
@@ -128,9 +123,24 @@ protected:
         //  if not found
         tmpNrc<dirIndexList> lookupProcessorsPath(const fileName&) const;
 
-        //- Does ioobject exist. Is either a directory (empty name()) or
-        //  a file
+        //- Does IOobject exist? Is either a directory (empty name()) or
+        //  a file.
         bool exists(IOobject& io) const;
+
+        //- Helper: check IO for local existence. Like filePathInfo but
+        //  without parent searching and instance searching
+        virtual bool exists(const dirIndexList& pDirs, IOobject& io) const;
+
+        //- ...
+        void searchInstance
+        (
+            const dirIndexList& pDirs,
+            IOobject& io,
+            const IOobject& startIo,
+            const scalar startValue,
+            const word& stopInstance,
+            const instantList& times
+        ) const;
 
 
 public:
@@ -380,8 +390,7 @@ public:
                 const regIOobject&,
                 IOstream::streamFormat format=IOstream::ASCII,
                 IOstream::versionNumber version=IOstream::currentVersion,
-                IOstream::compressionType compression=IOstream::UNCOMPRESSED,
-                const bool write = true
+                IOstream::compressionType compression=IOstream::UNCOMPRESSED
             ) const;
 
 
@@ -405,8 +414,7 @@ public:
                 const fileName& filePath,
                 IOstream::streamFormat format=IOstream::ASCII,
                 IOstream::versionNumber version=IOstream::currentVersion,
-                IOstream::compressionType compression=IOstream::UNCOMPRESSED,
-                const bool write = true
+                IOstream::compressionType compression=IOstream::UNCOMPRESSED
             ) const = 0;
 
 
@@ -474,12 +482,7 @@ public:
             ) const;
 
             //- Get sorted list of times
-            virtual instantList findTimes
-            (
-                const Time&,
-                const fileName&,
-                const word&
-            ) const;
+            virtual instantList findTimes(const Time&, const fileName&) const;
 
             //- Find instance where IOobject is. Fails if cannot be found
             //  and readOpt() is MUST_READ/MUST_READ_IF_MODIFIED. Otherwise
@@ -550,9 +553,14 @@ const fileOperation& fileHandler();
 void fileHandler(autoPtr<fileOperation>&);
 
 //- Recursively search the given directory for the file
+//  using fileHandler().readDir returning the path relative to the directory or
+//  fileName::null if not found
+// fileName search(const word& file, const fileName& directory);
+
+//- Recursively search the given directory for the file
 //  returning the path relative to the directory or
 //  fileName::null if not found
-fileName search(const word& file, const fileName& directory);
+fileName searchDir(const word& file, const fileName& directory);
 
 //- Copy all the files from the source to the target directory
 void cpFiles(const fileName& srcDir, const fileName& targetDir);

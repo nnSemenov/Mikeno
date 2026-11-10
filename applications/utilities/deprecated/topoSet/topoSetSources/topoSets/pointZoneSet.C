@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -250,13 +250,13 @@ bool pointZoneSet::writeObject
     IOstream::streamFormat s,
     IOstream::versionNumber v,
     IOstream::compressionType c,
-    const bool write
+    const bool updateInstance
 ) const
 {
     // Write shadow pointSet
     word oldTypeName = typeName;
     const_cast<word&>(type()) = pointSet::typeName;
-    bool ok = pointSet::writeObject(s, v, c, write);
+    bool ok = pointSet::writeObject(s, v, c, updateInstance);
     const_cast<word&>(type()) = oldTypeName;
 
     // Modify pointZone
@@ -284,7 +284,7 @@ bool pointZoneSet::writeObject
         pointZones[zoneID] = addressing_;
     }
 
-    return ok && pointZones.write(write);
+    return ok && pointZones.write(updateInstance);
 }
 
 

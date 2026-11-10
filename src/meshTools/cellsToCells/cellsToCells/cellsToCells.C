@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -243,16 +243,24 @@ Foam::scalar Foam::cellsToCells::update
 
     // Determine numbers of faces on both sides, report, and quit if either
     // side is empty
-    const label srcTotalSize = returnReduce(srcMesh.nCells(), sumOp<label>());
-    const label tgtTotalSize = returnReduce(tgtMesh.nCells(), sumOp<label>());
+    const label srcTotalSize = returnReduce(srcMesh.nCells(), sumOp());
+    const label tgtTotalSize = returnReduce(tgtMesh.nCells(), sumOp());
     if (srcTotalSize == 0 || tgtTotalSize == 0)
     {
         return 0;
     }
 
-    Info<< indent << typeName << ": Calculating couplings between "
-        << srcTotalSize << " source cells and " << tgtTotalSize
-        << " target cells" << incrIndent << endl;
+    const bool srcIsRegion = srcMesh.name() != polyMesh::defaultRegion;
+    const bool tgtIsRegion = tgtMesh.name() != polyMesh::defaultRegion;
+    static const char* noRegion = "the default region";
+    const char* srcMeshName = srcIsRegion ? srcMesh.name().c_str() : noRegion;
+    const char* tgtMeshName = tgtIsRegion ? tgtMesh.name().c_str() : noRegion;
+    Info<< indent << typeName << ":";
+    if (srcIsRegion || tgtIsRegion)
+    {
+        Info<< " " << srcMeshName << " and " << tgtMeshName;
+    }
+    Info<< endl << incrIndent;
 
     singleProcess_ =
         patchToPatchTools::singleProcess
@@ -357,7 +365,7 @@ Foam::scalar Foam::cellsToCells::update
         normalise(tgtMesh, tgtLocalSrcCells_, tgtWeights_);
 
         // Collect volume intersection contributions
-        reduce(V, sumOp<scalar>());
+        reduce(V, sumOp());
     }
 
     label nCouples = 0;
@@ -369,12 +377,13 @@ Foam::scalar Foam::cellsToCells::update
     {
         nCouples += tgtLocalSrcCells_[tgtCelli].size();
     }
-    reduce(nCouples, sumOp<label>());
+    reduce(nCouples, sumOp());
 
     if (nCouples != 0)
     {
         Info<< indent << "Overlapping volume = " << V << endl
-            << indent << nCouples << " couplings calculated in "
+            << indent << nCouples << " couplings calculated between "
+            << srcTotalSize << " and " << tgtTotalSize << " cells in "
             << time.cpuTimeIncrement() << 's' << endl;
     }
     else

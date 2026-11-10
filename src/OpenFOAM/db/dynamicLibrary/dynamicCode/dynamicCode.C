@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
-
+#include "macros.H"
 #include "dynamicCode.H"
 #include "OSHA1stream.H"
 #include "dlLibraryTable.H"
@@ -384,12 +384,12 @@ Foam::dynamicCode::dynamicCode
             << "because of security issues. If you trust the code you can"
             << " enable this" << nl
             << "facility be adding to the InfoSwitches setting in the system"
-            << " controlDict:" << nl << nl
+            << " configDict:" << nl << nl
             << "    allowSystemOperations 1" << nl << nl
-            << "The system controlDict is either" << nl << nl
-            << "    ~/.OpenFOAM/$WM_PROJECT_VERSION/controlDict" << nl << nl
+            << "The system configDict is either" << nl << nl
+            << "    ~/.OpenFOAM/$WM_PROJECT_VERSION/configDict" << nl << nl
             << "or" << nl << nl
-            << "    $WM_PROJECT_DIR/etc/controlDict" << nl
+            << "    $WM_PROJECT_DIR/etc/configDict" << nl
             << endl
             << exit(FatalIOError);
     }
@@ -555,7 +555,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
 {
     if (verbose)
     {
-        Info<< "Creating new library in " << libRelPath() << endl;
+        Pout<< "Creating new library in " << libRelPath() << endl;
     }
 
     HashTable<string> filterVars(varSubstitutions_);
@@ -579,6 +579,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
         resolvedFiles,
         badFiles
     );
+
     dynamicCode::resolveTemplates
     (
         copyFiles_,
@@ -608,7 +609,7 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
 
         if (verbose)
         {
-            Info << "    Copying " << srcFile << " to " << dstFile << endl;
+            Pout << "    Copying " << srcFile << " to " << dstFile << endl;
         }
 
         IFstream is(srcFile);
@@ -630,7 +631,6 @@ bool Foam::dynamicCode::copyOrCreateFiles(const bool verbose) const
         // Copy lines while expanding variables
         dynamicCode::copyAndFilter(is, os, filterVars);
     }
-
 
     // Create Make/files + Make/options
     createMakeFiles();

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -74,7 +74,7 @@ SourceFiles
 #include "blendedSchemeBase.H"
 #include "surfaceInterpolate.H"
 #include "extrapolatedCalculatedFvPatchFields.H"
-#include "fvcSurfaceIntegrate.H"
+#include "fviSurfaceIntegrate.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -197,7 +197,7 @@ public:
             const fvMesh& mesh = this->mesh();
             tmp<surfaceScalarField> tUflux = faceFlux_;
 
-            if (faceFlux_.dimensions() == dimMassFlux)
+            if (faceFlux_.dimensions() == dimensions::massFlux)
             {
                 // Currently assume that the density field
                 // corresponding to the mass-flux is named "rho"
@@ -207,7 +207,7 @@ public:
 
                 tUflux = faceFlux_/fvc::interpolate(rho);
             }
-            else if (faceFlux_.dimensions() != dimVolumetricFlux)
+            else if (faceFlux_.dimensions() != dimensions::volumetricFlux)
             {
                 FatalErrorInFunction
                     << "dimensions of faceFlux are not correct"
@@ -229,7 +229,7 @@ public:
 
             scalarField sumPhi
             (
-                fvc::surfaceSum(mag(tUflux))().primitiveField()
+                fvi::surfaceSum(mag(tUflux))().primitiveField()
             );
 
             Co.primitiveFieldRef() =

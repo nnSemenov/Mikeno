@@ -94,12 +94,15 @@ bool Foam::clouds::particle::reCalculateModified()
     }
 
     {
-        result = Lagrangianm::initDdt(dimMass, e, dUdt) || result;
+        result = Lagrangianm::initDdt(dimensions::mass, e, dUdt) || result;
 
         if (context == cloud::contextType::fvModel)
         {
-            result = initPsicDdt(m, hec) || result;
-            if (hasPhase() && &hecPhase != &hec)
+            if (hasThermoc())
+            {
+                result = initPsicDdt(m, hec) || result;
+            }
+            if (hasThermocPhase() && &hecPhase != &hec)
             {
                 result = initPsicDdt(m, hecPhase) || result;
             }
@@ -107,7 +110,7 @@ bool Foam::clouds::particle::reCalculateModified()
     }
 
     {
-        result = Lagrangianm::initDdt(dimMass, U, dUdt) || result;
+        result = Lagrangianm::initDdt(dimensions::mass, U, dUdt) || result;
 
         if (context == cloud::contextType::fvModel)
         {
@@ -153,7 +156,7 @@ void Foam::clouds::particle::calculate
 
         // Correct the diameter for the change in mass, assuming the density
         // remains constant
-        spherical::correct(toSubField(m/rho));
+        spherical::correct(toSubField(eval(m/rho)));
 
         // Calculate mass exchanges with the carrier
         if (context == cloud::contextType::fvModel && final)
@@ -181,13 +184,16 @@ void Foam::clouds::particle::calculate
         thermo().correct(subMesh);
 
         // Correct the diameter for changes in density
-        spherical::correct(toSubField(m/rho));
+        spherical::correct(toSubField(eval(m/rho)));
 
         // Calculate energy exchanges with the carrier
         if (context == cloud::contextType::fvModel && final)
         {
-            carrierEqn(hec) += psicEqn(deltaT, m, e, hec);
-            if (hasPhase() && &hecPhase != &hec)
+            if (hasThermoc())
+            {
+                carrierEqn(hec) += psicEqn(deltaT, m, e, hec);
+            }
+            if (hasThermocPhase() && &hecPhase != &hec)
             {
                 carrierEqn(hecPhase) += psicEqn(deltaT, m, e, hecPhase);
             }

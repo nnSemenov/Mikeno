@@ -278,14 +278,14 @@ void surfaceDisplacementPointPatchVectorField::calcProjection
         }
     }
 
-    reduce(nNotProjected, sumOp<label>());
+    reduce(nNotProjected, sumOp());
 
     if (nNotProjected > 0)
     {
         Info<< "surfaceDisplacement :"
             << " on patch " << patch().name()
             << " did not project " << nNotProjected
-            << " out of " << returnReduce(localPoints.size(), sumOp<label>())
+            << " out of " << returnReduce(localPoints.size(), sumOp())
             << " points." << endl;
     }
 }
@@ -302,7 +302,7 @@ surfaceDisplacementPointPatchVectorField
 )
 :
     fixedValuePointPatchVectorField(p, iF, dict),
-    velocity_(dict.lookup<vector>("velocity", dimVelocity)),
+    velocity_(dict.lookup<vector>("velocity", dimensions::velocity)),
     surfacesDict_(dict.subDict("geometry")),
     projectMode_(projectModeNames_.read(dict.lookup("projectMode"))),
     projectDir_(dict.lookup<vector>("projectDirection", dimless)),

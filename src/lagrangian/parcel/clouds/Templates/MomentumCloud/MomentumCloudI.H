@@ -323,8 +323,8 @@ inline Foam::scalar Foam::MomentumCloud<CloudType>::Dij
         sj += p.nParticle()*pow(p.d(), j);
     }
 
-    reduce(si, sumOp<scalar>());
-    reduce(sj, sumOp<scalar>());
+    reduce(si, sumOp());
+    reduce(sj, sumOp());
     sj = max(sj, vSmall);
 
     return si/sj;
@@ -341,7 +341,7 @@ inline Foam::scalar Foam::MomentumCloud<CloudType>::Dmin() const
         d = min(d, iter().d());
     }
 
-    return returnReduce(d, minOp<scalar>());
+    return returnReduce(d, minOp());
 }
 
 
@@ -355,7 +355,7 @@ inline Foam::scalar Foam::MomentumCloud<CloudType>::Dmax() const
         d = max(d, iter().d());
     }
 
-    return returnReduce(d, maxOp<scalar>());
+    return returnReduce(d, maxOp());
 }
 
 
@@ -443,23 +443,24 @@ Foam::MomentumCloud<CloudType>::SU(const volVectorField& U) const
     {
         if (solution_.semiImplicit("U"))
         {
-            const volScalarField::Internal
+            const volInternalScalarField
                 Vdt(this->mesh().V()*this->time().deltaT());
 
-            return UTrans()/Vdt - fvm::Sp(UCoeff()/Vdt, U) + UCoeff()/Vdt*U;
+            return UTrans()/Vdt - fvm::Sp(UCoeff()/Vdt, U) + UCoeff()/Vdt*U();
         }
         else
         {
-            tmp<fvVectorMatrix> tfvm(new fvVectorMatrix(U, dimForce));
+            tmp<fvVectorMatrix> tfvm(new fvVectorMatrix(U, dimensions::force));
             fvVectorMatrix& fvm = tfvm.ref();
 
-            fvm.source() = -UTrans()/(this->time().deltaT());
+            fvm.source() =
+                -UTrans()().primitiveField()/this->time().deltaT().value();
 
             return tfvm;
         }
     }
 
-    return tmp<fvVectorMatrix>(new fvVectorMatrix(U, dimForce));
+    return tmp<fvVectorMatrix>(new fvVectorMatrix(U, dimensions::force));
 }
 
 
@@ -473,7 +474,7 @@ Foam::MomentumCloud<CloudType>::vDotSweep() const
         (
             this->name() + ":vDotSweep",
             this->mesh(),
-            dimensionedScalar(dimless/dimTime, 0),
+            dimensionedScalar(inv(dimensions::time), 0),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -487,7 +488,7 @@ Foam::MomentumCloud<CloudType>::vDotSweep() const
         vDotSweep[celli] += p.nParticle()*p.areaP()*mag(p.U() - U_[celli]);
     }
 
-    vDotSweep.primitiveFieldRef() /= this->mesh().V();
+    vDotSweep.primitiveFieldRef() /= this->mesh().V().primitiveField();
     vDotSweep.correctBoundaryConditions();
 
     return tvDotSweep;
@@ -518,7 +519,7 @@ Foam::MomentumCloud<CloudType>::alpha() const
         alpha[celli] += p.nParticle()*p.volume();
     }
 
-    alpha.primitiveFieldRef() /= this->mesh().V();
+    alpha.primitiveFieldRef() /= this->mesh().V().primitiveField();
     alpha.correctBoundaryConditions();
 
     return ttheta;
@@ -548,7 +549,7 @@ Foam::MomentumCloud<CloudType>::Y() const
         Y[celli] += p.nParticle()*p.mass();
     }
 
-    Y /= (this->mesh().V()*rho_);
+    Y /= (this->mesh().V().primitiveField()*rho_.primitiveField());
 
     return tY;
 }
@@ -564,7 +565,7 @@ Foam::MomentumCloud<CloudType>::rhoEff() const
         (
             this->name() + ":rhoEff",
             this->mesh(),
-            dimensionedScalar(dimDensity, 0)
+            dimensionedScalar(dimensions::density, 0)
         )
     );
 
@@ -577,7 +578,7 @@ Foam::MomentumCloud<CloudType>::rhoEff() const
         rhoEff[celli] += p.nParticle()*p.mass();
     }
 
-    rhoEff /= this->mesh().V();
+    rhoEff /= this->mesh().V().primitiveField();
 
     return trhoEff;
 }

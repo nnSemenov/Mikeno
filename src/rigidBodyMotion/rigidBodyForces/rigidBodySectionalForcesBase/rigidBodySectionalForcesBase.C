@@ -138,7 +138,7 @@ Foam::vector Foam::functionObjects::rigidBodySectionalForcesBase::normal() const
 
 Foam::point Foam::functionObjects::rigidBodySectionalForcesBase::origin() const
 {
-    return motion().X0(bodyIndex()).inv().transformPoint(localOrigin_);
+    return motion().X0(bodyIndex()).inv().pointTransform(localOrigin_);
 }
 
 
@@ -156,8 +156,8 @@ void Foam::functionObjects::rigidBodySectionalForcesBase::addFluid
 
     // Rotate into the body's coordinate frame
     const tensor E = motion().X0(bodyIndex()).E();
-    transform(dForce, E, dForce);
-    transform(dMoment, E, dMoment);
+    dForce = transform(E, dForce);
+    dMoment = transform(E, dMoment);
 
     // Add to the total
     force += dForce;

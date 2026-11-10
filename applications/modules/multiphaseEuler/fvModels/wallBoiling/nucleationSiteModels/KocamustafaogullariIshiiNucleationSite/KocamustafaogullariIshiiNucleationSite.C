@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -66,7 +66,7 @@ KocamustafaogullariIshiiNucleationSite::calculate
 {
     const ScalarFieldType rhoM((rhoLiquid - rhoVapour)/rhoVapour);
 
-    const dimensionedScalar zeroT_(dimTemperature, 0);
+    const dimensionedScalar zeroT_(dimensions::temperature, 0);
     auto zeroT = coefficient<ScalarFieldType>::value(zeroT_);
 
     auto Cn = coefficient<ScalarFieldType>::value(Cn_);
@@ -74,7 +74,7 @@ KocamustafaogullariIshiiNucleationSite::calculate
     // eq. (32)
     const ScalarFieldType f
     (
-        2.157e-7*pow(rhoM, -3.2)*pow(1 + 0.0049*rhoM, 4.13)
+        scalar{2.157e-7}*pow(rhoM, scalar{-3.2})*pow(1 + scalar{0.0049}*rhoM, scalar{4.13})
     );
 
     // eq. (17)
@@ -83,7 +83,7 @@ KocamustafaogullariIshiiNucleationSite::calculate
         dDep*max(Tw - Tsatw, zeroT)*rhoVapour*L/(4*sigma*Tsatw)
     );
 
-    return Cn/sqr(dDep)*pow(rRc, 4.4)*f;
+    return Cn/sqr(dDep)*pow(rRc, scalar{4.4})*f;
 }
 
 
@@ -158,18 +158,18 @@ KocamustafaogullariIshiiNucleationSite::nucleationSiteDensity
 }
 
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::volInternalScalarField>
 Foam::wallBoilingModels::nucleationSiteModels::
 KocamustafaogullariIshiiNucleationSite::nucleationSiteDensity
 (
     const phaseModel& liquid,
     const phaseModel& vapour,
     const phaseModel& solid,
-    const volScalarField::Internal& Tf,
-    const volScalarField::Internal& Tsatw,
-    const volScalarField::Internal& L,
-    const volScalarField::Internal& dDep,
-    const volScalarField::Internal& fDep
+    const volInternalScalarField& Tf,
+    const volInternalScalarField& Tsatw,
+    const volInternalScalarField& L,
+    const volInternalScalarField& dDep,
+    const volInternalScalarField& fDep
 ) const
 {
     return calculate

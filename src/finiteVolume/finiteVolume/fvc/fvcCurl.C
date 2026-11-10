@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,22 +40,21 @@ namespace fvc
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-tmp<VolField<Type>>
-curl
+tmp<VolField<Type>> curl
 (
     const VolField<Type>& vf
 )
 {
-    word nameCurlVf = "curl(" + vf.name() + ')';
+    const word nameCurlVf("curl(", vf.name(), ')');
 
     // Gausses theorem curl
-    // tmp<VolField<Type>> tcurlVf =
-    // fvc::surfaceIntegrateExtrapolate(vf.mesh().Sf() ^ fvc::interpolate(vf));
+    // tmp<VolField<Type>> tcurlVf
+    // (
+    //     fvc::surfaceIntegrate(vf.mesh().Sf() ^ fvc::interpolate(vf))
+    // );
 
     // Calculate curl as the Hodge dual of the skew-symmetric part of grad
-    tmp<VolField<Type>> tcurlVf =
-        2.0*(*skew(fvc::grad(vf, nameCurlVf)));
-
+    tmp<VolField<Type>> tcurlVf(2*(*skew(fvc::grad(vf, nameCurlVf))));
     tcurlVf.ref().rename(nameCurlVf);
 
     return tcurlVf;
@@ -63,11 +62,7 @@ curl
 
 
 template<class Type>
-tmp<VolField<Type>>
-curl
-(
-    const tmp<VolField<Type>>& tvf
-)
+tmp<VolField<Type>> curl(const tmp<VolField<Type>>& tvf)
 {
     tmp<VolField<Type>> Curl(fvc::curl(tvf()));
     tvf.clear();

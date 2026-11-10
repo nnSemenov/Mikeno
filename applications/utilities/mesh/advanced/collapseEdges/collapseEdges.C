@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     #include "addNoOverwriteOption.H"
     #include "addMeshOption.H"
     #include "addRegionOption.H"
-    #include "setRootCaseNoFunctionObjects.H"
+    #include "setRootCase.H"
     #include "createTimeNoFunctionObjects.H"
     const instantList timeDirs = timeSelector::selectIfPresent(runTime, args);
 
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
         );
         Info<< "Read faceSet " << indirectPatchFaces.name()
             << " with "
-            << returnReduce(indirectPatchFaces.size(), sumOp<label>())
+            << returnReduce(indirectPatchFaces.size(), sumOp())
             << " faces" << endl;
 
 

@@ -36,7 +36,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::IOobject Foam::LagrangianModels::io(const LagrangianMesh& mesh) const
+Foam::IOobject Foam::LagrangianModels::io(const LagrangianMesh& mesh)
 {
     typeIOobject<IOdictionary> result
     (
@@ -101,19 +101,17 @@ Foam::LagrangianModels::LagrangianModels(const LagrangianMesh& mesh)
     <
         LagrangianMesh,
         TopoChangeableMeshObject,
-        LagrangianModels
+        LagrangianModels,
+        IOdictionary
     >
     (
         io(mesh),
         mesh
     ),
-    dictionary(),
     PtrListDictionary<LagrangianModel>(0),
     checkTimeIndex_(mesh.time().timeIndex() + 1),
     addSupFields_()
 {
-    readHeaderOk(IOstream::ASCII, typeName);
-
     const dictionary& dict(*this);
 
     // Iterate through the dictionary to determine the number of models
@@ -159,9 +157,6 @@ Foam::LagrangianModels::LagrangianModels(const LagrangianMesh& mesh)
             modelList[i].postConstruct();
         }
     }
-
-    // Enable re-reading
-    addWatch();
 }
 
 
@@ -419,26 +414,12 @@ bool Foam::LagrangianModels::read()
 }
 
 
-bool Foam::LagrangianModels::readData(Istream& is)
-{
-    is >> *this;
-    return !is.bad();
-}
-
-
-bool Foam::LagrangianModels::writeData(Ostream& os) const
-{
-    dictionary::write(os, false);
-    return os.good();
-}
-
-
 bool Foam::LagrangianModels::writeObject
 (
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,
     IOstream::compressionType cmp,
-    const bool write
+    const bool updateInstance
 ) const
 {
     bool allOk = true;
@@ -447,10 +428,10 @@ bool Foam::LagrangianModels::writeObject
 
     forAll(modelList, i)
     {
-        const bool ok = modelList[i].write(write);
+        const bool ok = modelList[i].write(updateInstance);
         allOk = allOk && ok;
 
-        const bool okState = modelList[i].writeState(write);
+        const bool okState = modelList[i].writeState(updateInstance);
         allOk = allOk && okState;
     }
 

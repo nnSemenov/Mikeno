@@ -73,9 +73,11 @@ algorithms/FaceCellWave/FaceCellWaveName.C
 algorithms/PointEdgeWave/PointEdgeWaveName.C
 algorithms/PatchEdgeFaceWave/PatchEdgeFaceWaveName.C
 algorithms/PatchEdgeFaceWave/patchPatchDist.C
+algorithms/regionSplit/regionSplitBase.C
+algorithms/regionSplit/regionSplit.C
+algorithms/regionSplit/patchRegionSplit.C
 
-regionSplit/regionSplit.C
-regionSplit/localPointRegion.C
+localPointRegion/localPointRegion.C
 
 indexedOctree/treeDataEdge.C
 indexedOctree/treeDataFace.C
@@ -149,7 +151,9 @@ patchToPatch/inverseDistance/inverseDistancePatchToPatch.C
 patchToPatch/intersection/intersectionPatchToPatch.C
 patchToPatch/rays/raysPatchToPatch.C
 
-patchToPatch/patchToPatchStabilisation/patchToPatchStabilisation.C
+patchToPatch/patchToPatchExtrapolation/patchToPatchExtrapolation/patchToPatchExtrapolation.C
+patchToPatch/patchToPatchExtrapolation/none/nonePatchToPatchExtrapolation.C
+patchToPatch/patchToPatchExtrapolation/nearest/nearestPatchToPatchExtrapolation.C
 
 patchToPatchFieldMapper/patchToPatchFieldMapper.C
 patchToPatchFieldMapper/patchToPatchLeftOverFieldMapper.C
@@ -161,7 +165,10 @@ cellsToCells/matching/matchingCellsToCells.C
 cellsToCells/nearest/nearestCellsToCells.C
 cellsToCells/intersection/intersectionCellsToCells.C
 
-cellsToCells/cellsToCellsStabilisation/cellsToCellsStabilisation.C
+cellsToCells/cellsToCellsExtrapolation/cellsToCellsExtrapolation/cellsToCellsExtrapolation.C
+cellsToCells/cellsToCellsExtrapolation/none/noneCellsToCellsExtrapolation.C
+cellsToCells/cellsToCellsExtrapolation/nearest/nearestCellsToCellsExtrapolation.C
+cellsToCells/cellsToCellsExtrapolation/multiNearest/multiNearestCellsToCellsExtrapolation.C
 
 meshToMesh/meshToMesh.C
 
@@ -181,8 +188,6 @@ mappedPatches/nonConformalMappedPatchBase/nonConformalMappedPatchBase.C
 mappedPatches/nonConformalMappedPolyPatch/nonConformalMappedWallPolyPatch.C
 
 meshStructure/meshStructure.C
-meshStructure/topoDistanceData.C
-meshStructure/pointTopoDistanceData.C
 
 tetOverlapVolume/tetOverlapVolume.C
 

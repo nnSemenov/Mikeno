@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,13 +64,13 @@ Foam::functionObjects::cloudAge::cloudAge
             IOobject::AUTO_WRITE
         ),
         mesh(),
-        dimensionedScalar(dimTime, scalar(0)),
+        dimensionedScalar(dimensions::time, scalar(0)),
         wordList
         (
             mesh().boundary().size(),
             calculatedLagrangianPatchScalarField::typeName
         ),
-        wordList::null(),
+        wordList{},
         cloud().LagrangianModels().modelTypeFieldSourceTypes
         <
             LagrangianInjection,
@@ -92,7 +92,7 @@ Foam::functionObjects::cloudAge::~cloudAge()
 
 Foam::wordList Foam::functionObjects::cloudAge::fields() const
 {
-    return wordList::null();
+    return {};
 }
 
 
