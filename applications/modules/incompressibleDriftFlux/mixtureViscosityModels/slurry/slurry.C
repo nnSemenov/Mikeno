@@ -69,7 +69,7 @@ Foam::mixtureViscosityModels::slurry::mu
 
     return
     (
-        muc*(1.0 + 2.5*alphad + 10.05*sqr(alphad) + 0.00273*exp(16.6*alphad))
+        muc*(1 + scalar{2.5}*alphad + scalar{10.05}*sqr(alphad) + scalar{0.00273}*exp(scalar{16.6}*alphad))
     );
 }
 

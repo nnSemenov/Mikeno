@@ -432,7 +432,7 @@ bool Foam::functionObjects::comfort::execute()
         volScalarField::New
         (
             "PPD",
-            100 - 95*exp(-0.03353*pow4(PMV()) - 0.21790*sqr(PMV()))
+            100 - 95*exp(scalar{-0.03353}*pow4(PMV()) - scalar{0.21790}*sqr(PMV()))
         )
     );
 

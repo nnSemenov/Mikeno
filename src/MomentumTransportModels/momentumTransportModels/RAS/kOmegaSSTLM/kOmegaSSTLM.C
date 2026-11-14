@@ -129,13 +129,13 @@ kOmegaSSTLM<BasicMomentumTransportModel>::ReThetac() const
             ReThetat <= 1870
           ?
             ReThetat
-          - 396.035e-2
-          + 120.656e-4*ReThetat
-          - 868.230e-6*sqr(ReThetat)
-          + 696.506e-9*pow3(ReThetat)
-          - 174.105e-12*pow4(ReThetat)
+          - scalar{396.035e-2}
+          + scalar{120.656e-4}*ReThetat
+          - scalar{868.230e-6}*sqr(ReThetat)
+          + scalar{696.506e-9}*pow3(ReThetat)
+          - scalar{174.105e-12}*pow4(ReThetat)
           :
-            ReThetat - 593.11 - 0.482*(ReThetat - 1870);
+            ReThetat - scalar{593.11} - scalar{0.482}*(ReThetat - 1870);
     }
 
     return tReThetac;
@@ -169,25 +169,25 @@ tmp<volInternalScalarField> kOmegaSSTLM<BasicMomentumTransportModel>::Flength
         if (ReThetat < 400)
         {
             Flength[celli] =
-                398.189e-1
-              - 119.270e-4*ReThetat
-              - 132.567e-6*sqr(ReThetat);
+                scalar{398.189e-1}
+              - scalar{119.270e-4}*ReThetat
+              - scalar{132.567e-6}*sqr(ReThetat);
         }
         else if (ReThetat < 596)
         {
             Flength[celli] =
-                263.404
-              - 123.939e-2*ReThetat
-              + 194.548e-5*sqr(ReThetat)
-              - 101.695e-8*pow3(ReThetat);
+                scalar{263.404}
+              - scalar{123.939e-2}*ReThetat
+              + scalar{194.548e-5}*sqr(ReThetat)
+              - scalar{101.695e-8}*pow3(ReThetat);
         }
         else if (ReThetat < 1200)
         {
-            Flength[celli] = 0.5 - 3e-4*(ReThetat - 596);
+            Flength[celli] = scalar{0.5} - scalar{3e-4}*(ReThetat - 596);
         }
         else
         {
-            Flength[celli] = 0.3188;
+            Flength[celli] = scalar{0.3188};
         }
 
         const scalar Fsublayer =
@@ -228,7 +228,7 @@ kOmegaSSTLM<BasicMomentumTransportModel>::ReThetat0
     {
         const scalar Tu
         (
-            max(100*sqrt((2.0/3.0)*k[celli])/Us[celli], scalar(0.027))
+            max(100*sqrt(static_cast<scalar>(2.0/3.0)*k[celli])/Us[celli], scalar(0.027))
         );
 
         // Initialise lambda to zero.
@@ -501,7 +501,7 @@ void kOmegaSSTLM<BasicMomentumTransportModel>::correctReThetatGammaInt()
            *ca1_*Flength(nu)*S*sqrt(gammaInt_()*Fonset(Rev, ReThetac, RT))
         );
 
-        const volInternalScalarField Fturb(exp(-pow4(0.25*RT)));
+        const volInternalScalarField Fturb(exp(-pow4(scalar{0.25}*RT)));
 
         const volInternalScalarField Egamma
         (

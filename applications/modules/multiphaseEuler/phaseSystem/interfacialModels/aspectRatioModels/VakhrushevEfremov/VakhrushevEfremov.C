@@ -70,9 +70,9 @@ Foam::aspectRatioModels::VakhrushevEfremov::E() const
 
     return
         neg(Ta - 1)
-      + pos0(Ta - 1)*neg(Ta - 39.8)
-       *pow3(0.81 + 0.206*tanh(1.6 - 2*log10(max(Ta, scalar(1)))))
-      + pos0(Ta - 39.8)*0.24;
+      + pos0(Ta - 1)*neg(Ta - scalar{39.8})
+       *pow3(scalar{0.81} + scalar{0.206}*tanh(scalar{1.6} - 2*log10(max(Ta, scalar{1}))))
+      + pos0(Ta - scalar{39.8})*scalar{0.24};
 }
 
 

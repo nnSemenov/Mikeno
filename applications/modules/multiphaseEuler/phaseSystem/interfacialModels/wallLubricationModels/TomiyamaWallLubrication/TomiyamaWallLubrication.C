@@ -77,11 +77,11 @@ Foam::wallLubricationModels::TomiyamaWallLubrication::Fi() const
     return zeroGradWalls
     (
         (
-            pos0(Eo - 1)*neg(Eo - 5)*exp(-0.933*Eo + 0.179)
-          + pos0(Eo - 5)*neg(Eo - 33)*(0.00599*Eo - 0.0187)
-          + pos0(Eo - 33)*0.179
+            pos0(Eo - 1)*neg(Eo - 5)*exp(scalar{-0.933}*Eo + scalar{0.179})
+          + pos0(Eo - 5)*neg(Eo - 33)*(scalar{0.00599}*Eo - scalar{0.0187})
+          + pos0(Eo - 33)*scalar{0.179}
         )
-       *0.5
+       *scalar{0.5}
        *interface_.dispersed().d()
        *(
             1/sqr(y)

@@ -126,7 +126,7 @@ void continuousGasKEpsilon<BasicMomentumTransportModel>::correctNut()
         min
         (
             exp(min(thetal/thetag, scalar(50))),
-            scalar(1)
+            scalar{1}
         )
     );
     volScalarField omega((1 - expThetar)/(1 + expThetar));
@@ -167,7 +167,7 @@ continuousGasKEpsilon<BasicMomentumTransportModel>::nuEff() const
             min
             (
                 (this->alpha_ - scalar(0.5))/(alphaInversion_ - 0.5),
-                scalar(1)
+                scalar{1}
             ),
             scalar(0)
         )

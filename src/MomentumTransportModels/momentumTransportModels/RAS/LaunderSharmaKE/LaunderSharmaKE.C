@@ -43,7 +43,7 @@ tmp<volScalarField>
 LaunderSharmaKE<BasicMomentumTransportModel>::fMu() const
 {
     return
-        exp(-3.4/sqr(scalar(1) + sqr(k_)/(this->nu()*epsilon_)/50.0));
+        exp(-scalar{3.4}/sqr(scalar(1) + sqr(k_)/(this->nu()*epsilon_)/50));
 }
 
 
@@ -53,7 +53,7 @@ LaunderSharmaKE<BasicMomentumTransportModel>::f2() const
 {
     return
         scalar(1)
-      - 0.3*exp(-min(sqr(sqr(k_())/(this->nu()()()*epsilon_())), scalar(50.0)));
+      - scalar{0.3}*exp(-min(sqr(sqr(k_())/(this->nu()()()*epsilon_())), scalar{50}));
 }
 
 

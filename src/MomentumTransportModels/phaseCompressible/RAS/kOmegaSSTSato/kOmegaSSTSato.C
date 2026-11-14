@@ -151,7 +151,7 @@ void kOmegaSSTSato<BasicMomentumTransportModel>::correctNut
 {
     volScalarField yPlus
     (
-        pow(this->betaStar_, 0.25)*this->y()*sqrt(this->k_)/this->nu()
+        pow(this->betaStar_, scalar{0.25})*this->y()*sqrt(this->k_)/this->nu()
     );
 
     this->nut_ =
@@ -161,7 +161,7 @@ void kOmegaSSTSato<BasicMomentumTransportModel>::correctNut
     forAllIter(UPtrList<const phaseModel>, dispersedPhases, phaseIter)
     {
         this->nut_ +=
-            sqr(1 - exp(-yPlus/16.0))
+            sqr(1 - exp(-yPlus/16))
            *Cmub_*phaseIter().d()*phaseIter().alpha()
            *(mag(this->U_ - phaseIter().U()));
     }
