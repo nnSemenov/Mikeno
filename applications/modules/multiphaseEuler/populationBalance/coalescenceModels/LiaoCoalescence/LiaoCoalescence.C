@@ -196,7 +196,7 @@ Foam::populationBalance::coalescenceModels::LiaoCoalescence::rate
     const volInternalScalarField& muc = tmuc();
 
     dimensionedScalar dEq(2*dSphi*dSphj/(dSphi + dSphj));
-    dimensionedScalar Aij(pi*0.25*sqr(dSphi + dSphj));
+    dimensionedScalar Aij(pi*scalar{0.25}*sqr(dSphi + dSphj));
 
     if (turbulence_)
     {
@@ -204,7 +204,7 @@ Foam::populationBalance::coalescenceModels::LiaoCoalescence::rate
         const volInternalScalarField& epsilonc = tepsilonc();
 
         uRelTurb_ =
-            CTurb_*sqrt(2.0)
+            CTurb_*sqrt(scalar{2.0})
            *sqrt(sqr(cbrt(dSphi)) + sqr(cbrt(dSphj)))
            *cbrt(epsilonc);
     }
@@ -216,7 +216,7 @@ Foam::populationBalance::coalescenceModels::LiaoCoalescence::rate
 
     if (laminarShear_)
     {
-        uRelShear_ = CShear_*0.5/pi*(dSphi + dSphj)*shearStrainRate_;
+        uRelShear_ = CShear_*scalar{0.5}/pi*(dSphi + dSphj)*shearStrainRate_;
     }
 
     const volInternalScalarField collisionEfficiency
@@ -236,7 +236,7 @@ Foam::populationBalance::coalescenceModels::LiaoCoalescence::rate
       + pos0(kolmogorovLengthScale_ - (dSphi + dSphj))
        *exp
         (
-          - (3.0/4.0)
+          - static_cast<scalar>(3.0/4.0)
            *muc
            *dEq
            *eddyStrainRate_

@@ -92,7 +92,7 @@ tmp<volScalarField> kkLOmega::BetaTS
     const volScalarField& ReOmega
 ) const
 {
-    return(scalar(1) - exp(-sqr(max(ReOmega - CtsCrit_, scalar(0)))/Ats_));
+    return(scalar{1} - exp(-sqr(max(ReOmega - CtsCrit_, scalar(0)))/Ats_));
 }
 
 
@@ -105,7 +105,7 @@ tmp<volScalarField> kkLOmega::fTaul
 {
     return
     (
-        scalar(1)
+        scalar{1}
       - exp
         (
            -CtauL_*ktL
@@ -142,10 +142,10 @@ tmp<volInternalScalarField> kkLOmega::fOmega
 {
     return
     (
-        scalar(1)
+        scalar{1}
       - exp
         (
-           -0.41
+           scalar{-0.41}
            *pow4
             (
                 lambdaEff
@@ -415,14 +415,14 @@ void kkLOmega::correct()
         (
             lambdaEff
            /(lambdaT + dimensionedScalar(dimensions::length, rootVSmall)),
-            2.0/3.0
+            static_cast<scalar>(2.0/3.0)
         )
     );
 
     tmp<volTensorField> tgradU(fvc::grad(U_));
     const volTensorField& gradU = tgradU();
 
-    const volScalarField Omega(sqrt(2.0)*mag(skew(gradU)));
+    const volScalarField Omega(sqrt(scalar{2.0})*mag(skew(gradU)));
 
     const volScalarField S2(2*magSqr(dev(symm(gradU))));
 

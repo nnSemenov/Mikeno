@@ -82,8 +82,8 @@ void Foam::Time::adjustDeltaT()
     );
 
     const scalar nSteps = timeToNextAction/deltaT_;
-
-    if (nSteps < labelMax)
+    // compiler warns that casting labelMax to float (SP) lost precision, changes value
+    if (static_cast<double>(nSteps) < static_cast<double>(labelMax))
     {
         // Allow the time-step to increase by up to 1%
         // to accommodate the next write time before splitting

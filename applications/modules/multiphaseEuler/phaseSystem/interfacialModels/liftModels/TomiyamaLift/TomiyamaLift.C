@@ -69,13 +69,13 @@ Foam::tmp<Foam::volScalarField> Foam::liftModels::TomiyamaLift::Cl() const
 
     const volScalarField f
     (
-        0.0010422*pow3(EoH) - 0.0159*sqr(EoH) - 0.0204*EoH + 0.474
+        scalar{0.0010422}*pow3(EoH) - scalar{0.0159}*sqr(EoH) - scalar{0.0204}*EoH + scalar{0.474}
     );
 
     return
-        neg(EoH - 4)*min(0.288*tanh(0.121*interface_.Re()), f)
-      + pos0(EoH - 4)*neg(EoH - 10.7)*f
-      + pos0(EoH - 10.7)*(-0.288);
+        neg(EoH - 4)*min(scalar{0.288}*tanh(scalar{0.121}*interface_.Re()), f)
+      + pos0(EoH - 4)*neg(EoH - scalar{10.7})*f
+      + pos0(EoH - scalar{10.7})*scalar{-0.288};
 }
 
 

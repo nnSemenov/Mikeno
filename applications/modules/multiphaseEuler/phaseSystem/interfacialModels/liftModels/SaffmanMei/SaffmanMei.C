@@ -76,12 +76,12 @@ Foam::tmp<Foam::volScalarField> Foam::liftModels::SaffmanMei::Cl() const
 
     const volScalarField Cld
     (
-        neg0(Re - 40)*6.46
+        neg0(Re - 40)*scalar{6.46}
        *(
-           (1 - 0.3314*sqrt(0.5*(Rew/Re)))*exp(-0.1*Re)
-         + 0.3314*sqrt(0.5*(Rew/Re))
+           (1 - 0.3314*sqrt(scalar{0.5}*(Rew/Re)))*exp(scalar{-0.1}*Re)
+         + scalar{0.3314}*sqrt(scalar{0.5}*(Rew/Re))
         )
-      + pos(Re - 40)*6.46*0.0524*sqrt(0.5*(Rew/Re)*Re)
+      + pos(Re - 40)*scalar{6.46}*scalar{0.0524}*sqrt(scalar{0.5}*(Rew/Re)*Re)
     );
 
     return 3/(twoPi*sqrt(Rew + small))*Cld;

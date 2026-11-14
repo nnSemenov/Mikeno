@@ -66,25 +66,24 @@ void qZeta::boundZeta()
 
 tmp<volScalarField> qZeta::fMu() const
 {
-    const volScalarField Rt(q_*k_/(2.0*nu()*zeta_));
+    const volScalarField Rt(q_*k_/(2*nu()*zeta_));
 
-    if (anisotropic_)
-    {
-        return exp((-scalar(2.5) + Rt/20.0)/pow3(scalar(1) + Rt/130.0));
+    if (anisotropic_) {
+        return exp((-scalar{2.5} + Rt/20)/pow3(scalar{1} + Rt/130));
     }
     else
     {
         return
-            exp(-6.0/sqr(scalar(1) + Rt/50.0))
-           *(scalar(1) + 3.0*exp(-Rt/10.0));
+            exp(-6/sqr(scalar{1} + Rt/50))
+           *(scalar{1} + 3*exp(-Rt/10));
     }
 }
 
 
 tmp<volScalarField> qZeta::f2() const
 {
-    tmp<volScalarField> Rt = q_*k_/(2.0*nu()*zeta_);
-    return scalar(1) - 0.3*exp(-sqr(Rt));
+    tmp<volScalarField> Rt = q_*k_/(2*nu()*zeta_);
+    return scalar{1} - scalar{0.3}*exp(-sqr(Rt));
 }
 
 

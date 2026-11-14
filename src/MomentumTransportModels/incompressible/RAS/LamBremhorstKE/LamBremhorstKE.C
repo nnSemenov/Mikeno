@@ -77,8 +77,8 @@ tmp<volScalarField> LamBremhorstKE::fMu
 ) const
 {
     return
-        sqr(scalar(1) - exp(-0.0165*sqrt(k_)*y()/nu()))
-       *(scalar(1) + 20.5/(Rt + small));
+        sqr(scalar{1} - exp(scalar{-0.0165}*sqrt(k_)*y()/nu()))
+       *(scalar{1} + scalar{20.5}/(Rt + small));
 }
 
 
@@ -87,7 +87,7 @@ tmp<volInternalScalarField> LamBremhorstKE::f1
     const volInternalScalarField& fMu
 ) const
 {
-    return scalar(1) + pow3(0.05/(fMu + small));
+    return scalar{1} + pow3(scalar{0.05}/(fMu + small));
 }
 
 
@@ -96,7 +96,7 @@ tmp<volInternalScalarField> LamBremhorstKE::f2
     const volInternalScalarField& Rt
 ) const
 {
-    return scalar(1) - exp(-sqr(Rt));
+    return scalar{1} - exp(-sqr(Rt));
 }
 
 

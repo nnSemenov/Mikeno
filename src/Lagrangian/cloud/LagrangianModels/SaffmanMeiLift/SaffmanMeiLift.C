@@ -80,11 +80,11 @@ Foam::Lagrangian::SaffmanMeiLift::calcL
 
     const LagrangianSubScalarField Rew(mag(curlUc)*sqr(d)/nuc);
     const LagrangianSubScalarField beta(Rew/(Re + rootVSmall)/2);
-    const LagrangianSubScalarField alpha(0.3314*sqrt(beta));
+    const LagrangianSubScalarField alpha(scalar{0.3314}*sqrt(beta));
     const LagrangianSubScalarField Cld
     (
-        neg(Re - 40)*6.46*((1 - alpha)*exp(-0.1*Re) + alpha)
-      + pos(Re - 40)*6.46*0.0524*sqrt(beta*Re)
+        neg(Re - 40)*scalar{6.46}*((1 - alpha)*exp(scalar{-0.1}*Re) + alpha)
+      + pos(Re - 40)*scalar{6.46}*scalar{0.0524}*sqrt(beta*Re)
     );
 
     return

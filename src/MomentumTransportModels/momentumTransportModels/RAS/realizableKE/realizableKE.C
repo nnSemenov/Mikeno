@@ -69,12 +69,12 @@ tmp<volInternalScalarField> realizableKE<BasicMomentumTransportModel>::rCmu
 
     const volInternalScalarField phis
     (
-        (1.0/3.0)*acos(min(max(sqrt(6.0)*W, -scalar(1)), scalar(1)))
+        static_cast<scalar>(1.0/3.0)*acos(min(max(sqrt(scalar{6.0})*W, -scalar{1}), scalar{1}))
     );
-    const volInternalScalarField As(sqrt(6.0)*cos(phis));
-    const volInternalScalarField Us(sqrt(S2/2.0 + magSqr(skew(gradU))));
+    const volInternalScalarField As(sqrt(scalar{6.0})*cos(phis));
+    const volInternalScalarField Us(sqrt(S2/2 + magSqr(skew(gradU))));
 
-    return 1.0/(A0_ + As*Us*k_()/epsilon_());
+    return 1/(A0_ + As*Us*k_()/epsilon_());
 }
 
 

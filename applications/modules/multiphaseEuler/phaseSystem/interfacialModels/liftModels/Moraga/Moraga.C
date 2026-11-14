@@ -87,7 +87,7 @@ Foam::tmp<Foam::volScalarField> Foam::liftModels::Moraga::Cl() const
     Re.bound(1200.0, 18800.0);
     sqrSr.bound(0.0016, 0.04);
 
-    return 0.2*exp(- Re*sqrSr/3.6e5 - 0.12)*exp(Re*sqrSr/3.0e7);
+    return scalar{0.2}*exp(- Re*sqrSr/scalar{3.6e5} - scalar{0.12})*exp(Re*sqrSr/scalar{3.0e7});
 }
 
 

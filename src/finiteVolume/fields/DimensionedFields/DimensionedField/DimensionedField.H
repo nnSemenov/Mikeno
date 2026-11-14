@@ -84,6 +84,9 @@ public:
         //- Component type of the elements of the field
         using cmptType = typename PrimitiveField<Type>::cmptType;
 
+#ifdef WM_SP
+        static_assert(not std::is_same_v<Type_, double>, "A double-typed operand leaked into SP field arithmetic");
+#endif
 
 private:
 
