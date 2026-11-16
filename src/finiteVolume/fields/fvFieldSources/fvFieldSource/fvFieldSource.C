@@ -266,7 +266,7 @@ Foam::fvFieldSource<Type>::value
 {
     return
         (1 - internalCoeff(model, source))
-       *sourceValue(model, source);
+       *sourceValue(model, source)
       + internalCoeff(model, source)
        *internalField();
 }
@@ -282,7 +282,7 @@ Foam::tmp<Foam::Field<Type>> Foam::fvFieldSource<Type>::value
 {
     return
         (1 - internalCoeff(model, source, cells))
-       *sourceValue(model, source, cells);
+       *sourceValue(model, source, cells)
       + internalCoeff(model, source, cells)
        *Field<Type>(internalField(), cells);
 }
