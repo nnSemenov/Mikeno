@@ -2,8 +2,10 @@ lnInclude(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(target_name multiphaseEulerReactions)
 
+wmake_parse_files(${CMAKE_CURRENT_SOURCE_DIR}/Make/files sources_from_wmake)
+
 add_library(${target_name} SHARED
-    phaseSurfaceArrheniusReactionRate/makephaseSurfaceArrheniusReactions.C
+    ${sources_from_wmake}
 )
 
 target_include_directories(${target_name} PUBLIC

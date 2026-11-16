@@ -3,12 +3,10 @@ lnInclude(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(solidDisplacementThermo)
 
 set(target_name solidDisplacementSolver)
+wmake_parse_files(${CMAKE_CURRENT_SOURCE_DIR}/Make/files sources_from_wmake)
 
 add_library(${target_name} SHARED
-    derivedFvPatchFields/tractionDisplacement/tractionDisplacementFvPatchVectorField.C
-    derivedFvPatchFields/hydrostaticDisplacement/hydrostaticDisplacementFvPatchVectorField.C
-    derivedFvPatchFields/displacementGapHeatTransferCoefficient/displacementGapHeatTransferCoefficient_DimensionedFieldFunction.C
-    solidDisplacement.C
+    ${sources_from_wmake}
 )
 
 target_include_directories(${target_name} PUBLIC
